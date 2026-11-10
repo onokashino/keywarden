@@ -41,7 +41,7 @@ jobs:
                  -e "s/^sha256sums=.*/sha256sums=('$sum')/" packaging/aur/PKGBUILD
           echo "ok=1" >> "$GITHUB_OUTPUT"
       - if: steps.pkg.outputs.ok
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        uses: KSXGitHub/github-actions-deploy-aur@v4.2.0
         with:
           pkgname: keywarden-bin
           pkgbuild: packaging/aur/PKGBUILD
