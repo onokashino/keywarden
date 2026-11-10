@@ -58,7 +58,7 @@ png = "0.18"
 
 # macOS и Windows: автоввод (набор и активное окно)
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]
-enigo = "0.5"
+enigo = "0.6"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
