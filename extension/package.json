@@ -16,7 +16,7 @@
     "@wxt-dev/module-svelte": "2.0.5",
     "svelte": "5.57.3",
     "svelte-check": "^4",
-    "typescript": "^5",
+    "typescript": "^7",
     "wxt": "0.21.5"
   }
 }
