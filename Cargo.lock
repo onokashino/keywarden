@@ -4427,7 +4427,7 @@ dependencies = [
 name = "keywarden-core"
 version = "0.1.0"
 dependencies = [
- "aes 0.8.4",
+ "aes 0.9.4",
  "bech32",
  "bip39",
  "bs58",
