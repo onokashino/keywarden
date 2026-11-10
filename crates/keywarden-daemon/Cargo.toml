@@ -37,7 +37,7 @@ keepass = { version = "0.17", features = ["save_kdbx4"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "ico", "gif", "webp"] }
 rqrr = "0.9"
 # проверка утечек паролей (Have I Been Pwned), только по запросу пользователя
-ureq = "2"
+ureq = "3"
 chrono = "0.4"
 
 # буфер обмена вне Wayland с data-control: X11, GNOME, macOS, Windows
