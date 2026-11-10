@@ -1,0 +1,9 @@
+/target
+extension/node_modules
+extension/.output
+extension/.wxt
+extension/wasm
+*.kdbx.bak*
+extension/public/keywarden_ext_bg.wasm
+tests/e2e-ext/node_modules
+.serena/

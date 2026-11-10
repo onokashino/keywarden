@@ -1,0 +1,123 @@
+# Витрина для сайта: аккуратная база и кадры для лендинга и документации.
+# Запуск: make site-shots (оба языка), снимки в target/showcase-{en,ru}.
+if [ "${KEYWARDEN_LANG:-ru}" = en ]; then
+  F_WORK=Work F_HOME=Personal F_FIN=Finance F_SRV=Servers
+  T_DEV=dev T_WORK=work T_SUBS=subscriptions T_HOME=home
+  WHO=alex.morgan MAIL=alex.morgan@proton.me
+  FIRST=Alex LAST=Morgan COUNTRY="United Kingdom" CITY=London HOLDER="ALEX MORGAN"
+  WIFI="Home Wi-Fi" PASSPORT="UK passport" WALLET="Ledger savings" CODES="Recovery codes"
+  CODES_TEXT="GitHub: 7f3a-91c2, 0b4e-55d1
+Google: 4821 9934, 1177 0452"
+  DEPLOY="prod deploy key"
+  C_TITLE="github.com is asking for a password"
+  C_TEXT="Fill in \"GitHub\" for \"$WHO\" on github.com?"
+else
+  F_WORK=Работа F_HOME=Личное F_FIN=Финансы F_SRV=Серверы
+  T_DEV=dev T_WORK=работа T_SUBS=подписки T_HOME=дом
+  WHO=anna.petrova MAIL=anna.petrova@proton.me
+  FIRST=Анна LAST=Петрова COUNTRY=Россия CITY=Москва HOLDER="ANNA PETROVA"
+  WIFI="Домашний Wi-Fi" PASSPORT=Паспорт WALLET="Ledger, накопления" CODES="Коды восстановления"
+  CODES_TEXT="GitHub: 7f3a-91c2, 0b4e-55d1
+Google: 4821 9934, 1177 0452"
+  DEPLOY="Ключ деплоя prod"
+  C_TITLE="Сайт github.com просит пароль"
+  C_TEXT="Заполнить «GitHub» для «$WHO» на github.com?"
+fi
+
+echo t | $B/kw unlock --password-stdin >/dev/null
+$B/kw db-settings --tune >/dev/null
+# коды 2FA снимать в начале 30-секундного периода, а не на последней секунде
+fresh() { while [ $(( $(date +%s) % 30 )) -gt 4 ]; do sleep 1; done; }
+for g in "$F_WORK" "$F_HOME" "$F_FIN" "$F_SRV"; do $B/kw mkgroup "$g" >/dev/null; done
+add() { $B/kw add "$@" >/dev/null; }
+otp() { echo "otpauth://totp/$1?secret=$2&issuer=$1"; }
+
+add --title GitHub -u $WHO --url https://github.com -g "$F_WORK" --tag $T_DEV --tag $T_WORK \
+  --field "Password=Vq7#mR2x!pLw9zKe" --otp "$(otp GitHub JBSWY3DPEHPK3PXP)"
+add --title Figma -u $MAIL --url https://figma.com -g "$F_WORK" --tag $T_WORK --field "Password=summer2024"
+add --title Slack -u $MAIL --url https://app.slack.com -g "$F_WORK" --tag $T_WORK --field "Password=Lk4!vB9q-Zr2Tn8w"
+add --title "Proton Mail" -u $MAIL --url https://account.proton.me -g "$F_HOME" \
+  --field "Password=Hn3%cW8y@Qe5Ub1s" --otp "$(otp Proton KRSXG5CTMVRXEZLU)"
+add --title Google -u "$WHO@gmail.com" --url https://accounts.google.com -g "$F_HOME" \
+  --field "Password=Gz6^tP1m&Xr4Dk7v" --otp "$(otp Google MFRGGZDFMZTWQ2LK)"
+add --title Netflix -u $MAIL --url https://netflix.com -g "$F_HOME" --tag $T_SUBS --field "Password=Movienight-42"
+add --title Spotify -u $MAIL --url https://spotify.com -g "$F_HOME" --tag $T_SUBS --field "Password=Movienight-42"
+add --title "$WIFI" -u keenetic-5G --url http://192.168.1.1 -g "$F_HOME" --tag $T_HOME --field "Password=river-copper-lantern-71"
+add -t identity --title "$PASSPORT" -g "$F_HOME" --field "First Name=$FIRST" --field "Last Name=$LAST" \
+  --field "Email=$MAIL" --field "Country=$COUNTRY" --field "City=$CITY" --field "Passport Number=72 4518093"
+add -t note --title "$CODES" -g "$F_HOME" --notes "$CODES_TEXT"
+add -t card --title Visa -g "$F_FIN" --expires 2029-08-31 --field "Cardholder=$HOLDER" \
+  --field "Card Number=4242424242424242" --field "Expiry=08/29" --field "CVV=314" --field "Brand=Visa"
+add --title Revolut -u "+44 7700 900123" --url https://app.revolut.com -g "$F_FIN" \
+  --field "Password=Rv8*nE2q!Ws6Jm3y" --otp "$(otp Revolut ONSWG4TFOQYTEMZU)"
+add -t wallet --title "$WALLET" -g "$F_FIN" --field "Wallet Type=Ledger Nano X" --field "Networks=BTC, ETH" \
+  --field "Seed=abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" \
+  --field "Addresses=$(printf 'savings: bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu')"
+add --title "Hetzner Cloud" -u admin@$WHO.dev --url https://console.hetzner.cloud -g "$F_SRV" \
+  --field "Password=Hz2!kQ9w#Tb5Lr8x" --otp "$(otp Hetzner GEZDGNBVGY3TQOJQ)"
+ssh-keygen -q -t ed25519 -N '' -C "deploy@prod" -f $W/id_deploy
+$B/kw ssh-import $W/id_deploy --title "$DEPLOY" -g "$F_SRV" --host "deploy@prod.example.com" >/dev/null
+$B/kw lock >/dev/null
+
+# главное окно
+ui
+shot sc-locked 3
+fresh
+key t -k Return
+shot sc-main 2.5
+key -M ctrl e -m ctrl
+shot sc-edit 1.5
+key -k Escape
+sleep 0.5
+key -M ctrl g -m ctrl
+shot sc-generator 1.5
+key -k Escape
+sleep 0.5
+fresh
+key -M alt -k Down -m alt
+shot sc-otp 1.5
+key -M alt -k Down -m alt
+shot sc-health 2
+# тип «Ключ SSH»: Здоровье -> Логин, Карта, Личная информация, Заметка, Ключ SSH
+for i in 1 2 3 4 5; do key -M alt -k Down -m alt; done
+shot sc-ssh 2
+key -M ctrl n -m ctrl
+shot sc-ssh-new 1.5
+key -k Escape
+sleep 0.5
+for i in 1 2 3 4 5 6 7; do key -M alt -k Up -m alt; done
+sleep 0.5
+key -M ctrl f -m ctrl
+key "Ledger"
+sleep 1
+key -k Down
+shot sc-wallet 2
+key -k Escape
+key -M ctrl -k a -m ctrl
+key -k BackSpace
+key -M ctrl -k comma -m ctrl
+key -M alt 2 -m alt
+shot sc-security 1.5
+key -M alt 5 -m alt
+shot sc-system 1.5
+key -M alt 7 -m alt
+shot sc-sync 1.5
+kill $UPID 2>/dev/null || true
+sleep 1
+
+# лаунчер и окно подтверждения
+fresh
+ui --launcher
+shot sc-launcher-all 2.5
+# стрелка вверх с первой строки выбирает последнюю: список должен докрутиться до неё
+key -k Up
+shot sc-launcher-last 1
+key -k Down
+key git
+shot sc-launcher 1.5
+key -k Escape
+sleep 1
+$B/keywarden-ui --confirm "{\"title\":\"$C_TITLE\",\"text\":\"$(echo "$C_TEXT" | sed 's/"/\\"/g')\",\"allow_always\":true}" & CPID=$!
+shot sc-confirm 2.5
+key -k Escape
+wait $CPID 2>/dev/null || true

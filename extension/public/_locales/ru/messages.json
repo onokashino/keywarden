@@ -1,0 +1,532 @@
+{
+  "extName": {
+    "message": "Keywarden"
+  },
+  "extDescription": {
+    "message": "Автозаполнение паролей из Keywarden (KeePass)"
+  },
+  "cmd_fill_login": {
+    "message": "Заполнить логин и пароль"
+  },
+  "err_host_disconnected": {
+    "message": "keywarden-host отключился"
+  },
+  "client_name": {
+    "message": "Keywarden для $BROWSER$",
+    "placeholders": {
+      "browser": {
+        "content": "$1"
+      }
+    }
+  },
+  "err_connect_failed": {
+    "message": "Не удалось подключиться"
+  },
+  "err_not_associated": {
+    "message": "Расширение не подключено к Keywarden"
+  },
+  "err_no_host": {
+    "message": "Нет keywarden-host"
+  },
+  "err_frames": {
+    "message": "Заполнение во фреймах выключено"
+  },
+  "err_no_tab": {
+    "message": "Нет активной вкладки"
+  },
+  "err_extension_only": {
+    "message": "Только из окна расширения"
+  },
+  "err_password_required": {
+    "message": "Нужен пароль"
+  },
+  "err_outdated": {
+    "message": "Расширение обновилось не полностью: нажмите «Обновить» на chrome://extensions"
+  },
+  "toast_otp_inserted": {
+    "message": "Код 2FA вставлен из Keywarden"
+  },
+  "toast_vault_locked_open": {
+    "message": "Хранилище Keywarden заблокировано: откройте его в окне Keywarden"
+  },
+  "menu_new_password": {
+    "message": "Новый пароль · $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_generate_sub": {
+    "message": "Сгенерировать надёжный пароль и вставить"
+  },
+  "toast_password_inserted": {
+    "message": "Пароль вставлен. После регистрации Keywarden предложит его сохранить"
+  },
+  "menu_otp_title": {
+    "message": "Код 2FA · $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_otp_sub": {
+    "message": "Вставить код 2FA"
+  },
+  "menu_otp_sub_for": {
+    "message": "Вставить код 2FA для $USER$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_no_otp": {
+    "message": "Для этого сайта нет записей с 2FA"
+  },
+  "menu_choose_account": {
+    "message": "Выберите аккаунт · $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_sign_in": {
+    "message": "Войти · $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_no_logins": {
+    "message": "Для этого сайта нет записей. Войдите, и Keywarden предложит сохранить пароль"
+  },
+  "unlock_keywarden": {
+    "message": "Разблокировать Keywarden"
+  },
+  "vault_locked": {
+    "message": "Хранилище заблокировано"
+  },
+  "toast_no_entries": {
+    "message": "Для этого сайта нет записей в Keywarden"
+  },
+  "username": {
+    "message": "Логин"
+  },
+  "password": {
+    "message": "Пароль"
+  },
+  "show_password": {
+    "message": "Показать пароль"
+  },
+  "hide_password": {
+    "message": "Скрыть пароль"
+  },
+  "never_here": {
+    "message": "Никогда здесь"
+  },
+  "not_now": {
+    "message": "Не сейчас"
+  },
+  "prompt_update_keywarden": {
+    "message": "Обновить пароль в Keywarden?"
+  },
+  "prompt_save_keywarden": {
+    "message": "Сохранить пароль в Keywarden?"
+  },
+  "no_username": {
+    "message": "без логина"
+  },
+  "update": {
+    "message": "Обновить"
+  },
+  "save": {
+    "message": "Сохранить"
+  },
+  "toast_saved_keywarden": {
+    "message": "Сохранено в Keywarden"
+  },
+  "toast_never_site": {
+    "message": "Для $SITE$ больше не предлагаю",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_new_password_field": {
+    "message": "На странице нет поля для нового пароля"
+  },
+  "passkey": {
+    "message": "Ключ доступа"
+  },
+  "toast_passkey_locked": {
+    "message": "База Keywarden заблокирована: использую обычный вход браузера"
+  },
+  "kind_login": {
+    "message": "Логины"
+  },
+  "kind_card": {
+    "message": "Карты"
+  },
+  "kind_identity": {
+    "message": "Личное"
+  },
+  "kind_note": {
+    "message": "Заметки"
+  },
+  "kind_passkey": {
+    "message": "Ключи доступа"
+  },
+  "kind_crypto_wallet": {
+    "message": "Криптокошельки"
+  },
+  "copied_username": {
+    "message": "Логин скопирован, буфер очистится сам"
+  },
+  "copied_password": {
+    "message": "Пароль скопирован, буфер очистится сам"
+  },
+  "copied_totp": {
+    "message": "Код 2FA скопирован, буфер очистится сам"
+  },
+  "address_copied": {
+    "message": "Адрес скопирован"
+  },
+  "need_url_password": {
+    "message": "Нужны адрес сайта и пароль"
+  },
+  "entry_saved": {
+    "message": "Запись сохранена в Keywarden"
+  },
+  "strength_excellent": {
+    "message": "отличный"
+  },
+  "strength_strong": {
+    "message": "надёжный"
+  },
+  "strength_fair": {
+    "message": "средний"
+  },
+  "strength_weak": {
+    "message": "слабый"
+  },
+  "strength_bits": {
+    "message": "$STRENGTH$ · $BITS$ бит",
+    "placeholders": {
+      "strength": {
+        "content": "$1"
+      },
+      "bits": {
+        "content": "$2"
+      }
+    }
+  },
+  "err_generator": {
+    "message": "Генератор не ответил: обновите расширение на chrome://extensions"
+  },
+  "password_copied": {
+    "message": "Пароль скопирован"
+  },
+  "untitled": {
+    "message": "Без названия"
+  },
+  "fill": {
+    "message": "Заполнить"
+  },
+  "actions": {
+    "message": "Действия"
+  },
+  "wallet_addresses": {
+    "message": "Адреса кошелька"
+  },
+  "copy_username": {
+    "message": "Скопировать логин"
+  },
+  "copy_password": {
+    "message": "Скопировать пароль"
+  },
+  "copy_totp": {
+    "message": "Скопировать код 2FA"
+  },
+  "open_site": {
+    "message": "Открыть сайт"
+  },
+  "back": {
+    "message": "Назад"
+  },
+  "view_entry": {
+    "message": "Просмотр записи"
+  },
+  "vault": {
+    "message": "Хранилище"
+  },
+  "login_details": {
+    "message": "Данные для входа"
+  },
+  "copy": {
+    "message": "Скопировать"
+  },
+  "totp_code": {
+    "message": "Код 2FA"
+  },
+  "no_login_password": {
+    "message": "У этой записи нет логина и пароля"
+  },
+  "receive_addresses": {
+    "message": "Адреса для получения"
+  },
+  "address": {
+    "message": "Адрес"
+  },
+  "wallet_hint": {
+    "message": "Сид-фраза и ключи кошелька в расширение не попадают: они только в окне Keywarden."
+  },
+  "site": {
+    "message": "Сайт"
+  },
+  "open": {
+    "message": "Открыть"
+  },
+  "fill_on_page": {
+    "message": "Заполнить на странице"
+  },
+  "new_entry": {
+    "message": "Новая запись"
+  },
+  "title": {
+    "message": "Название"
+  },
+  "title_placeholder": {
+    "message": "Например, GitHub"
+  },
+  "username_placeholder": {
+    "message": "Почта или имя пользователя"
+  },
+  "show": {
+    "message": "Показать"
+  },
+  "generate": {
+    "message": "Сгенерировать"
+  },
+  "new_entry_hint": {
+    "message": "Запись попадёт в папку «Из браузера», её можно дополнить в приложении Keywarden."
+  },
+  "cancel": {
+    "message": "Отмена"
+  },
+  "generator": {
+    "message": "Генератор"
+  },
+  "settings": {
+    "message": "Настройки"
+  },
+  "new_short": {
+    "message": "Новая"
+  },
+  "lock_vault": {
+    "message": "Заблокировать хранилище"
+  },
+  "search_placeholder": {
+    "message": "Поиск в хранилище"
+  },
+  "filters": {
+    "message": "Фильтры"
+  },
+  "all_types": {
+    "message": "Все типы"
+  },
+  "all_folders": {
+    "message": "Все папки"
+  },
+  "all_tags": {
+    "message": "Все теги"
+  },
+  "reset": {
+    "message": "Сбросить"
+  },
+  "no_connection": {
+    "message": "Нет связи с Keywarden"
+  },
+  "no_connection_hint": {
+    "message": "Запущен ли keywardend и установлен ли keywarden-host?"
+  },
+  "connect_title": {
+    "message": "Подключите расширение"
+  },
+  "connect_hint": {
+    "message": "Keywarden спросит подтверждение в своём окне."
+  },
+  "connected": {
+    "message": "Подключено"
+  },
+  "connect": {
+    "message": "Подключить"
+  },
+  "locked_hint": {
+    "message": "Откройте его мастер-паролем или PIN в окне Keywarden."
+  },
+  "unlock": {
+    "message": "Разблокировать"
+  },
+  "offer_update": {
+    "message": "Обновить пароль?"
+  },
+  "offer_save": {
+    "message": "Сохранить пароль?"
+  },
+  "never_site_done": {
+    "message": "Для этого сайта больше не предлагаю"
+  },
+  "never": {
+    "message": "Никогда"
+  },
+  "saved": {
+    "message": "Сохранено"
+  },
+  "for_this_page": {
+    "message": "Для этой страницы"
+  },
+  "no_entries_for": {
+    "message": "Нет записей для $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "add": {
+    "message": "Добавить"
+  },
+  "found": {
+    "message": "Найдено"
+  },
+  "all_entries": {
+    "message": "Все записи"
+  },
+  "load_failed": {
+    "message": "Не удалось загрузить записи: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "nothing_found": {
+    "message": "Ничего не нашлось"
+  },
+  "no_other_entries": {
+    "message": "Других записей нет"
+  },
+  "generator_locked_hint": {
+    "message": "Пароли генерирует Keywarden: откройте хранилище, и генератор заработает."
+  },
+  "gen_colors_hint": {
+    "message": "Цифры синим, символы фиолетовым"
+  },
+  "another_one": {
+    "message": "Ещё вариант"
+  },
+  "inserted_new_password": {
+    "message": "Вставлено в поле нового пароля"
+  },
+  "insert_into_field": {
+    "message": "Вставить в поле"
+  },
+  "passphrase": {
+    "message": "Фраза"
+  },
+  "length": {
+    "message": "Длина"
+  },
+  "shorter": {
+    "message": "Короче"
+  },
+  "longer": {
+    "message": "Длиннее"
+  },
+  "set_upper": {
+    "message": "Заглавные"
+  },
+  "set_lower": {
+    "message": "Строчные"
+  },
+  "set_digits": {
+    "message": "Цифры"
+  },
+  "set_symbols": {
+    "message": "Символы"
+  },
+  "need_one_set": {
+    "message": "Нужен хотя бы один набор"
+  },
+  "no_lookalikes": {
+    "message": "Без похожих"
+  },
+  "no_lookalikes_hint": {
+    "message": "Без l, 1, O, 0 и кавычек"
+  },
+  "words": {
+    "message": "Слов"
+  },
+  "capitalize": {
+    "message": "С заглавной"
+  },
+  "capitalize_hint": {
+    "message": "Каждое слово с большой буквы"
+  },
+  "add_digit": {
+    "message": "Добавить цифру"
+  },
+  "add_digit_hint": {
+    "message": "Для сайтов, которые требуют цифру"
+  },
+  "separator": {
+    "message": "Разделитель"
+  },
+  "space": {
+    "message": "пробел"
+  },
+  "section_autofill": {
+    "message": "Заполнение"
+  },
+  "pref_icons": {
+    "message": "Значок в полях"
+  },
+  "pref_icons_hint": {
+    "message": "Кнопка K в полях логина и пароля"
+  },
+  "pref_menu": {
+    "message": "Меню аккаунтов при фокусе"
+  },
+  "pref_menu_hint": {
+    "message": "Список аккаунтов сайта сразу под полем. Если выключить: только по значку K"
+  },
+  "pref_offer": {
+    "message": "Предлагать сохранить"
+  },
+  "pref_offer_hint": {
+    "message": "После входа: сохранить новый пароль или обновить старый"
+  },
+  "pref_otp": {
+    "message": "Вставлять код 2FA сам"
+  },
+  "pref_otp_hint": {
+    "message": "После заполнения входа код на следующем шаге того же сайта вставится сразу"
+  },
+  "never_sites": {
+    "message": "Никогда не предлагать сохранять"
+  },
+  "never_sites_empty": {
+    "message": "Пусто. Сайт попадает сюда кнопкой «Никогда здесь»."
+  },
+  "remove": {
+    "message": "Убрать"
+  },
+  "shortcuts": {
+    "message": "Клавиши"
+  }
+}

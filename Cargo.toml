@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+rust-version = "1.92"
+
+[workspace.dependencies]
+keywarden-core = { path = "crates/keywarden-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+libc = "0.2"
+
+# Зависимости в dev-сборке оптимизированы: без этого AES-KDF и Argon2 медленнее в десятки раз
+# (сохранение базы ~12 с), а GPUI тормозит при отрисовке. Свой код остаётся отлаживаемым.
+[profile.dev.package."*"]
+opt-level = 3
+
+# WASM расширения: размер важнее скорости
+[profile.release.package.keywarden-ext]
+opt-level = "s"
+
+[profile.release]
+lto = "thin"
+strip = true
+panic = "abort"
+
+# keepass-rs 0.17.0 с исправлением: удаление вложения у текущей версии записи стирало его и из истории.
+# Убрать, когда исправление попадёт в upstream (см. vendor/keepass/KEYWARDEN-PATCH.md).
+[patch.crates-io]
+keepass = { path = "vendor/keepass" }
+# gpui-component 0.9.0: рука-указатель у всех кнопок (см. vendor/gpui-component/KEYWARDEN-PATCH.md)
+gpui-component = { path = "vendor/gpui-component" }

@@ -1,0 +1,30 @@
+# Maintainer: onokashino
+# Обновляется из .github/workflows/packages.yml при публикации релиза: pkgver и sha256sums.
+pkgname=keywarden-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Keyboard-first password manager on the KeePass format (KDBX 4)'
+arch=('x86_64')
+url='https://onokashino.github.io/keywarden/'
+license=('GPL-3.0-or-later')
+depends=('gcc-libs' 'glibc' 'libxkbcommon' 'wayland' 'vulkan-icd-loader' 'fontconfig')
+optdepends=('wtype: autotype on Wayland'
+            'xdotool: autotype on X11'
+            'keepassxc: the same vault on other devices')
+provides=('keywarden')
+conflicts=('keywarden')
+install=keywarden.install
+source=("https://github.com/onokashino/keywarden/releases/download/v${pkgver}/keywarden-v${pkgver}-linux-x86_64.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  cd "keywarden-v${pkgver}-linux-x86_64"
+  install -Dm755 keywardend kw keywarden-ui keywarden-host -t "$pkgdir/usr/bin/"
+  for u in dist/systemd/*.service; do
+    sed 's|%h/.local/bin/|/usr/bin/|' "$u" | install -Dm644 /dev/stdin "$pkgdir/usr/lib/systemd/user/$(basename "$u")"
+  done
+  install -Dm644 dist/keywarden.desktop "$pkgdir/usr/share/applications/keywarden.desktop"
+  install -Dm644 dist/native-messaging/firefox.json "$pkgdir/usr/lib/mozilla/native-messaging-hosts/dev.keywarden.host.json"
+  install -Dm644 dist/niri/keywarden.kdl "$pkgdir/usr/share/keywarden/niri/keywarden.kdl"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/keywarden/README.md"
+}

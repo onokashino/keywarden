@@ -1,0 +1,42 @@
+# окно «Новый ключ SSH»: вкладка «Создать» с выбором алгоритма, «Добавить» с ключами из ~/.ssh
+echo t | $B/kw unlock --password-stdin >/dev/null
+mkdir -p $HOME/.ssh
+ssh-keygen -q -t ed25519 -N '' -C me@laptop -f $HOME/.ssh/id_ed25519
+ssh-keygen -q -t rsa -b 3072 -N 'pw' -C old@server -f $HOME/.ssh/id_rsa
+ui
+sleep 3
+# тип «Ключ SSH» в боковой панели
+for i in 1 2 3 4 5 6 7; do key -M alt -k Down -m alt; done
+key -M ctrl n -m ctrl
+shot ssh-new-create 1.5
+# мыши у стенда нет: всё с клавиатуры (Alt+↓ алгоритм, Ctrl+Enter сохранить)
+key -M alt -k Down -m alt
+key "ECDSA test"
+shot ssh-new-ecdsa 0.8
+key -M ctrl -k Return -m ctrl
+sleep 2
+export SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/keywarden/ssh.sock
+ssh-add -L | grep -q "^ecdsa-sha2-nistp256 .* ECDSA test$" && echo "СОЗДАН ECDSA OK" || { echo "ОШИБКА: ECDSA не создан"; ssh-add -L; }
+key -M ctrl n -m ctrl
+sleep 1.5
+key -M alt 2 -m alt
+shot ssh-new-add 1.5
+# первый найденный ключ (id_ed25519), название подставится из комментария
+key -M alt -k Down -m alt
+shot ssh-new-add-picked 0.8
+key -M ctrl -k Return -m ctrl
+sleep 2
+ssh-add -L | grep -q "$(cut -d' ' -f2 $HOME/.ssh/id_ed25519.pub)" && echo "ДОБАВЛЕН ИЗ ~/.ssh OK" || echo "ОШИБКА: ключ из ~/.ssh не добавлен"
+# второй: зашифрованный RSA, нужен пароль ключа
+key -M ctrl n -m ctrl
+sleep 1.5
+key -M alt 2 -m alt
+key -M alt -k Down -m alt
+shot ssh-new-add-encrypted 1
+# фокус в «Названии»: Shift+Tab ведёт в пароль ключа
+key -M shift -k Tab -m shift
+key pw
+key -M ctrl -k Return -m ctrl
+sleep 2
+ssh-add -L | grep -q "$(cut -d' ' -f2 $HOME/.ssh/id_rsa.pub)" && echo "ЗАШИФРОВАННЫЙ RSA ДОБАВЛЕН OK" || { echo "ОШИБКА: RSA не добавлен"; }
+shot ssh-new-done 1

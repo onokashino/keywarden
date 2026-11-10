@@ -1,0 +1,28 @@
+# настройки SSH-агента целиком (запускать с RES=1280x1500): ключи на диске, переключатели
+mkdir -p $HOME/.ssh
+ssh-keygen -q -t ed25519 -N '' -C me@laptop -f $HOME/.ssh/id_ed25519
+ssh-keygen -q -t ed25519 -N 'pw' -C old@laptop -f $HOME/.ssh/id_old
+printf 'Host prod-api\n  HostName 10.0.0.1\n  User root\n  IdentityFile ~/.ssh/id_ed25519\nHost prod-db\n  HostName 10.0.0.2\nHost homelab\n  HostName 192.168.1.10\n  Port 2222\n' > $HOME/.ssh/config
+ui
+sleep 3
+key t -k Return
+sleep 2
+key -M ctrl -k comma -m ctrl
+key -M alt 6 -m alt
+shot ssh-settings 2.5
+# окна переноса (мыши у стенда нет: до кнопок доходим Tab)
+key -k Tab; key -k Tab; key -k Tab; key -k Return
+shot ssh-migrate-keys 1.2
+key -k Escape
+sleep 0.8
+key -M ctrl -k comma -m ctrl
+key -M alt 6 -m alt
+sleep 1
+for i in 1 2 3 4; do key -k Tab; done
+key -k Return
+shot ssh-migrate-hosts 1.2
+key -M ctrl -k Return -m ctrl
+sleep 2
+$B/kw ssh --list > /tmp/hosts
+grep -qP "^SSH/prod\tprod-api\troot@10.0.0.1$" /tmp/hosts && grep -qP "^SSH/Прочие\thomelab\t192.168.1.10:2222$" /tmp/hosts && echo "СЕРВЕРЫ ПЕРЕНЕСЕНЫ OK" || { echo "ОШИБКА: серверы"; cat /tmp/hosts; }
+shot ssh-settings-after 1.5

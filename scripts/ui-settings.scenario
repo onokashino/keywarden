@@ -1,0 +1,18 @@
+# вкладки настроек: связка ключей и синхронизация
+echo t | $B/kw unlock --password-stdin
+ui
+sleep 3
+key -M ctrl -k comma -m ctrl
+sleep 1
+key -M alt 4 -m alt
+shot settings-keyring 2
+key -M alt 1 -m alt
+shot settings-general 1.5
+key -M alt 2 -m alt
+shot settings-security 1.5
+key -M alt 3 -m alt
+shot settings-transfer 1.5
+key -M alt 7 -m alt
+shot settings-sync 2
+key -M alt 5 -m alt
+shot settings-device 2

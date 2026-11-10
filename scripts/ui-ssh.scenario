@@ -1,0 +1,35 @@
+# SSH-агент: база заблокирована, ssh просит ключ -> окно разблокировки -> ключ отдан
+export SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/keywarden/ssh.sock
+echo t | $B/kw unlock --password-stdin >/dev/null
+ssh-keygen -q -t ed25519 -N '' -C ui@test -f $W/k
+$B/kw ssh-import $W/k --title "ssh test" >/dev/null
+echo "открыта: $(ssh-add -l 2>&1)"
+$B/kw lock >/dev/null
+ssh-add -l >$W/add1.out 2>&1 & APID=$!
+shot ssh-unlock 3
+key t -k Return
+code=0; wait $APID || code=$?
+echo "после разблокировки ssh-add -l (код $code): $(cat $W/add1.out)"
+grep -q ED25519 $W/add1.out && echo "SSH РАЗБЛОКИРОВКА OK" || echo "ОШИБКА: ключа нет"
+
+# отмена: Esc, ключей нет; повтор сразу без нового окна
+$B/kw lock >/dev/null
+ssh-add -l >$W/add2.out 2>&1 & APID=$!
+sleep 3; key -k Escape
+code=0; wait $APID || code=$?
+echo "после отмены (код $code): $(cat $W/add2.out)"
+t0=$(date +%s); ssh-add -l >/dev/null 2>&1 || true; t1=$(date +%s)
+[ $((t1 - t0)) -lt 3 ] && echo "повтор без окна OK ($((t1 - t0)) с)" || echo "ОШИБКА: повтор ждал $((t1 - t0)) с"
+
+# лаунчер: Enter на ключе с хостом открывает терминал с ssh (терминал из EXTRA_CONFIG пишет команду в файл)
+echo t | $B/kw unlock --password-stdin >/dev/null
+ssh-keygen -q -t ed25519 -N '' -C deploy@test -f $W/d
+$B/kw ssh-import $W/d --title "deploy prod" --host "ssh://deploy@prod.example.org:2222" >/dev/null
+ui --launcher
+sleep 2
+key "deploy prod"
+shot ssh-launcher 1.5
+key -k Return
+sleep 2
+echo "терминал получил: $(cat /tmp/kw-ssh-called 2>/dev/null)"
+grep -qx "ssh -p 2222 deploy@prod.example.org" /tmp/kw-ssh-called && echo "ПОДКЛЮЧЕНИЕ ИЗ ЛАУНЧЕРА OK" || echo "ОШИБКА: терминал не вызван"

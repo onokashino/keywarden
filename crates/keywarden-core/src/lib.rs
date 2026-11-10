@@ -1,0 +1,31 @@
+//! Ядро Keywarden: KDBX, модель записей, TOTP, поиск, генератор, слияние.
+
+pub mod autostart;
+pub mod autotype;
+pub mod bitwarden;
+pub mod generator;
+pub mod git_signing;
+pub mod health;
+pub mod i18n;
+pub mod ipc;
+pub mod keeagent;
+pub mod merge;
+pub mod model;
+pub mod passkey;
+pub mod platform;
+pub mod quick;
+pub mod search;
+pub mod secret;
+pub mod secrets;
+pub mod settings;
+pub mod ssh_hosts;
+pub mod ssh_setup;
+pub mod sync;
+pub mod totp;
+pub mod transfer;
+pub mod twofas;
+pub mod vault;
+pub mod wallet;
+pub mod wallet_card;
+pub mod wallet_derive;
+pub mod yubikey;

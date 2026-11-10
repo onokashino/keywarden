@@ -1,0 +1,24 @@
+[package]
+name = "keywarden-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+keywarden-core.workspace = true
+# syntect: подсветка кода во вложениях (сотни форматов по расширению)
+gpui-kit = { version = "0.9.0", features = ["syntect"] }
+gpui-kit-assets = "0.9.0"
+anyhow.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+data-encoding = "2"
+url = "2"
+chrono = "0.4"
+flate2 = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# иконки вшиваются и в debug-сборке, иначе rust-embed ищет их в CARGO_HOME во время работы
+rust-embed = { version = "8", features = ["debug-embed"] }
+rand = "0.10"
+zeroize = "1"

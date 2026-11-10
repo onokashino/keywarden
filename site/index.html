@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keywarden: passwords, 2FA and SSH keys in one KeePass file</title>
+<meta name="description" content="Keywarden is a password manager for Linux, Windows and macOS on the KeePass format. A launcher over any window, a browser extension, passkeys, 2FA codes, an SSH agent. Your data stays with you.">
+<meta property="og:title" content="Keywarden">
+<meta property="og:description" content="Passwords, 2FA codes and SSH keys in one KeePass file. Linux, Windows, macOS.">
+<meta property="og:image" content="https://onokashino.github.io/keywarden/assets/shots/main.webp">
+<meta name="theme-color" content="#17151c">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="assets/fonts.css">
+<link rel="stylesheet" href="assets/home.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="assets/logo.svg" alt="" width="26" height="26">Keywarden</a>
+    <nav class="nav-links" id="navLinks" aria-label="Sections">
+      <a href="#tour">Features</a>
+      <a href="#security">Security</a>
+      <a href="#compare">Compare</a>
+      <a href="#move">Switching</a>
+      <a href="#install">Install</a>
+      <a class="only-narrow" href="docs/">Docs</a>
+    </nav>
+    <div class="nav-right">
+      <a class="docs" href="docs/">Docs</a>
+      <a class="gh" href="https://github.com/onokashino/keywarden" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" aria-label="Section menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="lang" aria-label="Language">
+        <a href="./" aria-current="page" data-lang="en">EN</a>
+        <a href="ru/" hreflang="ru" data-lang="ru">RU</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Passwords, 2FA codes and SSH keys <em>in one KeePass file</em></h1>
+      <p class="lead">A password manager for Linux, Windows and macOS. The file stays yours: KeePassXC, KeePassDX and KeePassium open it, and your own folder syncs it, not our server.</p>
+      <div class="cta">
+        <a class="btn primary" href="#install">Install</a>
+        <a class="btn ghost" href="#move">How to switch</a>
+      </div>
+      <div class="trust"><span><b>Free</b>, GPL-3.0</span><span><b>0</b> Keywarden servers</span><span><b>KDBX 4</b>, Argon2id</span></div>
+    </div>
+    <div class="rig" id="rig" aria-label="Launcher demo: press Shift+P, then Enter">
+      <div class="row">
+        <div class="key" data-k="Meta" style="--i:0"><span>❖<small>super</small></span></div>
+        <div class="key mid" data-k="Shift" style="--i:1"><span>Shift<small>hold</small></span></div>
+        <div class="key" data-k="P" style="--i:2"><span>P<small>launcher</small></span></div>
+        <div class="plus" aria-hidden="true">→</div>
+        <div class="key accent" data-k="Enter" style="--i:3"><span>⏎<small>enter</small></span></div>
+      </div>
+      <div class="screen" id="screen" aria-live="polite">Try it: <b>Shift+P</b>, then <b>Enter</b>.</div>
+      <div class="hint">The launcher opens over any window. From keypress to password in the clipboard takes under half a second.</div>
+    </div>
+  </section>
+
+  <section class="show" aria-label="Main window">
+    <img src="assets/shots/main.webp" width="1280" height="800" alt="Keywarden main window: folders and entry types on the left, the list in the middle, the GitHub entry with its 2FA code on the right">
+  </section>
+
+  <section id="tour">
+    <h2 class="reveal">What is inside</h2>
+    <p class="sub reveal" style="--d:1">Pick a section or press a number from 1 to 6.</p>
+    <div class="tour-keys reveal" style="--d:2" role="tablist" aria-label="Features" data-tabs="tour">
+      <button class="key" role="tab" aria-controls="t-browser"><span>1<small>browser</small></span></button>
+      <button class="key" role="tab" aria-controls="t-otp"><span>2<small>2fa codes</small></span></button>
+      <button class="key" role="tab" aria-controls="t-ssh"><span>3<small>ssh</small></span></button>
+      <button class="key" role="tab" aria-controls="t-sync"><span>4<small>sync</small></span></button>
+      <button class="key" role="tab" aria-controls="t-health"><span>5<small>health</small></span></button>
+      <button class="key" role="tab" aria-controls="t-launcher"><span>6<small>launcher</small></span></button>
+    </div>
+    <div class="tour-panel" id="t-browser" role="tabpanel">
+      <div class="text">
+        <h3>A browser extension without surprises</h3>
+        <p>The Firefox and Chrome extension fills logins, types 2FA codes and saves new passwords. Passkeys live in the vault in the KeePassXC format.</p>
+        <ul class="facts"><li>Every new site is confirmed in a Keywarden window</li><li>Hidden fields and foreign frames are never filled</li><li>A generator right in the sign-up field</li></ul>
+        <a class="more" href="docs/#browser">More about the extension</a>
+      </div>
+      <img src="assets/shots/confirm.webp" width="1280" height="800" loading="lazy" alt="A Keywarden window asking whether to fill the GitHub password on github.com">
+    </div>
+    <div class="tour-panel" id="t-otp" role="tabpanel">
+      <div class="text">
+        <h3>2FA codes next to the password</h3>
+        <p>A codes page like an authenticator app, with the next code shown ahead of time. Add one from a QR in the clipboard or an image, an otpauth link or a secret.</p>
+        <ul class="facts"><li>2FAS import and export</li><li>A QR for your phone in one click</li><li>Ctrl+T copies the selected entry's code</li></ul>
+        <a class="more" href="docs/#otp">More about 2FA codes</a>
+      </div>
+      <img src="assets/shots/otp.webp" width="1280" height="800" loading="lazy" alt="The 2FA codes page: service tiles with six-digit codes and timers">
+    </div>
+    <div class="tour-panel" id="t-ssh" role="tabpanel">
+      <div class="text">
+        <h3>SSH keys and servers</h3>
+        <p>The built-in SSH agent serves keys from the vault to ssh, git and IDEs while the vault is open. Servers with their address, ProxyJump and port knocking live in the vault and travel to your other computers.</p>
+        <ul class="facts"><li>Move ~/.ssh and ~/.ssh/config into the vault</li><li>kw ssh: pick a server in the terminal, by folder</li><li>Sign git commits with a vault key</li></ul>
+        <a class="more" href="docs/#ssh">More about SSH</a>
+      </div>
+      <img src="assets/shots/ssh.webp" width="1280" height="800" loading="lazy" alt="An SSH key entry: the public key, buttons to add it to GitHub and GitLab, hosts">
+    </div>
+    <div class="tour-panel" id="t-sync" role="tabpanel">
+      <div class="text">
+        <h3>Sync through your own folder</h3>
+        <p>Keywarden watches the vault file. Edits from your phone or another computer merge by themselves, Syncthing conflict copies too.</p>
+        <ul class="facts"><li>Merges entry by entry, not the whole file</li><li>A mass deletion waits for your confirmation</li><li>A sync journal with undo</li></ul>
+        <a class="more" href="docs/#sync">More about sync</a>
+      </div>
+      <img src="assets/shots/sync.webp" width="1280" height="800" loading="lazy" alt="Sync settings: the vault file in a Syncthing folder, watching and mass-deletion protection">
+    </div>
+    <div class="tour-panel" id="t-health" role="tabpanel">
+      <div class="text">
+        <h3>Password health</h3>
+        <p>Weak, reused, old and expired passwords in one report. A Have I Been Pwned breach check at the press of a button, without sending the passwords themselves.</p>
+        <ul class="facts"><li>zxcvbn strength estimates</li><li>k-anonymity for the breach check</li><li>“Exclude from reports”, as in KeePassXC</li></ul>
+        <a class="more" href="docs/#window">More about the main window</a>
+      </div>
+      <img src="assets/shots/health.webp" width="1280" height="800" loading="lazy" alt="The password health report: weak, reused and old passwords">
+    </div>
+    <div class="tour-panel" id="t-launcher" role="tabpanel">
+      <div class="text">
+        <h3>A launcher over every window</h3>
+        <p>One hotkey from any window: fuzzy search, live 2FA codes, Enter copies the password. Autotype types the login and password straight into the window.</p>
+        <ul class="facts"><li>Under 0.5 s from keypress to password in the clipboard</li><li>Searches every open vault</li><li>Asks for the password first if the vault is locked</li></ul>
+        <a class="more" href="docs/#launcher">More about the launcher</a>
+      </div>
+      <img src="assets/shots/launcher.webp" width="1280" height="800" loading="lazy" alt="The Keywarden launcher over the desktop: search and entries with 2FA codes">
+    </div>
+  </section>
+
+  <section id="security">
+    <h2 class="reveal">What is protected, and <em>what is not</em></h2>
+    <p class="sub reveal" style="--d:1">No big words: exactly what Keywarden does, and where its job ends.</p>
+    <div class="spec">
+      <div class="key" style="--d:0"><span>KDBX 4<small>open format</small></span></div>
+      <div class="key" style="--d:1"><span>Argon2id<small>256 MiB, about 1 s</small></span></div>
+      <div class="key" style="--d:2"><span>AES-256<small>or ChaCha20</small></span></div>
+      <div class="key" style="--d:3"><span>YubiKey<small>and key files</small></span></div>
+      <div class="key accent" style="--d:4"><span>0 servers<small>your data stays with you</small></span></div>
+    </div>
+    <div class="two">
+      <div class="reveal" style="--d:2">
+        <h3><span class="mark yes" aria-hidden="true">✓</span>Protected</h3>
+        <ul>
+          <li><b>The whole vault file</b><span>A stolen laptop or a leaked sync folder only gives away an encrypted file.</span></li>
+          <li><b>Memory and the clipboard</b><span>Secrets are wiped on lock and kept out of swap and core dumps; the clipboard clears after 30 seconds.</span></li>
+          <li><b>Websites and apps</b><span>The extension fills only the entry's own domain, and only after you have confirmed a new site.</span></li>
+          <li><b>The vault during crashes</b><span>A backup before every write and atomic saving: pulling the plug will not corrupt the file.</span></li>
+        </ul>
+      </div>
+      <div class="reveal" style="--d:3">
+        <h3><span class="mark no" aria-hidden="true">!</span>Not protected</h3>
+        <ul>
+          <li><b>A forgotten master password</b><span>Nobody can recover it, us included. Keep a copy of the vault and the password written down somewhere safe.</span></li>
+          <li><b>Malware on your system</b><span>A program running with your rights while the vault is open can read what you can.</span></li>
+          <li><b>A weak password</b><span>Argon2 slows guessing down, but “123456” is still “123456”. Password health shows weak and reused ones.</span></li>
+        </ul>
+        <a class="more" href="docs/#security">The full security model</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <h2 class="reveal">How it differs</h2>
+    <p class="sub reveal" style="--d:1">Keywarden against each of the popular managers, on points you can check. Where the other one wins, it says so.</p>
+    <div class="rival-keys reveal" style="--d:2" role="tablist" aria-label="Compare with" data-rivals>
+      <button class="key" role="tab" data-rival="kpxc"><span>KeePassXC<small>the same file</small></span></button>
+      <button class="key" role="tab" data-rival="bw"><span>Bitwarden<small>cloud, open source</small></span></button>
+      <button class="key" role="tab" data-rival="op"><span>1Password<small>cloud, subscription</small></span></button>
+    </div>
+    <div class="duel" id="duel">
+      <div class="duel-head"><div></div><div class="us">Keywarden</div><div class="them"><span class="rival on" data-for="kpxc">KeePassXC</span><span class="rival" data-for="bw">Bitwarden</span><span class="rival" data-for="op">1Password</span></div></div>
+      <div class="duel-row" style="--r:0"><div class="label">Where data lives</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>a file you own</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark yes" aria-hidden="true">✓</span><span>a file you own</span></div><div class="cell rival" data-for="bw"><span class="mark part" aria-hidden="true">~</span><span>their server or yours</span></div><div class="cell rival" data-for="op"><span class="mark part" aria-hidden="true">~</span><span>their server</span></div></div></div>
+      <div class="duel-row" style="--r:1"><div class="label">Format</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>KDBX 4, open</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark yes" aria-hidden="true">✓</span><span>KDBX 4, open</span></div><div class="cell rival" data-for="bw"><span class="mark part" aria-hidden="true">~</span><span>their own, exports JSON and CSV</span></div><div class="cell rival" data-for="op"><span class="mark part" aria-hidden="true">~</span><span>their own, exports 1PUX and CSV</span></div></div></div>
+      <div class="duel-row" style="--r:2"><div class="label">Price</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>free</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark yes" aria-hidden="true">✓</span><span>free</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>free, paid premium</span></div><div class="cell rival" data-for="op"><span class="mark part" aria-hidden="true">~</span><span>subscription</span></div></div></div>
+      <div class="duel-row" style="--r:3"><div class="label">Source code</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>open, GPL-3.0</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark yes" aria-hidden="true">✓</span><span>open, GPL</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>open</span></div><div class="cell rival" data-for="op"><span class="mark no" aria-hidden="true">✕</span><span>closed</span></div></div></div>
+      <div class="duel-row" style="--r:4"><div class="label">Sync</div><div class="cell us-cell"><span class="mark part" aria-hidden="true">~</span><span>your folder: Syncthing, Nextcloud, Dropbox</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark part" aria-hidden="true">~</span><span>your folder</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>built in</span></div><div class="cell rival" data-for="op"><span class="mark yes" aria-hidden="true">✓</span><span>built in</span></div></div></div>
+      <div class="duel-row" style="--r:5"><div class="label">Phone</div><div class="cell us-cell"><span class="mark part" aria-hidden="true">~</span><span>through KeePassDX or KeePassium</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark part" aria-hidden="true">~</span><span>through KeePassDX or KeePassium</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>its own app</span></div><div class="cell rival" data-for="op"><span class="mark yes" aria-hidden="true">✓</span><span>its own app</span></div></div></div>
+      <div class="duel-row" style="--r:6"><div class="label">Launcher over windows</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>yes, from any window</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark part" aria-hidden="true">~</span><span>no, has autotype</span></div><div class="cell rival" data-for="bw"><span class="mark no" aria-hidden="true">✕</span><span>no</span></div><div class="cell rival" data-for="op"><span class="mark yes" aria-hidden="true">✓</span><span>Quick Access</span></div></div></div>
+      <div class="duel-row" style="--r:7"><div class="label">Sharing with family or team</div><div class="cell us-cell"><span class="mark no" aria-hidden="true">✕</span><span>no</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark no" aria-hidden="true">✕</span><span>no</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>yes</span></div><div class="cell rival" data-for="op"><span class="mark yes" aria-hidden="true">✓</span><span>yes</span></div></div></div>
+    </div>
+    <div class="verdict"><div class="key accent" aria-hidden="true"><span>=</span></div><div><p class="rival on" data-for="kpxc"><b>Same file, different approach.</b> KeePassXC is more mature and proven over years. Keywarden wins on the keyboard and the details: a launcher over any window, a 2FA codes page, SSH servers in the vault. You can use both, taking turns.</p><p class="rival" data-for="bw"><b>Pick Bitwarden</b> if you need sharing with family or a team and a native phone app. <b>Pick Keywarden</b> if you do not want your vault living on anyone's server.</p><p class="rival" data-for="op"><b>1Password</b> is polished and can share passwords, but it is a subscription, closed source and their server. <b>Keywarden</b> is free and keeps everything with you in an open format.</p></div></div>
+    <p class="note">Spotted a mistake in the comparison? <a href="https://github.com/onokashino/keywarden/issues">Tell us in GitHub Issues</a> and we will fix it.</p>
+  </section>
+
+  <section id="move">
+    <h2 class="reveal">Switch in <em>three steps</em></h2>
+    <p class="sub reveal" style="--d:1">You may not need to move anything: if you already have a KeePass vault, just open it. If your passwords live in another manager, Keywarden brings them over.</p>
+    <div class="steps">
+      <div class="step reveal" style="--d:2">
+        <div class="key accent" style="--d:0"><span>1</span></div>
+        <h3>Open or import your vault</h3>
+        <p>A .kdbx file opens as it is. Other managers import with one button, with a report of what to check by hand.</p>
+        <div class="chips"><span>Bitwarden</span><span>1Password</span><span>Proton Pass</span><span>Chrome</span><span>Firefox</span><span>2FAS</span></div>
+      </div>
+      <div class="step reveal" style="--d:3">
+        <div class="key accent" style="--d:1"><span>2</span></div>
+        <h3>Add the browser extension</h3>
+        <p>Firefox and Chrome: fills logins, types 2FA codes, saves new passwords and passkeys. Every new site is confirmed in a Keywarden window.</p>
+        <div class="chips"><span>Firefox</span><span>Chrome</span></div>
+      </div>
+      <div class="step reveal" style="--d:4">
+        <div class="key accent" style="--d:2"><span>3</span></div>
+        <h3>Connect your phone</h3>
+        <p>Put the vault into a Syncthing, Nextcloud or Dropbox folder. On the phone, KeePassDX or KeePassium opens the same file, and edits from both sides merge.</p>
+        <div class="chips"><span>Android</span><span>iPhone</span><span>Syncthing</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2 class="reveal">Install</h2>
+    <p class="sub reveal" style="--d:1">Pick your system. Updates come through your system's package manager.</p>
+    <div class="os-keys reveal" style="--d:2" role="tablist" aria-label="System" data-tabs="os">
+      <button class="key" role="tab" aria-controls="os-linux" data-os="linux"><span>Linux<small>primary</small></span></button>
+      <button class="key" role="tab" aria-controls="os-windows" data-os="windows"><span>Windows<small>beta</small></span></button>
+      <button class="key" role="tab" aria-controls="os-macos" data-os="macos"><span>macOS<small>beta</small></span></button>
+    </div>
+    <div class="os-panel" id="os-linux" role="tabpanel">
+<pre class="term"><span class="c"># Arch Linux, AUR</span>
+<span class="p">$ </span><span data-type>paru -S keywarden-bin</span>
+
+<span class="c"># other distributions: an archive from GitHub Releases</span>
+<span class="p">$ </span><span data-type>tar xf keywarden-*-linux-x86_64.tar.gz</span></pre>
+      <div>
+        <h3>Linux</h3>
+        <p>Full support: Wayland, a tray icon, YubiKey, the SSH agent, a keyring in place of gnome-keyring, autotype in niri.</p>
+        <a class="btn ghost" href="docs/#install">How to install and set up</a>
+      </div>
+    </div>
+    <div class="os-panel" id="os-windows" role="tabpanel">
+<pre class="term"><span class="c"># PowerShell</span>
+<span class="p">&gt; </span><span data-type>winget install onokashino.Keywarden</span></pre>
+      <div>
+        <h3>Windows<span class="badge">beta</span></h3>
+        <p>The window, the launcher, the browser extension, the SSH agent for the built-in OpenSSH, a tray icon and autostart. YubiKey is so far tested at the protocol level only.</p>
+        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases">Files on GitHub Releases</a>
+      </div>
+    </div>
+    <div class="os-panel" id="os-macos" role="tabpanel">
+<pre class="term"><span class="c"># Apple Silicon</span>
+<span class="p">$ </span><span data-type>brew install onokashino/tap/keywarden</span></pre>
+      <div>
+        <h3>macOS<span class="badge">beta</span></h3>
+        <p>The window, the launcher, the browser extension, the SSH agent and autostart. No menu bar icon yet.</p>
+        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases">Files on GitHub Releases</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="faq-grid">
+      <div>
+        <h2 class="reveal">Questions</h2>
+        <p class="sub reveal" style="--d:1">Did not find your answer? <a href="docs/#faq">All questions in the docs</a>, or <a href="https://github.com/onokashino/keywarden/issues">ask on GitHub</a>.</p>
+        <div class="faq-list reveal" style="--d:2">
+          <details><summary><span class="n">1</span>Will my KeePassXC vault open?</summary><p>Yes, with no conversion. Keywarden writes the same KDBX 4, and KeePassXC keeps opening it. You can use both, taking turns.</p></details>
+          <details><summary><span class="n">2</span>What happens if I stop using Keywarden?</summary><p>Nothing is lost: the file stays an ordinary KeePass vault that any KeePass client opens. There is no lock-in.</p></details>
+          <details><summary><span class="n">3</span>Why no cloud?</summary><p>So that your passwords do not sit on someone else's server that can be breached or shut down. Sync is done by a folder you choose, and only the encrypted file goes there.</p></details>
+          <details><summary><span class="n">4</span>Are Windows and macOS ready?</summary><p>They work, but are still in beta: the basics are tested, while some features (YubiKey, a menu bar icon on macOS) are still being worked in. On Linux everything is tested.</p></details>
+          <details><summary><span class="n">5</span>How much does it cost?</summary><p>Nothing. Keywarden is GPL-3.0 with open source code, and has no subscriptions or paid features.</p></details>
+        </div>
+      </div>
+      <div class="faq-screen" id="faqScreen" aria-live="polite" data-of="question {n} of {t}"></div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2 class="reveal">Bring your own KeePass file</h2>
+    <p class="sub reveal" style="--d:1">Open the vault you already have, or create a new one in a minute.</p>
+    <div class="cta reveal" style="--d:2"><a class="btn primary" href="#install">Install</a><a class="btn ghost" href="docs/">Documentation</a></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Keywarden · GPL-3.0-or-later · this site loads nothing from third parties</span>
+    <nav aria-label="Links">
+      <a href="docs/">Docs</a>
+      <a href="https://github.com/onokashino/keywarden">GitHub</a>
+      <a href="https://github.com/onokashino/keywarden/releases">Releases</a>
+      <a href="https://github.com/onokashino/keywarden/security">Security</a>
+      <a href="https://github.com/onokashino/keywarden/blob/main/docs/translating.md">Help translate</a>
+    </nav>
+  </div>
+</footer>
+
+<template id="t-launch">› <b>git</b><span class="caret"></span><br><span class="row-hit">GitHub · anna.petrova · 2FA 950 095</span><br>GitLab · deploy<br>Enter: password · Ctrl+U: login · Ctrl+T: code</template>
+<template id="t-copied"><span class="ok">✓ GitHub password copied.</span><br>The clipboard clears in <b data-left>30</b> s.<div class="bar"><i></i></div></template>
+<template id="t-cleared">Clipboard cleared. Again: <b>Shift+P</b>, then <b>Enter</b>.</template>
+<script src="assets/home.js" defer></script>
+</body>
+</html>

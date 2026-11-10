@@ -1,0 +1,6 @@
+RUST_LOG=keywarden_ui=debug ui --launcher
+sleep 3
+wtype t -k Return
+sleep 2
+wtype abc -k Return
+shot dbg-after-enter 2.5

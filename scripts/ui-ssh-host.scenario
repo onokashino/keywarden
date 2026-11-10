@@ -1,0 +1,12 @@
+# раздел «Сервер SSH»: пустой список с переносом из ~/.ssh/config, затем новая запись
+# (подсказки форматов в пустых полях, а не в подписях)
+echo t | $B/kw unlock --password-stdin >/dev/null
+mkdir -p $HOME/.ssh
+printf 'Host prod-api\n  HostName 10.0.0.1\nHost prod-db\n  HostName 10.0.0.2\n' > $HOME/.ssh/config
+ui
+sleep 3
+# тип «Сервер SSH» в боковой панели
+for i in 1 2 3 4 5 6 7 8; do key -M alt -k Down -m alt; done
+shot ssh-host-empty 1.2
+key -M ctrl n -m ctrl
+shot ssh-host-new 1.5

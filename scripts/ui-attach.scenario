@@ -1,0 +1,44 @@
+# просмотр вложений: код с подсветкой, JSON, Markdown, картинка (по одному вложению на запись)
+ui
+shot attach-0 3
+key t -k Return
+sleep 2
+printf '{"name":"keywarden","features":["kdbx","2fa"],"nested":{"ok":true,"n":42}}' > $W/config.json
+printf '# Заметки\n\n- **жирный** пункт\n- `код` в строке\n\n```rust\nfn main() {}\n```\n\n| поле | значение |\n|---|---|\n| логин | octo |\n' > $W/README.md
+cp crates/keywarden-ui/src/brands.rs $W/brands.rs
+grim -g "300,170 360x120" $W/logo.png
+# у записей разные первые вложения: Ctrl+O открывает первое
+$B/kw add --title "A код" -u a >/dev/null; $B/kw attach "A код" $W/brands.rs --name brands.rs >/dev/null
+$B/kw add --title "A json" -u a >/dev/null; $B/kw attach "A json" $W/config.json --name config.json >/dev/null
+$B/kw add --title "A md" -u a >/dev/null; $B/kw attach "A md" $W/README.md --name README.md >/dev/null
+$B/kw add --title "A png" -u a >/dev/null; $B/kw attach "A png" $W/logo.png --name logo.png >/dev/null
+sleep 1.5
+key "A код"
+sleep 1
+key -M alt 2 -m alt
+shot attach-list 1.5
+key -M ctrl o -m ctrl
+shot attach-code 2.5
+key -k Escape
+key -M ctrl a -m ctrl "A json"
+sleep 1
+key -M ctrl o -m ctrl
+shot attach-json 2.5
+key -k Escape
+key -M ctrl a -m ctrl "A md"
+sleep 1
+key -M ctrl o -m ctrl
+shot attach-md 2.5
+key -k Escape
+key -M ctrl a -m ctrl "A png"
+sleep 1
+key -M ctrl o -m ctrl
+shot attach-png 2.5
+key -k Escape
+chromium --headless --no-sandbox --disable-gpu --print-to-pdf=$W/doc.pdf 'data:text/html;charset=utf-8,<h1>Keywarden</h1><p>Проверка просмотра PDF во вложениях.</p><ul><li>страница рисуется pdftoppm</li><li>через stdin и tmpfs</li></ul>' >/dev/null 2>&1
+$B/kw add --title "A pdf" -u a >/dev/null; $B/kw attach "A pdf" $W/doc.pdf --name scan.pdf >/dev/null
+sleep 1
+key -M ctrl a -m ctrl "A pdf"
+sleep 1
+key -M ctrl o -m ctrl
+shot attach-pdf 4

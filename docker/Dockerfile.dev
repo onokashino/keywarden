@@ -1,0 +1,31 @@
+# Образ для сборок и тестов. Arch, как целевая система: свежий keepassxc-cli для тестов совместимости.
+# Запускается через Makefile с лимитом памяти.
+FROM archlinux:latest
+
+# Системные библиотеки GPUI + keepassxc-cli + wl-clipboard и headless sway (тесты буфера) + openssh (тесты агента)
+# + программный Vulkan (lavapipe), grim и шрифты: UI запускается в headless sway и снимается скриншотами
+# + chromium и node: e2e расширения (playwright-core, headless Chromium с настоящим native messaging)
+RUN pacman -Syu --noconfirm --needed \
+      base-devel rustup clang pkgconf fontconfig wayland libxkbcommon libxkbcommon-x11 \
+      libxcb vulkan-icd-loader vulkan-swrast grim wtype noto-fonts chromium nodejs npm openssl zstd keepassxc wl-clipboard openssh git sway \
+    && pacman -Scc --noconfirm
+
+ENV RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo PATH=/opt/cargo/bin:$PATH
+RUN rustup default stable \
+    && rustup target add wasm32-unknown-unknown \
+    && rustup component add clippy rustfmt \
+    && cargo install wasm-bindgen-cli --version 0.2.130 --locked \
+    && rm -rf /opt/cargo/registry \
+    && chmod -R a+rwX /opt/rustup
+
+# pdftoppm: просмотр PDF во вложениях (отдельным слоем, чтобы не пересобирать образ целиком)
+RUN pacman -Syu --noconfirm --needed poppler && pacman -Scc --noconfirm
+
+# Кроссплатформенность: проверка сборки под Windows и macOS (cargo check, без линковки)
+RUN rustup target add x86_64-pc-windows-msvc x86_64-pc-windows-gnu aarch64-apple-darwin \
+    && pacman -Syu --noconfirm --needed mingw-w64-gcc && pacman -Scc --noconfirm \
+    && chmod -R a+rwX /opt/rustup
+
+# zig как C-компилятор под macOS (проверка сборки C-зависимостей вроде ring без Xcode)
+RUN pacman -Syu --noconfirm --needed zig && pacman -Scc --noconfirm
+COPY bin/zigcc-macos /usr/local/bin/zigcc-macos

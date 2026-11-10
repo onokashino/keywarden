@@ -1,0 +1,7 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    // индексы полей формы приходят из классификатора и всегда в пределах inputs
+    "noUncheckedIndexedAccess": false
+  }
+}

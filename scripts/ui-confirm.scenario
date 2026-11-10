@@ -1,0 +1,8 @@
+# окно подтверждения: Enter = только сейчас (10), Ctrl+Enter = всегда (11), Esc = отказ (1)
+$B/keywarden-ui --confirm '{"title":"Сайт github.com просит пароль","text":"Заполнить «GitHub» (octo) на github.com?","allow_always":true}' & CPID=$!
+shot confirm 2.5
+key -M ctrl -k Return -m ctrl
+code=0; wait $CPID || code=$?; echo "Ctrl+Enter → код $code"
+$B/keywarden-ui --confirm '{"title":"t","text":"x"}' & CPID=$!
+sleep 2; key -k Escape
+code=0; wait $CPID || code=$?; echo "Esc → код $code"

@@ -1,0 +1,21 @@
+# синхронизация: массовое удаление с «другого устройства» ставится на паузу, вкладка настроек
+echo t | $B/kw unlock --password-stdin
+for i in 1 2 3 4 5 6 7 8; do $B/kw add --title "Сайт $i" -u user$i --field "Password=pw-$i-Xq9" >/dev/null; done
+ui
+sleep 3
+# другое устройство: копия базы без 7 записей, затем подменяет файл (как Syncthing)
+cp $W/db.kdbx $W/other.kdbx
+for i in 1 2 3 4 5 6 7; do echo t | keepassxc-cli rm -q $W/other.kdbx "/Сайт $i" >/dev/null 2>&1; done
+mv $W/other.kdbx $W/db.kdbx
+sleep 4
+shot sync-flash 0.5
+key -M ctrl -k comma -m ctrl
+sleep 1
+key -M alt 7 -m alt
+shot sync-held 2
+$B/kw sync status
+$B/kw sync reject
+$B/kw sync status
+key -M alt 5 -m alt
+key -M alt 7 -m alt
+shot sync-journal 2

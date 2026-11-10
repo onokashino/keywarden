@@ -1,0 +1,16 @@
+[Unit]
+Description=Keywarden password manager daemon (база %i)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/keywardend --profile %i
+Restart=on-failure
+LimitCORE=0
+LimitMEMLOCK=infinity
+MemorySwapMax=0
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=graphical-session.target

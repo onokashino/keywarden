@@ -1,0 +1,532 @@
+{
+  "extName": {
+    "message": "Keywarden"
+  },
+  "extDescription": {
+    "message": "Password autofill from Keywarden (KeePass)"
+  },
+  "cmd_fill_login": {
+    "message": "Fill username and password"
+  },
+  "err_host_disconnected": {
+    "message": "keywarden-host disconnected"
+  },
+  "client_name": {
+    "message": "Keywarden for $BROWSER$",
+    "placeholders": {
+      "browser": {
+        "content": "$1"
+      }
+    }
+  },
+  "err_connect_failed": {
+    "message": "Could not connect"
+  },
+  "err_not_associated": {
+    "message": "The extension is not connected to Keywarden"
+  },
+  "err_no_host": {
+    "message": "keywarden-host not found"
+  },
+  "err_frames": {
+    "message": "Filling in frames is disabled"
+  },
+  "err_no_tab": {
+    "message": "No active tab"
+  },
+  "err_extension_only": {
+    "message": "Allowed only from the extension window"
+  },
+  "err_password_required": {
+    "message": "Password is required"
+  },
+  "err_outdated": {
+    "message": "The extension did not fully update: click \"Update\" on chrome://extensions"
+  },
+  "toast_otp_inserted": {
+    "message": "2FA code inserted from Keywarden"
+  },
+  "toast_vault_locked_open": {
+    "message": "Keywarden vault is locked: unlock it in the Keywarden window"
+  },
+  "menu_new_password": {
+    "message": "New password · $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_generate_sub": {
+    "message": "Generate a strong password and insert it"
+  },
+  "toast_password_inserted": {
+    "message": "Password inserted. After you sign up, Keywarden will offer to save it"
+  },
+  "menu_otp_title": {
+    "message": "2FA code · $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_otp_sub": {
+    "message": "Insert 2FA code"
+  },
+  "menu_otp_sub_for": {
+    "message": "Insert 2FA code for $USER$",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_no_otp": {
+    "message": "No entries with 2FA for this site"
+  },
+  "menu_choose_account": {
+    "message": "Choose an account · $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_sign_in": {
+    "message": "Sign in · $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "menu_no_logins": {
+    "message": "No entries for this site. Sign in and Keywarden will offer to save the password"
+  },
+  "unlock_keywarden": {
+    "message": "Unlock Keywarden"
+  },
+  "vault_locked": {
+    "message": "Vault is locked"
+  },
+  "toast_no_entries": {
+    "message": "No Keywarden entries for this site"
+  },
+  "username": {
+    "message": "Username"
+  },
+  "password": {
+    "message": "Password"
+  },
+  "show_password": {
+    "message": "Show password"
+  },
+  "hide_password": {
+    "message": "Hide password"
+  },
+  "never_here": {
+    "message": "Never here"
+  },
+  "not_now": {
+    "message": "Not now"
+  },
+  "prompt_update_keywarden": {
+    "message": "Update password in Keywarden?"
+  },
+  "prompt_save_keywarden": {
+    "message": "Save password to Keywarden?"
+  },
+  "no_username": {
+    "message": "no username"
+  },
+  "update": {
+    "message": "Update"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "toast_saved_keywarden": {
+    "message": "Saved to Keywarden"
+  },
+  "toast_never_site": {
+    "message": "Won't offer for $SITE$ again",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_new_password_field": {
+    "message": "No new password field on this page"
+  },
+  "passkey": {
+    "message": "Passkey"
+  },
+  "toast_passkey_locked": {
+    "message": "Keywarden vault is locked: using the browser's regular sign-in"
+  },
+  "kind_login": {
+    "message": "Logins"
+  },
+  "kind_card": {
+    "message": "Cards"
+  },
+  "kind_identity": {
+    "message": "Identities"
+  },
+  "kind_note": {
+    "message": "Notes"
+  },
+  "kind_passkey": {
+    "message": "Passkeys"
+  },
+  "kind_crypto_wallet": {
+    "message": "Crypto wallets"
+  },
+  "copied_username": {
+    "message": "Username copied, the clipboard will clear itself"
+  },
+  "copied_password": {
+    "message": "Password copied, the clipboard will clear itself"
+  },
+  "copied_totp": {
+    "message": "2FA code copied, the clipboard will clear itself"
+  },
+  "address_copied": {
+    "message": "Address copied"
+  },
+  "need_url_password": {
+    "message": "Site address and password are required"
+  },
+  "entry_saved": {
+    "message": "Entry saved to Keywarden"
+  },
+  "strength_excellent": {
+    "message": "excellent"
+  },
+  "strength_strong": {
+    "message": "strong"
+  },
+  "strength_fair": {
+    "message": "fair"
+  },
+  "strength_weak": {
+    "message": "weak"
+  },
+  "strength_bits": {
+    "message": "$STRENGTH$ · $BITS$ bits",
+    "placeholders": {
+      "strength": {
+        "content": "$1"
+      },
+      "bits": {
+        "content": "$2"
+      }
+    }
+  },
+  "err_generator": {
+    "message": "The generator did not respond: update the extension on chrome://extensions"
+  },
+  "password_copied": {
+    "message": "Password copied"
+  },
+  "untitled": {
+    "message": "Untitled"
+  },
+  "fill": {
+    "message": "Fill"
+  },
+  "actions": {
+    "message": "Actions"
+  },
+  "wallet_addresses": {
+    "message": "Wallet addresses"
+  },
+  "copy_username": {
+    "message": "Copy username"
+  },
+  "copy_password": {
+    "message": "Copy password"
+  },
+  "copy_totp": {
+    "message": "Copy 2FA code"
+  },
+  "open_site": {
+    "message": "Open site"
+  },
+  "back": {
+    "message": "Back"
+  },
+  "view_entry": {
+    "message": "View entry"
+  },
+  "vault": {
+    "message": "Vault"
+  },
+  "login_details": {
+    "message": "Login details"
+  },
+  "copy": {
+    "message": "Copy"
+  },
+  "totp_code": {
+    "message": "2FA code"
+  },
+  "no_login_password": {
+    "message": "This entry has no username or password"
+  },
+  "receive_addresses": {
+    "message": "Receiving addresses"
+  },
+  "address": {
+    "message": "Address"
+  },
+  "wallet_hint": {
+    "message": "The seed phrase and wallet keys never reach the extension: they stay in the Keywarden window."
+  },
+  "site": {
+    "message": "Site"
+  },
+  "open": {
+    "message": "Open"
+  },
+  "fill_on_page": {
+    "message": "Fill on page"
+  },
+  "new_entry": {
+    "message": "New entry"
+  },
+  "title": {
+    "message": "Title"
+  },
+  "title_placeholder": {
+    "message": "For example, GitHub"
+  },
+  "username_placeholder": {
+    "message": "Email or username"
+  },
+  "show": {
+    "message": "Show"
+  },
+  "generate": {
+    "message": "Generate"
+  },
+  "new_entry_hint": {
+    "message": "The entry goes to the browser entries folder, you can complete it in the Keywarden app."
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "generator": {
+    "message": "Generator"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "new_short": {
+    "message": "New"
+  },
+  "lock_vault": {
+    "message": "Lock vault"
+  },
+  "search_placeholder": {
+    "message": "Search the vault"
+  },
+  "filters": {
+    "message": "Filters"
+  },
+  "all_types": {
+    "message": "All types"
+  },
+  "all_folders": {
+    "message": "All folders"
+  },
+  "all_tags": {
+    "message": "All tags"
+  },
+  "reset": {
+    "message": "Reset"
+  },
+  "no_connection": {
+    "message": "No connection to Keywarden"
+  },
+  "no_connection_hint": {
+    "message": "Is keywardend running and keywarden-host installed?"
+  },
+  "connect_title": {
+    "message": "Connect the extension"
+  },
+  "connect_hint": {
+    "message": "Keywarden will ask for confirmation in its window."
+  },
+  "connected": {
+    "message": "Connected"
+  },
+  "connect": {
+    "message": "Connect"
+  },
+  "locked_hint": {
+    "message": "Unlock it with your master password or PIN in the Keywarden window."
+  },
+  "unlock": {
+    "message": "Unlock"
+  },
+  "offer_update": {
+    "message": "Update password?"
+  },
+  "offer_save": {
+    "message": "Save password?"
+  },
+  "never_site_done": {
+    "message": "Won't offer for this site again"
+  },
+  "never": {
+    "message": "Never"
+  },
+  "saved": {
+    "message": "Saved"
+  },
+  "for_this_page": {
+    "message": "For this page"
+  },
+  "no_entries_for": {
+    "message": "No entries for $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "add": {
+    "message": "Add"
+  },
+  "found": {
+    "message": "Found"
+  },
+  "all_entries": {
+    "message": "All entries"
+  },
+  "load_failed": {
+    "message": "Could not load entries: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "nothing_found": {
+    "message": "Nothing found"
+  },
+  "no_other_entries": {
+    "message": "No other entries"
+  },
+  "generator_locked_hint": {
+    "message": "Keywarden generates the passwords: unlock the vault and the generator will work."
+  },
+  "gen_colors_hint": {
+    "message": "Digits in blue, symbols in purple"
+  },
+  "another_one": {
+    "message": "Another one"
+  },
+  "inserted_new_password": {
+    "message": "Inserted into the new password field"
+  },
+  "insert_into_field": {
+    "message": "Insert into field"
+  },
+  "passphrase": {
+    "message": "Passphrase"
+  },
+  "length": {
+    "message": "Length"
+  },
+  "shorter": {
+    "message": "Shorter"
+  },
+  "longer": {
+    "message": "Longer"
+  },
+  "set_upper": {
+    "message": "Uppercase"
+  },
+  "set_lower": {
+    "message": "Lowercase"
+  },
+  "set_digits": {
+    "message": "Digits"
+  },
+  "set_symbols": {
+    "message": "Symbols"
+  },
+  "need_one_set": {
+    "message": "At least one set is required"
+  },
+  "no_lookalikes": {
+    "message": "No look-alikes"
+  },
+  "no_lookalikes_hint": {
+    "message": "No l, 1, O, 0 or quotes"
+  },
+  "words": {
+    "message": "Words"
+  },
+  "capitalize": {
+    "message": "Capitalize"
+  },
+  "capitalize_hint": {
+    "message": "Each word starts with a capital letter"
+  },
+  "add_digit": {
+    "message": "Add a digit"
+  },
+  "add_digit_hint": {
+    "message": "For sites that require a digit"
+  },
+  "separator": {
+    "message": "Separator"
+  },
+  "space": {
+    "message": "space"
+  },
+  "section_autofill": {
+    "message": "Autofill"
+  },
+  "pref_icons": {
+    "message": "Icon in fields"
+  },
+  "pref_icons_hint": {
+    "message": "K button in username and password fields"
+  },
+  "pref_menu": {
+    "message": "Account menu on focus"
+  },
+  "pref_menu_hint": {
+    "message": "Site accounts right under the field. When off: only via the K icon"
+  },
+  "pref_offer": {
+    "message": "Offer to save"
+  },
+  "pref_offer_hint": {
+    "message": "After sign-in: save a new password or update the old one"
+  },
+  "pref_otp": {
+    "message": "Insert 2FA code automatically"
+  },
+  "pref_otp_hint": {
+    "message": "After a login is filled, the code on the next step of the same site is inserted right away"
+  },
+  "never_sites": {
+    "message": "Never offer to save"
+  },
+  "never_sites_empty": {
+    "message": "Empty. A site is added here with the \"Never here\" button."
+  },
+  "remove": {
+    "message": "Remove"
+  },
+  "shortcuts": {
+    "message": "Shortcuts"
+  }
+}

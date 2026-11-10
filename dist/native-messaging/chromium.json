@@ -1,0 +1,7 @@
+{
+  "name": "dev.keywarden.host",
+  "description": "Keywarden native messaging host",
+  "path": "/usr/bin/keywarden-host",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://REPLACE_WITH_EXTENSION_ID/"]
+}

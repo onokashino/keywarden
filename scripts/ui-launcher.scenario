@@ -1,0 +1,15 @@
+# лаунчер: заблокирован → пароль → поиск → Enter копирует пароль
+ui --launcher
+shot launcher-locked 3
+key t -k Return
+shot launcher-unlocked 2.5
+key git
+shot launcher-search 1.5
+key -k Down
+shot launcher-down 0.8
+# «github ssh» теперь ключ с хостом: Enter на нём подключается (ui-ssh.scenario); копируем пароль GitHub
+key -k Up
+key -k Return
+sleep 1.5
+echo "буфер: $(wl-paste -n 2>/dev/null | wc -c) символов, совпадает с паролем GitHub: $([ "$(wl-paste -n)" = "s3cr3t-пароль" ] && echo да || echo нет)"
+kill -0 $UPID 2>/dev/null && echo "ОШИБКА: лаунчер ещё жив" || echo "лаунчер закрылся после копирования"

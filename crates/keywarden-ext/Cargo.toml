@@ -1,0 +1,24 @@
+[package]
+name = "keywarden-ext"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Логика расширения браузера (WASM): сопоставление адресов, поиск полей, протокол и шифрование канала"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# версия зафиксирована: wasm-bindgen-cli в Docker-образе должен совпадать байт в байт
+wasm-bindgen = "=0.2.130"
+url = "2"
+psl = "2"
+serde.workspace = true
+serde_json.workspace = true
+crypto_box = { version = "0.9", features = ["std"] }
+data-encoding = "2"
+zeroize = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# OsRng в браузере берёт случайность из crypto.getRandomValues
+getrandom = { version = "0.2", features = ["js"] }

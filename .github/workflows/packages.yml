@@ -1,0 +1,99 @@
+# Пакеты для обновления через менеджеры пакетов, когда черновик релиза опубликован:
+# AUR (keywarden-bin), Homebrew tap (onokashino/homebrew-tap), winget. Канал без секрета
+# пропускается. Настройка: docs/publishing.md, раздел «Обновления».
+name: packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Тег релиза, например v0.1.0
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ inputs.tag || github.event.release.tag_name }}
+
+jobs:
+  aur:
+    runs-on: ubuntu-24.04
+    environment: packages
+    if: ${{ !contains(inputs.tag || github.event.release.tag_name, '-') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: PKGBUILD новой версии
+        id: pkg
+        env:
+          KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -n "$KEY" ] || { echo "::warning::нет AUR_SSH_PRIVATE_KEY, AUR пропущен"; exit 0; }
+          v=${TAG#v}
+          gh release download "$TAG" -p "keywarden-$TAG-linux-x86_64.tar.gz" -D /tmp/rel
+          sum=$(sha256sum /tmp/rel/*.tar.gz | cut -d' ' -f1)
+          sed -i -e "s/^pkgver=.*/pkgver=$v/" -e "s/^pkgrel=.*/pkgrel=1/" \
+                 -e "s/^sha256sums=.*/sha256sums=('$sum')/" packaging/aur/PKGBUILD
+          echo "ok=1" >> "$GITHUB_OUTPUT"
+      - if: steps.pkg.outputs.ok
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        with:
+          pkgname: keywarden-bin
+          pkgbuild: packaging/aur/PKGBUILD
+          assets: packaging/aur/keywarden.install
+          commit_username: onokashino
+          commit_email: onokashino@users.noreply.github.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update to ${{ env.TAG }}
+
+  homebrew:
+    runs-on: ubuntu-24.04
+    environment: packages
+    if: ${{ !contains(inputs.tag || github.event.release.tag_name, '-') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: формула в tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -n "$TAP_TOKEN" ] || { echo "::warning::нет HOMEBREW_TAP_TOKEN, Homebrew пропущен"; exit 0; }
+          v=${TAG#v}
+          gh release download "$TAG" -p "keywarden-$TAG-macos-arm64.tar.gz" -D /tmp/rel
+          sum=$(sha256sum /tmp/rel/*.tar.gz | cut -d' ' -f1)
+          git clone "https://x-access-token:$TAP_TOKEN@github.com/onokashino/homebrew-tap.git" /tmp/tap
+          mkdir -p /tmp/tap/Formula
+          sed -e "s/^  version \".*\"/  version \"$v\"/" -e "s/^  sha256 \".*\"/  sha256 \"$sum\"/" \
+            packaging/homebrew/keywarden.rb > /tmp/tap/Formula/keywarden.rb
+          cd /tmp/tap
+          git config user.name onokashino
+          git config user.email onokashino@users.noreply.github.com
+          git add Formula/keywarden.rb
+          git diff --cached --quiet || { git commit -m "keywarden $v" && git push; }
+
+  winget:
+    runs-on: windows-2022
+    environment: packages
+    if: ${{ !contains(inputs.tag || github.event.release.tag_name, '-') }}
+    steps:
+      - name: есть ли токен
+        id: tok
+        shell: bash
+        env:
+          T: ${{ secrets.WINGET_TOKEN }}
+        run: '[ -n "$T" ] && echo "ok=1" >> "$GITHUB_OUTPUT" || echo "::warning::нет WINGET_TOKEN, winget пропущен"'
+      # обновляет уже существующий пакет; первую версию отправить вручную (docs/publishing.md)
+      - if: steps.tok.outputs.ok
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: onokashino.Keywarden
+          release-tag: ${{ env.TAG }}
+          installers-regex: '-windows-x86_64\.zip$'
+          token: ${{ secrets.WINGET_TOKEN }}

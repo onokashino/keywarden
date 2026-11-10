@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keywarden: пароли, 2FA и ключи SSH в одном файле KeePass</title>
+<meta name="description" content="Keywarden: менеджер паролей для Linux, Windows и macOS на формате KeePass. Лаунчер поверх окон, расширение для браузера, ключи доступа, коды 2FA, SSH-агент. Данные только у вас.">
+<meta property="og:title" content="Keywarden">
+<meta property="og:description" content="Пароли, коды 2FA и ключи SSH в одном файле KeePass. Linux, Windows, macOS.">
+<meta property="og:image" content="https://onokashino.github.io/keywarden/assets/shots/ru/main.webp">
+<meta name="theme-color" content="#17151c">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/">
+<link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/home.css">
+</head>
+<body>
+<a class="skip" href="#main">Перейти к содержимому</a>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="../assets/logo.svg" alt="" width="26" height="26">Keywarden</a>
+    <nav class="nav-links" id="navLinks" aria-label="Разделы">
+      <a href="#tour">Возможности</a>
+      <a href="#security">Безопасность</a>
+      <a href="#compare">Сравнение</a>
+      <a href="#move">Переезд</a>
+      <a href="#install">Установка</a>
+      <a class="only-narrow" href="docs/">Документация</a>
+    </nav>
+    <div class="nav-right">
+      <a class="docs" href="docs/">Документация</a>
+      <a class="gh" href="https://github.com/onokashino/keywarden" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" aria-label="Меню разделов"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="lang" aria-label="Язык">
+        <a href="../" hreflang="en" data-lang="en">EN</a>
+        <a href="./" aria-current="page" data-lang="ru">RU</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Пароли, коды 2FA и&nbsp;ключи SSH <em>в одном файле KeePass</em></h1>
+      <p class="lead">Менеджер паролей для Linux, Windows и macOS. Файл остаётся вашим: его открывают KeePassXC, KeePassDX и KeePassium, а синхронизирует ваша папка, а не наш сервер.</p>
+      <div class="cta">
+        <a class="btn primary" href="#install">Установить</a>
+        <a class="btn ghost" href="#move">Как переехать</a>
+      </div>
+      <div class="trust"><span><b>Бесплатно</b>, GPL-3.0</span><span><b>0</b> серверов Keywarden</span><span><b>KDBX 4</b>, Argon2id</span></div>
+    </div>
+    <div class="rig" id="rig" aria-label="Демо лаунчера: нажмите Shift+P, затем Enter">
+      <div class="row">
+        <div class="key" data-k="Meta" style="--i:0"><span>❖<small>super</small></span></div>
+        <div class="key mid" data-k="Shift" style="--i:1"><span>Shift<small>держать</small></span></div>
+        <div class="key" data-k="P" style="--i:2"><span>P<small>лаунчер</small></span></div>
+        <div class="plus" aria-hidden="true">→</div>
+        <div class="key accent" data-k="Enter" style="--i:3"><span>⏎<small>enter</small></span></div>
+      </div>
+      <div class="screen" id="screen" aria-live="polite">Попробуйте: <b>Shift+P</b>, затем <b>Enter</b>.</div>
+      <div class="hint">Лаунчер открывается поверх любого окна. От нажатия до пароля в буфере меньше полсекунды.</div>
+    </div>
+  </section>
+
+  <section class="show" aria-label="Главное окно">
+    <img src="../assets/shots/ru/main.webp" width="1280" height="800" alt="Главное окно Keywarden: папки и типы записей слева, список посередине, карточка GitHub с кодом 2FA справа">
+  </section>
+
+  <section id="tour">
+    <h2 class="reveal">Что внутри</h2>
+    <p class="sub reveal" style="--d:1">Выберите раздел или нажмите цифру от 1 до 6.</p>
+    <div class="tour-keys reveal" style="--d:2" role="tablist" aria-label="Возможности" data-tabs="tour">
+      <button class="key" role="tab" aria-controls="t-browser"><span>1<small>браузер</small></span></button>
+      <button class="key" role="tab" aria-controls="t-otp"><span>2<small>коды 2fa</small></span></button>
+      <button class="key" role="tab" aria-controls="t-ssh"><span>3<small>ssh</small></span></button>
+      <button class="key" role="tab" aria-controls="t-sync"><span>4<small>синхронизация</small></span></button>
+      <button class="key" role="tab" aria-controls="t-health"><span>5<small>проверка</small></span></button>
+      <button class="key" role="tab" aria-controls="t-launcher"><span>6<small>лаунчер</small></span></button>
+    </div>
+    <div class="tour-panel" id="t-browser" role="tabpanel">
+      <div class="text">
+        <h3>Браузер без сюрпризов</h3>
+        <p>Расширение для Firefox и Chrome заполняет логины, подставляет коды 2FA и сохраняет новые пароли. Ключи доступа (passkeys) хранятся в базе в формате KeePassXC.</p>
+        <ul class="facts"><li>Новый сайт подтверждается в окне Keywarden</li><li>Невидимые поля и чужие фреймы не заполняются</li><li>Генератор прямо в поле регистрации</li></ul>
+        <a class="more" href="docs/#browser">Подробнее о расширении</a>
+      </div>
+      <img src="../assets/shots/ru/confirm.webp" width="1280" height="800" loading="lazy" alt="Окно Keywarden спрашивает, заполнить ли пароль GitHub на github.com">
+    </div>
+    <div class="tour-panel" id="t-otp" role="tabpanel">
+      <div class="text">
+        <h3>Коды 2FA рядом с паролем</h3>
+        <p>Отдельная страница кодов, как в аутентификаторе, и следующий код заранее. Добавить: QR из буфера или картинки, ссылка otpauth или секрет.</p>
+        <ul class="facts"><li>Импорт и экспорт 2FAS</li><li>QR для телефона в одно нажатие</li><li>Ctrl+T копирует код выбранной записи</li></ul>
+        <a class="more" href="docs/#otp">Подробнее о кодах 2FA</a>
+      </div>
+      <img src="../assets/shots/ru/otp.webp" width="1280" height="800" loading="lazy" alt="Страница кодов 2FA: плитки сервисов с шестизначными кодами и таймерами">
+    </div>
+    <div class="tour-panel" id="t-ssh" role="tabpanel">
+      <div class="text">
+        <h3>Ключи и серверы SSH</h3>
+        <p>Встроенный SSH-агент отдаёт ключи из базы ssh, git и IDE, пока база открыта. Серверы с адресом, ProxyJump и port knocking хранятся в базе и едут на другие компьютеры.</p>
+        <ul class="facts"><li>Перенос ~/.ssh и ~/.ssh/config в базу</li><li>kw ssh: выбор сервера в терминале по папкам</li><li>Подпись коммитов git ключом из базы</li></ul>
+        <a class="more" href="docs/#ssh">Подробнее об SSH</a>
+      </div>
+      <img src="../assets/shots/ru/ssh.webp" width="1280" height="800" loading="lazy" alt="Запись ключа SSH: открытый ключ, кнопки добавления на GitHub и GitLab, хосты">
+    </div>
+    <div class="tour-panel" id="t-sync" role="tabpanel">
+      <div class="text">
+        <h3>Синхронизация вашей папкой</h3>
+        <p>Keywarden следит за файлом базы. Правки с телефона или другого компьютера сливаются сами, конфликтные копии Syncthing тоже.</p>
+        <ul class="facts"><li>Слияние по записям, а не по файлу целиком</li><li>Массовое удаление ждёт подтверждения</li><li>Журнал синхронизаций с отменой</li></ul>
+        <a class="more" href="docs/#sync">Подробнее о синхронизации</a>
+      </div>
+      <img src="../assets/shots/ru/sync.webp" width="1280" height="800" loading="lazy" alt="Настройки синхронизации: файл базы в папке Syncthing, слежение и защита от массового удаления">
+    </div>
+    <div class="tour-panel" id="t-health" role="tabpanel">
+      <div class="text">
+        <h3>Проверка паролей</h3>
+        <p>Слабые, повторяющиеся, старые и истёкшие пароли в одном отчёте. Проверка утечек в Have I Been Pwned по кнопке, сами пароли никуда не отправляются.</p>
+        <ul class="facts"><li>Оценка стойкости zxcvbn</li><li>k-анонимность при проверке утечек</li><li>«Исключить из отчётов», как в KeePassXC</li></ul>
+        <a class="more" href="docs/#window">Подробнее о главном окне</a>
+      </div>
+      <img src="../assets/shots/ru/health.webp" width="1280" height="800" loading="lazy" alt="Отчёт проверки паролей: слабые, повторы и старые пароли">
+    </div>
+    <div class="tour-panel" id="t-launcher" role="tabpanel">
+      <div class="text">
+        <h3>Лаунчер поверх всех окон</h3>
+        <p>Горячая клавиша из любого окна: нечёткий поиск, живые коды 2FA, Enter копирует пароль. Автоввод набирает логин и пароль прямо в окно.</p>
+        <ul class="facts"><li>От нажатия до пароля в буфере меньше 0,5 с</li><li>Поиск по всем открытым базам</li><li>Если база заблокирована, сначала спросит пароль</li></ul>
+        <a class="more" href="docs/#launcher">Подробнее о лаунчере</a>
+      </div>
+      <img src="../assets/shots/ru/launcher.webp" width="1280" height="800" loading="lazy" alt="Лаунчер Keywarden поверх рабочего стола: поиск и список записей с кодами 2FA">
+    </div>
+  </section>
+
+  <section id="security">
+    <h2 class="reveal">Что защищено и <em>от&nbsp;чего не спасёт</em></h2>
+    <p class="sub reveal" style="--d:1">Без громких слов: что именно делает Keywarden и где его ответственность заканчивается.</p>
+    <div class="spec">
+      <div class="key" style="--d:0"><span>KDBX 4<small>открытый формат</small></span></div>
+      <div class="key" style="--d:1"><span>Argon2id<small>256 МиБ, около 1 с</small></span></div>
+      <div class="key" style="--d:2"><span>AES-256<small>или ChaCha20</small></span></div>
+      <div class="key" style="--d:3"><span>YubiKey<small>и файл-ключ</small></span></div>
+      <div class="key accent" style="--d:4"><span>0 серверов<small>данные только у вас</small></span></div>
+    </div>
+    <div class="two">
+      <div class="reveal" style="--d:2">
+        <h3><span class="mark yes" aria-hidden="true">✓</span>Защищено</h3>
+        <ul>
+          <li><b>Файл базы целиком</b><span>Украденный ноутбук или утёкшая папка синхронизации дают только зашифрованный файл.</span></li>
+          <li><b>Память и буфер обмена</b><span>Секреты стираются после блокировки, не попадают в своп и дампы, буфер чистится через 30 секунд.</span></li>
+          <li><b>Сайты и программы</b><span>Расширение заполняет только домен записи и только после того, как вы подтвердили новый сайт.</span></li>
+          <li><b>База при сбоях</b><span>Резервная копия перед каждой записью и атомарное сохранение: выдернутое питание не испортит файл.</span></li>
+        </ul>
+      </div>
+      <div class="reveal" style="--d:3">
+        <h3><span class="mark no" aria-hidden="true">!</span>Не спасёт</h3>
+        <ul>
+          <li><b>Забытый мастер-пароль</b><span>Восстановить его не может никто, и мы тоже. Держите копию базы и записанный пароль в надёжном месте.</span></li>
+          <li><b>Вирус в вашей системе</b><span>Программа с вашими правами, запущенная, пока база открыта, может читать то же, что и вы.</span></li>
+          <li><b>Слабый пароль</b><span>Argon2 замедляет подбор, но пароль «123456» не спасёт. Проверка паролей покажет слабые и повторы.</span></li>
+        </ul>
+        <a class="more" href="docs/#security">Модель безопасности целиком</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <h2 class="reveal">Чем отличается</h2>
+    <p class="sub reveal" style="--d:1">Keywarden против каждой из популярных программ, по пунктам, которые можно проверить. Где выигрывает соперник, так и написано.</p>
+    <div class="rival-keys reveal" style="--d:2" role="tablist" aria-label="Сравнить с" data-rivals>
+      <button class="key" role="tab" data-rival="kpxc"><span>KeePassXC<small>тот же файл</small></span></button>
+      <button class="key" role="tab" data-rival="bw"><span>Bitwarden<small>облако, открытый код</small></span></button>
+      <button class="key" role="tab" data-rival="op"><span>1Password<small>облако по подписке</small></span></button>
+    </div>
+    <div class="duel" id="duel">
+      <div class="duel-head"><div></div><div class="us">Keywarden</div><div class="them"><span class="rival on" data-for="kpxc">KeePassXC</span><span class="rival" data-for="bw">Bitwarden</span><span class="rival" data-for="op">1Password</span></div></div>
+      <div class="duel-row" style="--r:0"><div class="label">Где хранятся данные</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>файл у вас</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark yes" aria-hidden="true">✓</span><span>файл у вас</span></div><div class="cell rival" data-for="bw"><span class="mark part" aria-hidden="true">~</span><span>их сервер или свой</span></div><div class="cell rival" data-for="op"><span class="mark part" aria-hidden="true">~</span><span>их сервер</span></div></div></div>
+      <div class="duel-row" style="--r:1"><div class="label">Формат</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>KDBX 4, открытый</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark yes" aria-hidden="true">✓</span><span>KDBX 4, открытый</span></div><div class="cell rival" data-for="bw"><span class="mark part" aria-hidden="true">~</span><span>свой, экспорт в JSON и CSV</span></div><div class="cell rival" data-for="op"><span class="mark part" aria-hidden="true">~</span><span>свой, экспорт в 1PUX и CSV</span></div></div></div>
+      <div class="duel-row" style="--r:2"><div class="label">Цена</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>бесплатно</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark yes" aria-hidden="true">✓</span><span>бесплатно</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>бесплатно, премиум за деньги</span></div><div class="cell rival" data-for="op"><span class="mark part" aria-hidden="true">~</span><span>подписка</span></div></div></div>
+      <div class="duel-row" style="--r:3"><div class="label">Исходный код</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>открыт, GPL-3.0</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark yes" aria-hidden="true">✓</span><span>открыт, GPL</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>открыт</span></div><div class="cell rival" data-for="op"><span class="mark no" aria-hidden="true">✕</span><span>закрыт</span></div></div></div>
+      <div class="duel-row" style="--r:4"><div class="label">Синхронизация</div><div class="cell us-cell"><span class="mark part" aria-hidden="true">~</span><span>ваша папка: Syncthing, Nextcloud, Dropbox</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark part" aria-hidden="true">~</span><span>ваша папка</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>встроенная</span></div><div class="cell rival" data-for="op"><span class="mark yes" aria-hidden="true">✓</span><span>встроенная</span></div></div></div>
+      <div class="duel-row" style="--r:5"><div class="label">Телефон</div><div class="cell us-cell"><span class="mark part" aria-hidden="true">~</span><span>через KeePassDX или KeePassium</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark part" aria-hidden="true">~</span><span>через KeePassDX или KeePassium</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>своё приложение</span></div><div class="cell rival" data-for="op"><span class="mark yes" aria-hidden="true">✓</span><span>своё приложение</span></div></div></div>
+      <div class="duel-row" style="--r:6"><div class="label">Лаунчер поверх окон</div><div class="cell us-cell"><span class="mark yes" aria-hidden="true">✓</span><span>да, из любого окна</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark part" aria-hidden="true">~</span><span>нет, есть автоввод</span></div><div class="cell rival" data-for="bw"><span class="mark no" aria-hidden="true">✕</span><span>нет</span></div><div class="cell rival" data-for="op"><span class="mark yes" aria-hidden="true">✓</span><span>Quick Access</span></div></div></div>
+      <div class="duel-row" style="--r:7"><div class="label">Общий доступ семье или команде</div><div class="cell us-cell"><span class="mark no" aria-hidden="true">✕</span><span>нет</span></div><div><div class="cell rival on" data-for="kpxc"><span class="mark no" aria-hidden="true">✕</span><span>нет</span></div><div class="cell rival" data-for="bw"><span class="mark yes" aria-hidden="true">✓</span><span>есть</span></div><div class="cell rival" data-for="op"><span class="mark yes" aria-hidden="true">✓</span><span>есть</span></div></div></div>
+    </div>
+    <div class="verdict"><div class="key accent" aria-hidden="true"><span>=</span></div><div><p class="rival on" data-for="kpxc"><b>Тот же файл, другой подход.</b> KeePassXC зрелее и проверен годами. Keywarden берёт клавиатурой и мелочами: лаунчер поверх окон, страница кодов 2FA, серверы SSH в базе. Пользоваться можно обоими по очереди.</p><p class="rival" data-for="bw"><b>Берите Bitwarden</b>, если нужен общий доступ семье или команде и своё приложение на телефоне. <b>Keywarden</b>, если не хотите, чтобы база жила на чьём-то сервере.</p><p class="rival" data-for="op"><b>1Password</b> отполирован и умеет делиться паролями, но это подписка, закрытый код и их сервер. <b>Keywarden</b> бесплатен и хранит всё у вас в открытом формате.</p></div></div>
+    <p class="note">Нашли неточность в сравнении: <a href="https://github.com/onokashino/keywarden/issues">напишите в GitHub Issues</a>, поправим.</p>
+  </section>
+
+  <section id="move">
+    <h2 class="reveal">Переезд за <em>три шага</em></h2>
+    <p class="sub reveal" style="--d:1">Можно ничего не переносить: если у вас уже есть база KeePass, просто откройте её. Если пароли в другом менеджере, Keywarden заберёт их сам.</p>
+    <div class="steps">
+      <div class="step reveal" style="--d:2">
+        <div class="key accent" style="--d:0"><span>1</span></div>
+        <h3>Откройте или перенесите базу</h3>
+        <p>Файл .kdbx открывается как есть. Из других менеджеров импорт одной кнопкой, с отчётом, что проверить вручную.</p>
+        <div class="chips"><span>Bitwarden</span><span>1Password</span><span>Proton Pass</span><span>Chrome</span><span>Firefox</span><span>2FAS</span></div>
+      </div>
+      <div class="step reveal" style="--d:3">
+        <div class="key accent" style="--d:1"><span>2</span></div>
+        <h3>Поставьте расширение</h3>
+        <p>Firefox и Chrome: заполняет логины, подставляет коды 2FA, сохраняет новые пароли и ключи доступа. Каждый новый сайт подтверждается в окне Keywarden.</p>
+        <div class="chips"><span>Firefox</span><span>Chrome</span></div>
+      </div>
+      <div class="step reveal" style="--d:4">
+        <div class="key accent" style="--d:2"><span>3</span></div>
+        <h3>Подключите телефон</h3>
+        <p>Положите базу в папку Syncthing, Nextcloud или Dropbox. На телефоне тот же файл откроет KeePassDX или KeePassium, правки с обеих сторон сольются.</p>
+        <div class="chips"><span>Android</span><span>iPhone</span><span>Syncthing</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2 class="reveal">Установка</h2>
+    <p class="sub reveal" style="--d:1">Выберите систему. Обновления приходят через менеджер пакетов вашей системы.</p>
+    <div class="os-keys reveal" style="--d:2" role="tablist" aria-label="Система" data-tabs="os">
+      <button class="key" role="tab" aria-controls="os-linux" data-os="linux"><span>Linux<small>основная</small></span></button>
+      <button class="key" role="tab" aria-controls="os-windows" data-os="windows"><span>Windows<small>бета</small></span></button>
+      <button class="key" role="tab" aria-controls="os-macos" data-os="macos"><span>macOS<small>бета</small></span></button>
+    </div>
+    <div class="os-panel" id="os-linux" role="tabpanel">
+<pre class="term"><span class="c"># Arch Linux, AUR</span>
+<span class="p">$ </span><span data-type>paru -S keywarden-bin</span>
+
+<span class="c"># другие дистрибутивы: архив с GitHub Releases</span>
+<span class="p">$ </span><span data-type>tar xf keywarden-*-linux-x86_64.tar.gz</span></pre>
+      <div>
+        <h3>Linux</h3>
+        <p>Полная поддержка: Wayland, значок в трее, YubiKey, SSH-агент, связка ключей вместо gnome-keyring, автоввод в niri.</p>
+        <a class="btn ghost" href="docs/#install">Как установить и настроить</a>
+      </div>
+    </div>
+    <div class="os-panel" id="os-windows" role="tabpanel">
+<pre class="term"><span class="c"># PowerShell</span>
+<span class="p">&gt; </span><span data-type>winget install onokashino.Keywarden</span></pre>
+      <div>
+        <h3>Windows<span class="badge">бета</span></h3>
+        <p>Окно, лаунчер, расширение браузера, SSH-агент для встроенного OpenSSH, значок в трее и автозапуск. YubiKey пока проверен только на протоколе.</p>
+        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases">Файлы на GitHub Releases</a>
+      </div>
+    </div>
+    <div class="os-panel" id="os-macos" role="tabpanel">
+<pre class="term"><span class="c"># Apple Silicon</span>
+<span class="p">$ </span><span data-type>brew install onokashino/tap/keywarden</span></pre>
+      <div>
+        <h3>macOS<span class="badge">бета</span></h3>
+        <p>Окно, лаунчер, расширение браузера, SSH-агент и автозапуск. Значка в строке меню пока нет.</p>
+        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases">Файлы на GitHub Releases</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="faq-grid">
+      <div>
+        <h2 class="reveal">Частые вопросы</h2>
+        <p class="sub reveal" style="--d:1">Не нашли ответ: <a href="docs/#faq">все вопросы в документации</a> или <a href="https://github.com/onokashino/keywarden/issues">спросите в GitHub</a>.</p>
+        <div class="faq-list reveal" style="--d:2">
+          <details><summary><span class="n">1</span>Моя база из KeePassXC откроется?</summary><p>Да, без конвертации. Keywarden пишет тот же KDBX 4, и KeePassXC продолжает её открывать. Можно пользоваться обоими по очереди.</p></details>
+          <details><summary><span class="n">2</span>Что будет, если я перестану пользоваться Keywarden?</summary><p>Ничего не потеряется: файл остаётся обычной базой KeePass, его откроет любой клиент KeePass. Привязки к нам нет.</p></details>
+          <details><summary><span class="n">3</span>Почему не облако?</summary><p>Чтобы пароли не лежали на чужом сервере, который могут взломать или закрыть. Синхронизацию делает папка, которую вы выбираете сами, и туда попадает только зашифрованный файл.</p></details>
+          <details><summary><span class="n">4</span>Windows и macOS готовы?</summary><p>Работают, но пока в статусе бета: основное проверено, часть функций (YubiKey, значок в строке меню на macOS) ещё обкатывается. На Linux проверено всё.</p></details>
+          <details><summary><span class="n">5</span>Сколько это стоит?</summary><p>Нисколько. Keywarden распространяется под GPL-3.0, исходники открыты, подписок и платных функций нет.</p></details>
+        </div>
+      </div>
+      <div class="faq-screen" id="faqScreen" aria-live="polite" data-of="вопрос {n} из {t}"></div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2 class="reveal">Приходите со своим файлом KeePass</h2>
+    <p class="sub reveal" style="--d:1">Откройте базу, которая у вас уже есть, или создайте новую за минуту.</p>
+    <div class="cta reveal" style="--d:2"><a class="btn primary" href="#install">Установить</a><a class="btn ghost" href="docs/">Документация</a></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Keywarden · GPL-3.0-or-later · сайт ничего не загружает со сторонних ресурсов</span>
+    <nav aria-label="Ссылки">
+      <a href="docs/">Документация</a>
+      <a href="https://github.com/onokashino/keywarden">GitHub</a>
+      <a href="https://github.com/onokashino/keywarden/releases">Релизы</a>
+      <a href="https://github.com/onokashino/keywarden/security">Безопасность</a>
+      <a href="https://github.com/onokashino/keywarden/blob/main/docs/translating.md">Помочь с переводом</a>
+    </nav>
+  </div>
+</footer>
+
+<template id="t-launch">› <b>git</b><span class="caret"></span><br><span class="row-hit">GitHub · anna.petrova · 2FA 950 095</span><br>GitLab · deploy<br>Enter: пароль · Ctrl+U: логин · Ctrl+T: код</template>
+<template id="t-copied"><span class="ok">✓ Пароль GitHub в буфере.</span><br>Буфер очистится через <b data-left>30</b> с.<div class="bar"><i></i></div></template>
+<template id="t-cleared">Буфер очищен. Ещё раз: <b>Shift+P</b>, затем <b>Enter</b>.</template>
+<script src="../assets/home.js" defer></script>
+</body>
+</html>

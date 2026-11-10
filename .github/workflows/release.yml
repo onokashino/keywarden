@@ -1,0 +1,125 @@
+# Релиз по тегу vX.Y.Z: сборка на трёх системах, архивы, расширение, контрольные суммы.
+# Релиз создаётся черновиком: проверить и опубликовать вручную на странице Releases.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Тег, например v0.1.0
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: тег совпадает с версией в Cargo.toml и package.json
+        run: |
+          v=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          e=$(node -p "require('./extension/package.json').version")
+          [ "v$v" = "$TAG" ] || { echo "::error::тег $TAG, а в Cargo.toml $v"; exit 1; }
+          [ "$e" = "$v" ] || { echo "::error::extension/package.json $e, а Cargo.toml $v"; exit 1; }
+
+  build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, name: linux-x86_64 }
+          - { os: windows-2022, name: windows-x86_64 }
+          - { os: macos-14, name: macos-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: ./.github/actions/linux-deps
+        if: runner.os == 'Linux'
+      - name: сборка
+        run: cargo build --release --locked -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui
+      - name: архив
+        shell: bash
+        run: |
+          d=keywarden-$TAG-${{ matrix.name }}
+          mkdir -p "$d"
+          x=; [ "$RUNNER_OS" = Windows ] && x=.exe
+          for b in keywardend kw keywarden-ui keywarden-host; do cp "target/release/$b$x" "$d/"; done
+          cp README.md "$d/"
+          if [ "$RUNNER_OS" = Linux ]; then
+            cp -r dist scripts/install.sh "$d/"
+          fi
+          if [ "$RUNNER_OS" = Windows ]; then
+            7z a -tzip "$d.zip" "$d" >/dev/null
+          else
+            tar czf "$d.tar.gz" "$d"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: keywarden-*.*
+          if-no-files-found: error
+
+  extension:
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.130
+      - run: sh scripts/build-wasm.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - working-directory: extension
+        run: npm ci && npm run zip
+      - name: исходники для AMO (WASM собирается из Rust, нужен весь репозиторий)
+        run: |
+          rm extension/.output/*-sources.zip
+          git archive --format=zip -o "extension/.output/keywarden-$TAG-sources.zip" HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension
+          path: extension/.output/*.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [build, extension]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: черновик релиза
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          sha256sum -- * > SHA256SUMS
+          pre=; case "$TAG" in *-*) pre=--prerelease;; esac
+          gh release create "$TAG" ./* --repo "$GITHUB_REPOSITORY" --draft $pre \
+            --title "Keywarden $TAG" --generate-notes

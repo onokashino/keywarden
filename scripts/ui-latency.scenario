@@ -1,0 +1,15 @@
+# От горячей клавиши до пароля в буфере < 2 с (база уже открыта)
+echo t | $B/kw unlock --password-stdin >/dev/null
+for run in 1 2 3; do
+  printf 'x' | wl-copy
+  : > $W/ui.log
+  start=$(date +%s%N)
+  RUST_LOG=keywarden_ui=debug ui --launcher
+  for i in $(seq 500); do grep -q "лаунчер готов" $W/ui.log && break; sleep 0.005; done
+  ready=$(date +%s%N)
+  wtype -s 120 -k Return
+  for i in $(seq 500); do [ "$(wl-paste -n 2>/dev/null)" != "x" ] && break; sleep 0.005; done
+  end=$(date +%s%N)
+  echo "прогон $run: окно с результатами $(( (ready - start) / 1000000 )) мс, пароль в буфере $(( (end - start) / 1000000 )) мс (из них 120 мс пауза wtype)"
+  wait $UPID 2>/dev/null || true
+done

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Keywarden
+GenericName=Password manager
+GenericName[ru]=Менеджер паролей
+Comment=Password manager on the KeePass format
+Comment[ru]=Менеджер паролей поверх KeePass
+Exec=keywarden-ui
+Icon=dialog-password
+Categories=Utility;Security;
+StartupWMClass=keywarden
+Keywords=password;keepass;2fa;totp;
+Keywords[ru]=password;keepass;2fa;totp;пароль;

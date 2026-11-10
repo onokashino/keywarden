@@ -1,0 +1,15 @@
+# PIN: вкладка «Этот компьютер», блокировка, вход PIN-ом, неверный PIN
+echo t | $B/kw unlock --password-stdin
+ui
+sleep 3
+printf 't\n2468\n' | $B/kw pin --stdin
+key -M ctrl -k comma -m ctrl
+sleep 1
+key -M alt 5 -m alt
+shot pin-device 1.5
+$B/kw lock
+shot pin-locked 2
+key 0000 -k Return
+shot pin-wrong 2
+key 2468 -k Return
+shot pin-ok 2.5

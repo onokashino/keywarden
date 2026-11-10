@@ -1,0 +1,53 @@
+# главное окно: разблокировка, навигация, правка, генератор, новая запись
+ui
+shot main-locked 3
+key t -k Return
+shot main-ready 2.5
+key -M alt -M shift -k Down -m shift -m alt
+shot main-nudge 1.5
+key -M alt -M shift -k Up -m shift -m alt
+sleep 1
+$B/kw autotype GitHub --window "проверка" --sequence "{USERNAME}"
+shot main-autotype 1.5
+key -M ctrl a -m ctrl
+key -k BackSpace
+key -k Down
+shot main-detail 1.5
+key -M ctrl e -m ctrl
+shot main-edit 1.5
+key -k Escape
+sleep 0.5
+key -M ctrl g -m ctrl
+shot main-generator 1.5
+key -k Escape
+sleep 0.5
+key -M ctrl n -m ctrl
+sleep 1
+key "Тестовая запись"
+shot main-new 1
+key -M ctrl s -m ctrl
+shot main-saved 2
+key -M alt -k Down -m alt
+shot main-otp 1.5
+key -M ctrl n -m ctrl
+key "JBSWY3DPEHPK3PXP"
+shot main-otp-wizard 1.5
+key -k Escape
+key -M alt -k Down -m alt
+shot main-health 2
+key -M alt -k Down -m alt
+key -M alt -k Down -m alt
+shot main-filter-card 1.5
+key -M ctrl -k comma -m ctrl
+shot main-settings 1.5
+key -M alt 2 -m alt
+shot main-settings-security 1
+key -M alt 3 -m alt
+shot main-settings-transfer 1
+key -M alt 4 -m alt
+shot main-settings-keyring 1.5
+key -M alt 5 -m alt
+shot main-settings-device 1.5
+key -k Escape
+key -M ctrl -k Tab -m ctrl
+shot main-profile-work 2.5

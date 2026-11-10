@@ -1,0 +1,11 @@
+#!/bin/sh
+# C-компилятор для проверки сборки под macOS из Linux (ring и подобные): zig несёт заголовки macOS.
+# cc-rs передаёт свой --target, zig понимает только -target: свой убираем.
+args=""
+for a in "$@"; do
+  case "$a" in
+    --target=*|-mmacosx-version-min=*) ;;
+    *) args="$args '$(printf %s "$a" | sed "s/'/'\\\\''/g")'" ;;
+  esac
+done
+eval exec zig cc -target aarch64-macos $args

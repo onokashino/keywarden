@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Документация · Keywarden</title>
+<meta name="description" content="Как установить и использовать Keywarden: лаунчер, расширение для браузера, ключи доступа, 2FA, автоввод, SSH-агент, синхронизация, CLI и модель безопасности.">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/docs/">
+<link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/docs/">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Перейти к содержимому</a>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../../assets/logo.svg" alt="" width="28" height="28">Keywarden</a>
+    <nav class="nav-links" aria-label="Основное меню">
+      <a href="../#tour">Возможности</a>
+      <a href="../#security">Безопасность</a>
+      <a href="../#move">Переезд</a>
+      <a href="./" aria-current="page">Документация</a>
+    </nav>
+    <div class="nav-right">
+      <div class="lang" aria-label="Язык">
+        <a href="../../docs/" data-lang="en" hreflang="en">EN</a>
+        <a href="./" aria-current="page" data-lang="ru">RU</a>
+      </div>
+      <a class="btn small" href="https://github.com/onokashino/keywarden"><svg aria-hidden="true"><use href="../../assets/icons.svg#i-code"/></svg>GitHub</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap docs">
+<nav class="side" aria-label="Документация">
+  <div class="group">Начало работы</div>
+  <a href="#overview">Обзор</a>
+  <a href="#install">Установка</a>
+  <a href="#first-vault">Первая база</a>
+  <a href="#unlock">Разблокировка</a>
+  <div class="group">Каждый день</div>
+  <a href="#window">Главное окно</a>
+  <a href="#search">Поиск</a>
+  <a href="#shortcuts">Горячие клавиши</a>
+  <a href="#launcher">Лаунчер</a>
+  <a href="#browser">Расширение для браузера</a>
+  <a href="#passkeys">Ключи доступа</a>
+  <a href="#otp">Коды 2FA</a>
+  <a href="#autotype">Автоввод</a>
+  <a href="#ssh">SSH-агент</a>
+  <div class="group">Ваши данные</div>
+  <a href="#sync">Синхронизация</a>
+  <a href="#import">Импорт и экспорт</a>
+  <a href="#profiles">Несколько баз</a>
+  <a href="#backups">Резервные копии и надёжность</a>
+  <a href="#keyring">Secret Service (Linux)</a>
+  <div class="group">Справочник</div>
+  <a href="#cli">Командная строка kw</a>
+  <a href="#platforms">Поддержка платформ</a>
+  <a href="#security">Модель безопасности</a>
+  <a href="#api">Локальный API</a>
+  <a href="#faq">Вопросы и ответы</a>
+</nav>
+
+<main class="doc" id="main">
+<h1>Документация</h1>
+<p class="lead">Всё, что нужно, чтобы установить Keywarden, перенести в него пароли и пользоваться им каждый день.</p>
+
+<h2 id="overview">Обзор</h2>
+<p>Keywarden состоит из четырёх частей, которые ставятся вместе:</p>
+<ul>
+  <li><b><code>keywardend</code></b>, демон. Он открывает файл <code>.kdbx</code>, держит его разблокированным в памяти, сохраняет изменения, сам блокируется, запускает SSH-агент и общается с браузером.</li>
+  <li><b><code>keywarden-ui</code></b>, главное окно. С флагом <code>--launcher</code> это окно быстрого поиска, которое вызывается горячей клавишей.</li>
+  <li><b><code>kw</code></b>, клиент командной строки: поиск, копирование, добавление, 2FA, импорт, всё можно автоматизировать скриптами.</li>
+  <li><b><code>keywarden-host</code></b> и <b>расширение для браузера</b>: расширение общается с хостом, а хост пересылает зашифрованные сообщения демону.</li>
+</ul>
+<p>Все клиенты общаются с демоном через локальный сокет (Linux, macOS) или именованный канал (Windows). Демон принимает только процессы вашего пользователя. Если демон не запущен, окно запустит его само.</p>
+
+<h2 id="install">Установка</h2>
+<p>Скачайте архив для своей системы из <a href="https://github.com/onokashino/keywarden/releases/latest">последнего релиза</a>. При желании сверьте его с <code>SHA256SUMS</code>.</p>
+<div class="os-tabs">
+  <div class="tabs" role="tablist" aria-label="Система">
+    <button class="tab" role="tab" aria-selected="true" aria-controls="inst-linux" id="t-inst-linux">Linux</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-win" id="t-inst-win">Windows</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-mac" id="t-inst-mac">macOS</button>
+  </div>
+  <div class="panel" id="inst-linux" role="tabpanel" aria-labelledby="t-inst-linux">
+<pre><code>tar xzf keywarden-*-linux-x86_64.tar.gz
+cd keywarden-*-linux-x86_64
+./install.sh</code></pre>
+    <p>Скрипту не нужен root. Он кладёт бинарники в <code>~/.local/bin</code>, ставит пользовательскую службу systemd для демона и запускает её, добавляет ярлык в меню и регистрирует хост браузера для Firefox. Браузерам на основе Chromium нужен id расширения, см. <a href="#browser">Расширение для браузера</a>.</p>
+    <p>Необязательные пакеты: <code>wtype</code> (автоввод на Wayland) или <code>xdotool</code> (автоввод на X11).</p>
+  </div>
+  <div class="panel" id="inst-win" role="tabpanel" aria-labelledby="t-inst-win" hidden>
+    <p>Распакуйте <code>keywarden-*-windows-x86_64.zip</code> в постоянную папку, например <code>%LOCALAPPDATA%\Programs\Keywarden</code>, и запустите <code>keywarden-ui.exe</code>. Демон стартует по требованию.</p>
+    <p>Бинарники пока не подписаны, поэтому SmartScreen один раз переспросит: выберите «Подробнее», затем «Выполнить в любом случае».</p>
+    <p>Зарегистрируйте хост браузера из этой папки:</p>
+<pre><code>.\kw.exe browser-setup</code></pre>
+  </div>
+  <div class="panel" id="inst-mac" role="tabpanel" aria-labelledby="t-inst-mac" hidden>
+<pre><code>tar xzf keywarden-*-macos-arm64.tar.gz
+cd keywarden-*-macos-arm64
+xattr -dr com.apple.quarantine .
+./keywarden-ui</code></pre>
+    <p>Сборки для Apple Silicon пока не нотаризованы, отсюда шаг с <code>xattr</code>. Затем зарегистрируйте хост браузера командой <code>./kw browser-setup</code>.</p>
+  </div>
+</div>
+<h3>Из исходников</h3>
+<p>Нужен Rust 1.92 или новее. На Linux также нужны библиотеки для GPUI (<code>libxkbcommon</code>, <code>wayland</code>, <code>vulkan</code>, <code>fontconfig</code>).</p>
+<pre><code>git clone https://github.com/onokashino/keywarden
+cd keywarden
+cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui</code></pre>
+
+<h3>Обновления</h3>
+<p class="muted">Каналы пакетов заработают с первым релизом.</p>
+<ul>
+  <li><b>Arch Linux</b>: <code>paru -S keywarden-bin</code> (AUR), обновляется вместе с системой.</li>
+  <li><b>macOS</b>: <code>brew install onokashino/tap/keywarden</code>, дальше <code>brew upgrade</code>. Снимать карантин не нужно.</li>
+  <li><b>Windows</b>: <code>winget install onokashino.Keywarden</code>, дальше <code>winget upgrade</code>.</li>
+  <li>На любой системе: включите «Настройки», «Этот компьютер», «Обновления». Раз в сутки Keywarden спросит у GitHub последний релиз (больше ничего не отправляется) и сообщит о новой версии. По умолчанию выключено.</li>
+</ul>
+<p>Расширение из магазина обновляется само.</p>
+
+<h2 id="first-vault">Первая база</h2>
+<p>Запустите <code>keywarden-ui</code>. На первом экране два пути:</p>
+<ul>
+  <li><b>Открыть существующий <code>.kdbx</code></b> из KeePassXC, KeePassDX, KeePassium или KeePass. Ничего не конвертируется: файл по-прежнему читается этими приложениями.</li>
+  <li><b>Создать новую базу</b>: выберите место (синхронизируемая папка подойдёт хорошо), задайте мастер-пароль, при желании добавьте ключевой файл или YubiKey.</li>
+</ul>
+<p>То же самое из терминала:</p>
+<pre><code>kw new ~/Sync/passwords.kdbx          # создать
+kw unlock --db ~/Sync/passwords.kdbx  # открыть; путь запомнится</code></pre>
+<p>Переходите с другого менеджера? См. <a href="#import">Импорт</a>: Bitwarden, 1Password, Proton Pass, Chrome, Firefox и другие.</p>
+
+<h2 id="unlock">Разблокировка</h2>
+<figure><div class="shot" style="max-width:516px"><img src="../../assets/shots/ru/unlock-card.webp" alt="Экран разблокировки с полем мастер-пароля" loading="lazy" width="516" height="306"></div></figure>
+<p>Базу можно защитить мастер-паролем, ключевым файлом, YubiKey (HMAC challenge-response, те же слоты, что в KeePassXC) или любым их сочетанием. Всё это задаётся в <b>Настройки, «Безопасность»</b>, там же их можно поменять позже. Ключевые файлы создаются в формате KeePassXC.</p>
+<p>База блокируется сама после периода бездействия, при блокировке экрана и перед сном компьютера. Заблокировать вручную: <kbd>Ctrl+L</kbd> в окне или <code>kw lock</code>.</p>
+<div class="note">YubiKey пока поддерживается только на Linux.</div>
+
+<h2 id="window">Главное окно</h2>
+<figure><div class="shot"><img src="../../assets/shots/ru/main.webp" alt="Главное окно: боковая панель, список записей, карточка записи" loading="lazy" width="1276" height="771"></div></figure>
+<p>На боковой панели разделы хранилища («Все записи», «Коды 2FA», «Проверка паролей», «Корзина»), <b>типы</b>, <b>папки</b> и <b>теги</b>. Перетащите записи на папку или тег, чтобы переместить их или пометить тегом; «+» рядом с папками и тегами создаёт новую папку или тег.</p>
+<p>Типы записей: <b>«Логин»</b>, <b>«Карта»</b>, <b>«Личная информация»</b>, <b>«Заметка»</b>, <b>«Ключ SSH»</b>, <b>«Ключ доступа»</b> и <b>«Криптокошелёк»</b>. Каждый тип показывает свои поля, но внутри это обычная запись KeePass, так что другие приложения KeePass видят все поля. К любой записи можно добавить свои поля, скрытые поля, вложения и срок действия; каждое изменение попадает в историю записи, и любую старую версию можно восстановить.</p>
+<figure><div class="shot"><img src="../../assets/shots/ru/edit.webp" alt="Редактирование записи карты" loading="lazy" width="1276" height="771"></div><figcaption>Редактирование записи. Тип меняется переключателем рядом с названием.</figcaption></figure>
+
+<h2 id="search">Поиск</h2>
+<p>Строка поиска понимает небольшой язык запросов. Слова нечётко сопоставляются с названием, логином, URL и тегами.</p>
+<div class="table-wrap"><table>
+  <thead><tr><th>Запрос</th><th>Находит</th></tr></thead>
+  <tbody>
+    <tr><td><code>github</code></td><td>записи, где где-либо встречается «github»</td></tr>
+    <tr><td><code>#work</code> или <code>tag:work</code></td><td>записи с этим тегом</td></tr>
+    <tr><td><code>user:octo</code> <code>url:gitlab</code> <code>title:bank</code> <code>notes:pin</code> <code>group:Finance</code></td><td>совпадение в одном поле</td></tr>
+    <tr><td><code>pass:1234</code></td><td>записи, пароль которых содержит этот текст</td></tr>
+    <tr><td><code>is:expired</code> <code>is:otp</code></td><td>просроченные записи, записи с 2FA</td></tr>
+    <tr><td><code>-old</code></td><td>исключает записи, подходящие под «old»</td></tr>
+    <tr><td><code>"exact phrase"</code> <code>/regex/</code></td><td>точная фраза, регулярное выражение</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="shortcuts">Горячие клавиши</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Клавиши</th><th>Действие</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>Ctrl+F</kbd></td><td>поиск</td></tr>
+    <tr><td><kbd>Ctrl+N</kbd></td><td>новая запись</td></tr>
+    <tr><td><kbd>Ctrl+E</kbd> · <kbd>Ctrl+S</kbd> · <kbd>Esc</kbd></td><td>изменить · сохранить · отменить</td></tr>
+    <tr><td><kbd>Ctrl+D</kbd> · <kbd>Shift+Del</kbd></td><td>дублировать · удалить</td></tr>
+    <tr><td><kbd>Ctrl+Shift+C</kbd> · <kbd>Ctrl+U</kbd> · <kbd>Ctrl+T</kbd></td><td>копировать пароль · логин · код 2FA</td></tr>
+    <tr><td><kbd>Ctrl+J</kbd> / <kbd>Ctrl+K</kbd></td><td>следующая / предыдущая запись</td></tr>
+    <tr><td><kbd>Alt+↑</kbd> / <kbd>Alt+↓</kbd></td><td>предыдущий / следующий раздел боковой панели</td></tr>
+    <tr><td><kbd>Ctrl+G</kbd></td><td>генератор паролей</td></tr>
+    <tr><td><kbd>Ctrl+Tab</kbd></td><td>следующая открытая база</td></tr>
+    <tr><td><kbd>Ctrl+,</kbd></td><td>настройки (<kbd>Alt+1</kbd>..<kbd>Alt+6</kbd> переключают вкладки)</td></tr>
+    <tr><td><kbd>Ctrl+L</kbd></td><td>заблокировать</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="launcher">Лаунчер</h2>
+<figure><div class="shot" style="max-width:560px"><img src="../../assets/shots/ru/launcher.webp" alt="Лаунчер: недавние записи из всех открытых баз" loading="lazy" width="698" height="578"></div></figure>
+<p>Лаунчер - это строка поиска поверх всех окон. Наберите пару букв, затем:</p>
+<ul>
+  <li><kbd>Enter</kbd> копирует пароль, <kbd>Ctrl+U</kbd> логин, <kbd>Ctrl+T</kbd> код 2FA;</li>
+  <li><kbd>Esc</kbd> закрывает лаунчер. Если база заблокирована, лаунчер сначала спросит мастер-пароль.</li>
+</ul>
+<p>Скопированное значение скрыто от истории буфера обмена и облачного буфера и очищается через 30 секунд, но только если оно всё ещё в буфере. Если открыто несколько баз, лаунчер ищет по всем.</p>
+<h3>Назначение горячей клавиши</h3>
+<p>Лаунчер запускается командой <code>keywarden-ui --launcher</code>. Назначьте её на клавишу в своей системе:</p>
+<div class="os-tabs">
+  <div class="tabs" role="tablist" aria-label="Рабочий стол">
+    <button class="tab" role="tab" aria-selected="true" aria-controls="hk-niri" id="t-hk-niri">niri</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="hk-de" id="t-hk-de">GNOME, KDE, Sway</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="hk-win" id="t-hk-win">Windows</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="hk-mac" id="t-hk-mac">macOS</button>
+  </div>
+  <div class="panel" id="hk-niri" role="tabpanel" aria-labelledby="t-hk-niri">
+    <p>Скопируйте <code>dist/niri/keywarden.kdl</code> рядом с конфигом niri и добавьте <code>include "keywarden.kdl"</code>. Там назначено:</p>
+<pre><code>Mod+Shift+P { spawn "keywarden-ui" "--launcher"; }   // лаунчер
+Mod+Shift+A { spawn "kw" "autotype"; }               // автоввод
+Mod+Shift+Alt+L { spawn "kw" "lock"; }               // блокировка</code></pre>
+  </div>
+  <div class="panel" id="hk-de" role="tabpanel" aria-labelledby="t-hk-de" hidden>
+    <p><b>GNOME</b>: «Параметры», «Клавиатура», «Просмотр и настройка комбинаций клавиш», «Пользовательские комбинации», добавьте <code>keywarden-ui --launcher</code>.</p>
+    <p><b>KDE Plasma</b>: «Параметры системы», «Комбинации клавиш», «Добавить», «Команда или сценарий».</p>
+    <p><b>Sway</b>: <code>bindsym $mod+Shift+p exec keywarden-ui --launcher</code></p>
+  </div>
+  <div class="panel" id="hk-win" role="tabpanel" aria-labelledby="t-hk-win" hidden>
+    <p>Создайте ярлык <code>keywarden-ui.exe</code> на рабочем столе или в меню «Пуск», откройте его свойства, укажите объект <code>keywarden-ui.exe --launcher</code> и выберите клавишу в поле «Быстрый вызов», например <kbd>Ctrl+Alt+K</kbd>.</p>
+  </div>
+  <div class="panel" id="hk-mac" role="tabpanel" aria-labelledby="t-hk-mac" hidden>
+    <p>В приложении «Команды» создайте команду с действием «Запуск скрипта оболочки» <code>/path/to/keywarden-ui --launcher</code>, затем назначьте ей сочетание клавиш в её свойствах.</p>
+  </div>
+</div>
+<p>В настройках на вкладке <b>«Этот компьютер»</b> есть точные инструкции для вашей системы.</p>
+
+<h2 id="browser">Расширение для браузера</h2>
+<p>Расширение заполняет логины, предлагает выбрать аккаунт, если их несколько, подставляет коды 2FA, предлагает сохранить новые и изменённые пароли и подсказывает сгенерированный пароль в формах регистрации. Невидимые поля и фреймы оно никогда не заполняет.</p>
+<h3>Установка</h3>
+<ol>
+  <li>Установите расширение. Пока его нет в магазинах, используйте zip из релиза: в браузерах на основе Chromium откройте <code>chrome://extensions</code>, включите режим разработчика и загрузите распакованную папку; в Firefox откройте <code>about:debugging</code> и загрузите его как временное дополнение.</li>
+  <li>Зарегистрируйте хост, чтобы браузер мог достучаться до Keywarden. Установщик на Linux делает это сам; в остальных случаях выполните <code>kw browser-setup</code>. Для браузеров на основе Chromium передайте id расширения со страницы <code>chrome://extensions</code>: <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</li>
+  <li>Нажмите значок Keywarden на панели браузера и кнопку <b>«Подключить»</b>. Подтвердите в окне Keywarden.</li>
+</ol>
+<h3>Подтверждения</h3>
+<figure><div class="shot" style="max-width:560px"><img src="../../assets/shots/ru/confirm.webp" alt="Окно подтверждения заполнения логина на github.com" loading="lazy" width="658" height="228"></div></figure>
+<p>Когда сайт впервые запрашивает логин, Keywarden показывает подтверждение поверх всех окон: <kbd>Enter</kbd> разрешает один раз, <kbd>Ctrl+Enter</kbd> всегда для этого сайта, <kbd>Esc</kbd> отказывает. Сайты сопоставляются по регистрируемому домену с помощью Public Suffix List, поэтому у <code>login.example.com</code> и <code>example.com</code> общие логины, а у <code>example.co.uk</code> и <code>other.co.uk</code> нет.</p>
+<p>Браузер и Keywarden общаются по зашифрованному каналу (та же схема crypto_box, что в KeePassXC-Browser); хост между ними лишь пересылает непрозрачные сообщения. Любое автоматическое поведение можно отключить в настройках расширения.</p>
+<p>Горячая клавиша в браузере: <kbd>Ctrl+Shift+L</kbd> заполняет логин на текущей странице.</p>
+
+<h2 id="passkeys">Ключи доступа</h2>
+<p>Когда сайт предлагает создать ключ доступа (passkey), расширение перехватывает запрос и сохраняет ключ в вашей базе в формате KeePassXC (поля <code>KPEX_PASSKEY_*</code>), так что KeePassXC может пользоваться теми же ключами. Вход по ключу доступа требует подтверждения, как и любой другой вход. Ключи используют ES256, которого требует почти любой сайт; в остальных случаях работает встроенный WebAuthn браузера.</p>
+
+<h2 id="otp">Коды 2FA</h2>
+<figure><div class="shot"><img src="../../assets/shots/ru/otp.webp" alt="Страница кодов 2FA" loading="lazy" width="1276" height="771"></div></figure>
+<p>Раздел <b>«Коды 2FA»</b> работает как приложение-аутентификатор: живые коды с обратным отсчётом, следующий код ближе к концу периода, копирование щелчком.</p>
+<ul>
+  <li>Код можно добавить из секрета, ссылки <code>otpauth://</code>, QR в буфере обмена или картинки с QR. Сделайте скриншот QR сочетанием <kbd>Win+Shift+S</kbd> в Windows или <kbd>Cmd+Ctrl+Shift+4</kbd> в macOS, затем добавьте его из буфера.</li>
+  <li>Покажите QR, чтобы перенести код на телефон.</li>
+  <li>Импорт и экспорт резервных копий <code>.2fas</code> (незашифрованных).</li>
+  <li>Поддерживаются коды Steam Guard и старые поля KeePass <code>TOTP Seed</code>.</li>
+</ul>
+<pre><code>kw totp github -c     # скопировать текущий код
+kw otp qr github      # показать QR в терминале</code></pre>
+
+<h2 id="autotype">Автоввод</h2>
+<p>Автоввод печатает в активное окно: по умолчанию логин, <kbd>Tab</kbd>, пароль, <kbd>Enter</kbd>. У записи может быть своя последовательность в синтаксисе KeePass, например <code>{USERNAME}{TAB}{TAB}{PASSWORD}{ENTER}</code>, и привязки к окнам, которые выбирают нужную запись по заголовку окна. Перед вводом Keywarden проверяет, что окно в фокусе не сменилось.</p>
+<pre><code>kw autotype           # запись для активного окна
+kw autotype github    # конкретная запись</code></pre>
+<div class="table-wrap"><table>
+  <thead><tr><th>Система</th><th>Чем печатает</th></tr></thead>
+  <tbody>
+    <tr><td>niri</td><td><code>wtype</code>, активное окно сообщает niri</td></tr>
+    <tr><td>Sway, другие wlroots</td><td><code>wtype</code>; запись выбирается в лаунчере</td></tr>
+    <tr><td>X11</td><td><code>xdotool</code></td></tr>
+    <tr><td>GNOME на Wayland</td><td>невозможно: GNOME не позволяет приложениям печатать в чужие окна</td></tr>
+    <tr><td>Windows</td><td>SendInput</td></tr>
+    <tr><td>macOS</td><td>нужно разрешение «Универсальный доступ», а для чтения заголовков окон ещё и «Запись экрана»</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="ssh">SSH-агент</h2>
+<p>Keywarden работает как SSH-агент: ключи лежат в записях типа «Ключ SSH», агент отдаёт их, пока база открыта, и забывает при блокировке. Приватный ключ на диск не попадает. Всё собрано на вкладке «Настройки», «SSH»: сверху состояние агента и кнопка «Подключить ко всем программам», ниже ключи, что ещё лежат на диске, серверы из <code>~/.ssh/config</code> и поведение. Каждая часть выключается там же.</p>
+<h3>Как завести ключ</h3>
+<ul>
+  <li><b>Создать</b>: «Новая запись», «Ключ SSH», вкладка «Создать». Алгоритм: Ed25519 (рекомендуется), ECDSA P-256 или RSA 4096 для старых серверов. Получится ключ и его открытый ключ с кнопками «Скопировать», «Добавить на GitHub» и «GitLab». Из терминала: <code>kw ssh-generate --title GitHub --host github.com</code> (<code>-t ecdsa</code>, <code>-t rsa</code>).</li>
+  <li><b>Добавить существующий</b>: вкладка «Добавить существующий» показывает ключи из <code>~/.ssh</code>, которых ещё нет в базе, их можно выбрать щелчком. Можно выбрать файл или вставить текст ключа; для ключа с паролем появится поле пароля. Или <code>kw ssh-import ~/.ssh/id_ed25519 --host github.com</code>.</li>
+  <li><b>Перенести всё из ~/.ssh</b>: карточка «Ключи на диске» на вкладке SSH, кнопка «Перенести в базу…»: в окне отмечаете нужные ключи и решаете, удалить ли приватные файлы (<code>.pub</code> остаются). Или <code>kw ssh-migrate --import [--delete]</code>.</li>
+</ul>
+<h3>Для всех программ</h3>
+<p>Нажмите «Подключить ко всем программам» (или <code>kw ssh-setup</code>): Keywarden пропишет <code>SSH_AUTH_SOCK</code> в окружение сессии, и после следующего входа агента увидят ssh, git, IDE и git-клиенты. В Linux это <code>~/.config/environment.d</code>, в macOS LaunchAgent, в Windows пользовательская переменная. В настройках видно, работает ли это или переменную перехватил другой агент (например, gcr-ssh-agent в GNOME). В уже открытых терминалах:</p>
+<pre><code># bash, zsh
+eval "$(kw ssh-env)"
+# fish
+kw ssh-env | source
+# PowerShell
+kw ssh-env | Invoke-Expression</code></pre>
+<h3>Свой ключ для каждого сервера</h3>
+<p>Впишите сервер в поле «Хост» ключа (<code>github.com</code>, <code>git@host</code>, <code>ssh://user@host:2222</code>, несколько через запятую) и включите «Серверы в ssh» (<code>kw ssh-setup --hosts</code>). Keywarden ведёт <code>~/.ssh/keywarden/config</code> с <code>IdentitiesOnly yes</code> для каждого хоста и подключает его к <code>~/.ssh/config</code> одной строкой. ssh предлагает серверу ровно один ключ, а не перебирает все, и ошибка «Too many authentication failures» уходит.</p>
+<h3>Серверы SSH в базе: настройки едут на все компьютеры</h3>
+<p>Запись «Сервер SSH» хранит то, что обычно лежит в <code>~/.ssh/config</code>: адрес (<code>user@host:port</code>), каким ключом из базы входить, ProxyJump, проброс портов (<code>8080, 5432:db:5432</code>), любые другие строки ssh_config через <code>;</code> и последовательность port knocking. Записи синхронизируются вместе с базой, а при включённых «Серверах в ssh» Keywarden пишет из них блоки <code>Host</code> в <code>~/.ssh/keywarden/config</code>, так что <code>ssh prod</code>, scp, rsync, git и IDE видят их как обычные хосты. Ваш <code>~/.ssh/config</code> не меняется (кроме одной строки Include), и при одинаковом имени побеждает запись из базы.</p>
+<p>Перенести то, что уже есть: карточка «Серверы из ~/.ssh/config» на вкладке SSH (в окне видно, какой хост в какую папку и с каким ключом попадёт, лишние снимаются галочкой) или <code>kw ssh-import-config</code>. Каждый <code>Host</code> без масок станет записью в папке «SSH», с теми же автопапками, что в <code>kw ssh</code>. IdentityFile, который уже есть в базе (сравнивается открытый ключ), заменяется ссылкой на запись; если ключа в базе нет, строка IdentityFile остаётся в «других строках». Перенесённые раньше хосты пропускаются.</p>
+<p><b>Port knocking.</b> Впишите порты в поле «Port knocking»: <code>7000 8000:udp 9000</code> (без <code>:udp</code> это tcp). Keywarden добавит в конфиг <code>Match originalhost prod exec "kw knock prod"</code>: ssh сам вызовет стук перед соединением, и для scp и rsync тоже. Последовательность лежит в базе зашифрованной и в файлы не пишется; пока база заблокирована, стук не выполнится. <code>kw knock prod</code> можно вызвать и вручную, а <code>kw ssh</code> стучит сам, даже когда «Серверы в ssh» выключены.</p>
+<h3>База заблокирована</h3>
+<p>Если ssh нужен ключ, а база заблокирована, Keywarden покажет окно разблокировки; после ввода пароля <code>git push</code> продолжится сам.</p>
+<h3>Подтверждения</h3>
+<p>Ключ может спрашивать перед каждым использованием. Окно пишет, куда идёт вход, например «Вход на github.com ключом "GitHub"» (OpenSSH 8.9+), предупреждает, если запрос пришёл через проброс агента, и предлагает «Разрешить на 15 мин», чтобы серия <code>git fetch</code> не спрашивала каждый раз. Блокировка базы это разрешение отменяет.</p>
+<h3>Подпись коммитов git</h3>
+<p>Переключатель «Подписывать этим ключом коммиты и теги git» в записи ключа (или <code>kw ssh-git-sign GitHub</code>) настраивает git подписывать через агент; GitHub и GitLab показывают такие коммиты как Verified. Выключение убирает настройки обратно.</p>
+<h3>Выбор сервера в терминале: kw ssh</h3>
+<p><code>kw ssh</code> открывает в терминале две панели: слева папки, справа хосты, внизу подробности выбранного (ключ, ProxyJump, команда). Папки базы берутся как есть, хосты из <code>~/.ssh/config</code> раскладываются сами по общему началу имени (<code>prod-api</code>, <code>prod-db</code> попадут в «prod») или по домену. Приватные ключи <code>kw ssh</code> не читает. Клавиши: <kbd>Enter</kbd> войти в этом терминале, <kbd>o</kbd> открыть в новом окне, <kbd>s</kbd> sftp, <kbd>f</kbd> проброс порта, <kbd>c</kbd> скопировать команду, <kbd>e</kbd> и <kbd>n</kbd> изменить адрес или добавить его ключу из базы, <kbd>/</kbd> поиск по всем папкам, <kbd>?</kbd> все клавиши. <code>kw ssh prod</code> сразу подключится, если совпадение одно; <code>kw ssh --list</code> печатает список для скриптов. Если база заблокирована, <code>kw ssh</code> спросит мастер-пароль.</p>
+<pre><code> Keywarden SSH   / поиск
+╭ Папки ───────────────────╮╭ prod ───────────────────────────────╮
+│◆ Все хосты            9  ││› prod-api   deploy@10.0.1.5        │
+│• Работа               2  ││  prod-db    root@10.0.1.9:2222     │
+│▾ ~/.ssh/config        7  ││                                    │
+│    prod               2  ││                                    │
+│    web                3  ││                                    │
+╰──────────────────────────╯╰────────────────────────────────────╯
+╭────────────────────────────────────────────────────────────────╮
+│prod-api  deploy@10.0.1.5                                       │
+│ключ: id_work  •  через bastion                                 │
+│~/.ssh/config / prod, только чтение  •  ssh prod-api            │
+╰────────────────────────────────────────────────────────────────╯
+ Enter войти  o в новом окне  c команда  / поиск  ? все клавиши</code></pre>
+<h3>Подключение из лаунчера</h3>
+<p>Найдите в лаунчере ключ SSH с хостом и нажмите <kbd>Enter</kbd>: откроется терминал с <code>ssh</code> на этот сервер. Keywarden находит ghostty, kitty, foot, alacritty, WezTerm, GNOME Terminal, Konsole или xterm (в macOS Terminal, в Windows Windows Terminal); выбрать другой можно на вкладке SSH, строка «Терминал».</p>
+<p>Поддерживаются ключи ed25519, ECDSA и RSA; записи хранят настройки KeeAgent, так что KeePassXC видит те же ключи.</p>
+
+<h2 id="sync">Синхронизация</h2>
+<figure><div class="shot"><img src="../../assets/shots/ru/sync.webp" alt="Настройки синхронизации" loading="lazy" width="1276" height="771"></div></figure>
+<p>Keywarden синхронизируется через файлы. Положите базу в папку, которую синхронизирует Syncthing, Nextcloud, Dropbox или что угодно ещё, и откройте тот же файл на телефоне в KeePassDX (Android) или KeePassium (iOS).</p>
+<p>Если файл меняется на диске, пока база открыта, Keywarden сливает изменения по записям: более новые правки побеждают, удаления учитываются, ничего не теряется молча. Конфликтные копии Syncthing сливаются и автоматически переносятся в резервные копии, а вы получаете уведомление. Если слияние удалило бы сразу много записей, Keywarden сначала спросит.</p>
+
+<h2 id="import">Импорт и экспорт</h2>
+<p>В <b>Настройки, «Перенос»</b> или из командной строки:</p>
+<ul>
+  <li><b>Импорт</b>: Bitwarden (JSON и CSV), 1Password, Proton Pass, CSV из Chrome, Firefox и KeePassXC, другой <code>.kdbx</code> или старый <code>.kdb</code>, резервные копии 2FAS. В конце вы получите отчёт: что перенесено и что нужно проверить вручную.</li>
+  <li><b>Экспорт</b>: CSV в формате KeePassXC, копия базы с другим паролем, резервная копия кодов <code>.2fas</code>.</li>
+  <li><b>Слияние</b> с другой копией той же базы.</li>
+</ul>
+<pre><code>kw import bitwarden_export.json
+kw export ~/backup.kdbx -f kdbx
+kw merge ~/old-laptop.kdbx</code></pre>
+
+<h2 id="profiles">Несколько баз</h2>
+<p>У каждой базы свой демон, это называется профилем. Переключаться между открытыми базами можно селектором вверху боковой панели или <kbd>Ctrl+Tab</kbd>; лаунчер ищет по всем.</p>
+<pre><code>kw profile-add work ~/Work/work.kdbx
+kw --profile work unlock
+kw profiles</code></pre>
+<p>На Linux каждый профиль - отдельный юнит systemd: <code>systemctl --user start keywardend@work</code>.</p>
+
+<h2 id="backups">Резервные копии и надёжность</h2>
+<ul>
+  <li>Перед каждым сохранением предыдущий файл остаётся резервной копией (хранятся несколько последних).</li>
+  <li>Сохранение идёт во временный файл, который снова расшифровывается и сверяется с тем, что в памяти, и только потом атомарно заменяет оригинал.</li>
+  <li>Если другое приложение изменило файл после открытия, Keywarden сливает изменения, а не перезаписывает.</li>
+  <li>Старые файлы KDBX 3.1 и 4.0 при первом сохранении обновляются до 4.1, который читают KeePassXC 2.7+ и актуальные мобильные приложения.</li>
+</ul>
+
+<h2 id="keyring">Secret Service (Linux)</h2>
+<p>Keywarden может заменить gnome-keyring или KWallet в роли системной связки ключей (<code>org.freedesktop.secrets</code>): приложения, которые хранят токены в связке ключей, будут держать их в вашей базе, в отдельной папке, а Keywarden спросит, прежде чем приложение прочитает секрет.</p>
+<ol>
+  <li>В <b>Настройки, «Связка ключей»</b> нажмите «Перенести из текущей связки».</li>
+  <li>Отключите компонент secrets в gnome-keyring и перезапустите <code>keywardend</code>. Keywarden никогда не захватывает имя силой.</li>
+</ol>
+
+<h2 id="cli">Командная строка kw</h2>
+<p><code>kw --help</code> и <code>kw &lt;command&gt; --help</code> описывают все параметры. Самые ходовые команды:</p>
+<pre><code>kw unlock [--db PATH] [-k KEYFILE]     kw lock     kw status
+kw search QUERY                        kw show QUERY [-r]
+kw copy QUERY [-f password|username|totp|FIELD]
+kw totp QUERY [-c]                     kw generate [-l 24] [-p -w 6] [-c]
+kw add -t login|card|identity|note|ssh-key|ssh-host --title ...
+kw edit ...   kw rm ...   kw dup ...   kw mv ...   kw tags
+kw groups     kw mkgroup A/B           kw attach / kw attachment
+kw health [--breaches]                 kw icon QUERY
+kw import FILE   kw export PATH [-f csv|kdbx|2fas]   kw merge FILE.kdbx
+kw ssh-import FILE [--confirm]         kw ssh-env
+kw ssh-import-config                   kw knock NAME
+kw otp set|scan|qr                     kw autotype [QUERY]
+kw passwd [-k KEYFILE]   kw keyfile PATH   kw db-settings [--tune]
+kw profiles   kw profile-add NAME FILE.kdbx   kw --profile NAME ...
+kw browser-setup [--chrome-id ID]      kw new PATH</code></pre>
+
+<h2 id="platforms">Поддержка платформ</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Возможность</th><th>Linux</th><th>Windows</th><th>macOS</th></tr></thead>
+  <tbody>
+    <tr><td>Окно, лаунчер, kw, расширение, синхронизация</td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td></tr>
+    <tr><td>Лаунчер поверх всех окон</td><td><span class="pill ok">Да</span><small>layer-shell на niri, Sway, KDE; в остальных окружениях окно по центру</small></td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td></tr>
+    <tr><td>Буфер обмена скрыт от истории</td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td></tr>
+    <tr><td>Автоввод</td><td><span class="pill part">Почти везде</span><small>кроме GNOME на Wayland</small></td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td></tr>
+    <tr><td>Блокировка при блокировке экрана и сне</td><td><span class="pill ok">Да</span><small>systemd-logind</small></td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td></tr>
+    <tr><td>SSH-агент</td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td><td><span class="pill ok">Да</span></td></tr>
+    <tr><td>YubiKey</td><td><span class="pill ok">Да</span></td><td><span class="pill part">Бета</span><small>через системный HID</small></td><td><span class="pill part">Бета</span><small>через системный HID</small></td></tr>
+    <tr><td>Значок в трее</td><td><span class="pill ok">Да</span><small>KDE, waybar, noctalia; в GNOME нужно расширение AppIndicator</small></td><td><span class="pill ok">Да</span></td><td><span class="pill no">Пока нет</span></td></tr>
+    <tr><td>Запуск при входе в систему</td><td><span class="pill ok">Да</span><small>служба systemd</small></td><td><span class="pill ok">Да</span><small>автозагрузка Windows</small></td><td><span class="pill ok">Да</span><small>LaunchAgent</small></td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="security">Модель безопасности</h2>
+<p><b>От чего Keywarden защищает:</b> от других пользователей на компьютере, сайтов, других расширений браузера, вредоносных программ, которые читают файлы, но не могут запускаться от вашего имени, от истории буфера обмена и облачного буфера, аварийных дампов, свопа, а также от потери данных при сбоях и конфликтах синхронизации.</p>
+<ul>
+  <li>Файл базы использует шифрование KDBX 4 (AES-256 или ChaCha20, вывод ключа Argon2 с настройкой под ваш компьютер).</li>
+  <li>Расшифрованные данные живут только в демоне. Секреты обнуляются после использования и никогда не попадают в логи.</li>
+  <li>Демон отключает дампы памяти и подключение отладчика (<code>PR_SET_DUMPABLE</code> и <code>RLIMIT_CORE</code> на Linux, <code>PT_DENY_ATTACH</code> на macOS, без дампов WER на Windows) и блокирует свою память там, где это разрешено.</li>
+  <li>Локальные сокеты имеют права <code>0600</code> и проверяют uid собеседника; именованные каналы Windows сверяют SID пользователя клиента и отклоняют удалённых клиентов.</li>
+  <li>Канал с браузером зашифрован из конца в конец; каждый новый сайт подтверждаете вы.</li>
+  <li>В сеть приложение выходит только по запросу: проверка через Have I Been Pwned с k-анонимностью (компьютер покидают только 5 символов хеша SHA-1) и загрузка иконки сайта.</li>
+</ul>
+<p><b>От чего не защищает:</b> от вредоносной программы, которая уже запущена от вашего пользователя, пока база разблокирована. Она может читать экран, клавиатуру и память процессов; ни один локальный менеджер паролей этому не помешает. Блокируйте базу, когда отходите от компьютера.</p>
+<p>Нашли проблему? Пожалуйста, сообщите о ней приватно, см. <a href="https://github.com/onokashino/keywarden/security">SECURITY</a>.</p>
+
+<h2 id="api">Локальный API</h2>
+<p>Отдельный сокет позволяет ассистентам и скриптам работать с базой, никогда не видя секретов: получать список записей, класть секрет в буфер обмена или создавать запись из буфера. Протокол: одна строка JSON на запрос; см. <a href="https://github.com/onokashino/keywarden/blob/main/docs/local-api.md">docs/local-api.md</a>.</p>
+
+<h2 id="faq">Вопросы и ответы</h2>
+<h3>Можно продолжать пользоваться KeePassXC?</h3>
+<p>Да. Оба приложения читают и пишут один и тот же файл, даже одновременно: Keywarden сливает изменения, которые KeePassXC вносит, пока база открыта.</p>
+<h3>Где хранятся настройки?</h3>
+<p>Linux: <code>~/.config/keywarden</code>. macOS: <code>~/Library/Application Support/Keywarden</code>. Windows: <code>%APPDATA%\Keywarden</code>.</p>
+<h3>Есть ли мобильное приложение?</h3>
+<p>Пока нет. Используйте KeePassDX на Android или KeePassium на iOS с тем же синхронизируемым файлом.</p>
+<h3>Как сменить язык?</h3>
+<p>«Настройки», «Общие», «Язык интерфейса»: как в системе или любой из доступных. Окно переключается сразу, фоновая служба после перезапуска. Расширение браузера следует языку браузера.</p>
+<h3>Можно помочь с переводом?</h3>
+<p>Да, будем рады. Новый язык добавляется без правок кода, и даже частичный перевод полезен: непереведённое показывается по-английски. Инструкция: <a href="https://github.com/onokashino/keywarden/blob/main/docs/translating.md">docs/translating.md</a>.</p>
+</main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Keywarden · GPL-3.0-or-later</span>
+    <a href="../">Главная</a>
+    <a href="https://github.com/onokashino/keywarden">GitHub</a>
+    <a href="https://github.com/onokashino/keywarden/releases">Релизы</a>
+    <span class="spacer"></span>
+    <a href="https://github.com/onokashino/keywarden/edit/main/site/ru/docs/index.html">Редактировать страницу</a>
+  </div>
+</footer>
+<script src="../../assets/site.js" defer></script>
+</body>
+</html>

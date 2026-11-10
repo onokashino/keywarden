@@ -1,0 +1,66 @@
+# Отправка расширения в магазины, когда черновик релиза опубликован.
+# Магазин без секретов пропускается. Как получить секреты: site/docs (раздел для разработчиков)
+# и CONTRIBUTING.md.
+name: extension-stores
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Тег релиза, например v0.1.0
+        required: true
+      dry_run:
+        description: Только проверить секреты
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    runs-on: ubuntu-24.04
+    environment: stores
+    env:
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - working-directory: extension
+        run: npm ci --ignore-scripts
+      - name: zip из релиза
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$TAG" -p 'keywarden-extension-*.zip' -p '*-sources.zip' -D zips
+      - name: wxt submit
+        working-directory: extension
+        env:
+          DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_API_VERSION: v2
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+        run: |
+          z=../zips
+          set --
+          [ -n "$CHROME_EXTENSION_ID" ] && set -- "$@" --chrome-zip $z/*-chrome.zip
+          [ -n "$FIREFOX_EXTENSION_ID" ] && set -- "$@" --firefox-zip $z/*-firefox.zip --firefox-sources-zip $z/*-sources.zip
+          [ -n "$EDGE_PRODUCT_ID" ] && set -- "$@" --edge-zip $z/*-chrome.zip
+          if [ $# -eq 0 ]; then echo "::warning::нет секретов ни одного магазина, пропуск"; exit 0; fi
+          # shellcheck disable=SC2086
+          npx wxt submit $DRY "$@"

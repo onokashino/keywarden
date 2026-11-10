@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation · Keywarden</title>
+<meta name="description" content="How to install and use Keywarden: launcher, browser extension, passkeys, 2FA, autotype, SSH agent, sync, CLI and security model.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/docs/">
+<link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/docs/">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/logo.svg" alt="" width="28" height="28">Keywarden</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="../#tour">Features</a>
+      <a href="../#security">Security</a>
+      <a href="../#move">Switching</a>
+      <a href="./" aria-current="page">Docs</a>
+    </nav>
+    <div class="nav-right">
+      <div class="lang" aria-label="Language">
+        <a href="./" aria-current="page" data-lang="en">EN</a>
+        <a href="../ru/docs/" data-lang="ru" hreflang="ru">RU</a>
+      </div>
+      <a class="btn small" href="https://github.com/onokashino/keywarden"><svg aria-hidden="true"><use href="../assets/icons.svg#i-code"/></svg>GitHub</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap docs">
+<nav class="side" aria-label="Documentation">
+  <div class="group">Getting started</div>
+  <a href="#overview">Overview</a>
+  <a href="#install">Install</a>
+  <a href="#first-vault">Your first vault</a>
+  <a href="#unlock">Unlocking</a>
+  <div class="group">Daily use</div>
+  <a href="#window">Main window</a>
+  <a href="#search">Search</a>
+  <a href="#shortcuts">Keyboard shortcuts</a>
+  <a href="#launcher">Launcher</a>
+  <a href="#browser">Browser extension</a>
+  <a href="#passkeys">Passkeys</a>
+  <a href="#otp">2FA codes</a>
+  <a href="#autotype">Autotype</a>
+  <a href="#ssh">SSH agent</a>
+  <div class="group">Your data</div>
+  <a href="#sync">Sync</a>
+  <a href="#import">Import and export</a>
+  <a href="#profiles">Several vaults</a>
+  <a href="#backups">Backups and safety</a>
+  <a href="#keyring">Secret Service (Linux)</a>
+  <div class="group">Reference</div>
+  <a href="#cli">kw command line</a>
+  <a href="#platforms">Platform support</a>
+  <a href="#security">Security model</a>
+  <a href="#api">Local API</a>
+  <a href="#faq">FAQ</a>
+</nav>
+
+<main class="doc" id="main">
+<h1>Documentation</h1>
+<p class="lead">Everything you need to install Keywarden, move your passwords in and use it every day.</p>
+
+<h2 id="overview">Overview</h2>
+<p>Keywarden has four parts that you install together:</p>
+<ul>
+  <li><b><code>keywardend</code></b>, the daemon. It opens your <code>.kdbx</code> file, keeps it unlocked in memory, saves changes, locks itself, runs the SSH agent and talks to the browser.</li>
+  <li><b><code>keywarden-ui</code></b>, the main window. With <code>--launcher</code> it is the quick search box you call with a hotkey.</li>
+  <li><b><code>kw</code></b>, the command line client: search, copy, add, 2FA, import, everything scriptable.</li>
+  <li><b><code>keywarden-host</code></b> and the <b>browser extension</b>: the extension talks to the host, the host forwards encrypted messages to the daemon.</li>
+</ul>
+<p>All clients talk to the daemon over a local socket (Linux, macOS) or a named pipe (Windows). The daemon accepts only processes of your own user. If the daemon is not running, the window starts it for you.</p>
+
+<h2 id="install">Install</h2>
+<p>Download the archive for your system from the <a href="https://github.com/onokashino/keywarden/releases/latest">latest release</a>. Check it against <code>SHA256SUMS</code> if you like.</p>
+<div class="os-tabs">
+  <div class="tabs" role="tablist" aria-label="System">
+    <button class="tab" role="tab" aria-selected="true" aria-controls="inst-linux" id="t-inst-linux">Linux</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-win" id="t-inst-win">Windows</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-mac" id="t-inst-mac">macOS</button>
+  </div>
+  <div class="panel" id="inst-linux" role="tabpanel" aria-labelledby="t-inst-linux">
+<pre><code>tar xzf keywarden-*-linux-x86_64.tar.gz
+cd keywarden-*-linux-x86_64
+./install.sh</code></pre>
+    <p>The script needs no root. It puts the binaries in <code>~/.local/bin</code>, installs a systemd user service for the daemon and starts it, adds a desktop entry and registers the browser host for Firefox. Chromium-based browsers need the extension id, see <a href="#browser">Browser extension</a>.</p>
+    <p>Optional packages: <code>wtype</code> (autotype on Wayland) or <code>xdotool</code> (autotype on X11).</p>
+  </div>
+  <div class="panel" id="inst-win" role="tabpanel" aria-labelledby="t-inst-win" hidden>
+    <p>Unpack <code>keywarden-*-windows-x86_64.zip</code> to a folder you keep, for example <code>%LOCALAPPDATA%\Programs\Keywarden</code>, and run <code>keywarden-ui.exe</code>. It starts the daemon on demand.</p>
+    <p>The binaries are not signed yet, so SmartScreen asks once: choose "More info", then "Run anyway".</p>
+    <p>Register the browser host from that folder:</p>
+<pre><code>.\kw.exe browser-setup</code></pre>
+  </div>
+  <div class="panel" id="inst-mac" role="tabpanel" aria-labelledby="t-inst-mac" hidden>
+<pre><code>tar xzf keywarden-*-macos-arm64.tar.gz
+cd keywarden-*-macos-arm64
+xattr -dr com.apple.quarantine .
+./keywarden-ui</code></pre>
+    <p>The builds are for Apple Silicon and are not notarized yet, hence the <code>xattr</code> step. Then register the browser host with <code>./kw browser-setup</code>.</p>
+  </div>
+</div>
+<h3>From source</h3>
+<p>Rust 1.92 or newer. On Linux you also need the GPUI libraries (<code>libxkbcommon</code>, <code>wayland</code>, <code>vulkan</code>, <code>fontconfig</code>).</p>
+<pre><code>git clone https://github.com/onokashino/keywarden
+cd keywarden
+cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui</code></pre>
+
+<h3>Updates</h3>
+<p class="muted">The package channels go live with the first release.</p>
+<ul>
+  <li><b>Arch Linux</b>: <code>paru -S keywarden-bin</code> (AUR), updated with the rest of the system.</li>
+  <li><b>macOS</b>: <code>brew install onokashino/tap/keywarden</code>, then <code>brew upgrade</code>. No quarantine step needed.</li>
+  <li><b>Windows</b>: <code>winget install onokashino.Keywarden</code>, then <code>winget upgrade</code>.</li>
+  <li>Anywhere: turn on <b>Settings, This computer, Updates</b>. Once a day Keywarden asks GitHub for the latest release (nothing else is sent) and tells you when a new version is out. It is off by default.</li>
+</ul>
+<p>The browser extension from a store updates itself.</p>
+
+<h2 id="first-vault">Your first vault</h2>
+<p>Start <code>keywarden-ui</code>. The first screen offers two paths:</p>
+<ul>
+  <li><b>Open an existing <code>.kdbx</code></b> from KeePassXC, KeePassDX, KeePassium or KeePass. Nothing is converted: the file stays readable by those apps.</li>
+  <li><b>Create a new vault</b>: pick a place (a synced folder is a good idea), set a master password, optionally add a key file or YubiKey.</li>
+</ul>
+<p>The same from the terminal:</p>
+<pre><code>kw new ~/Sync/passwords.kdbx          # create
+kw unlock --db ~/Sync/passwords.kdbx  # open; the path is remembered</code></pre>
+<p>Coming from another manager? See <a href="#import">Import</a>: Bitwarden, 1Password, Proton Pass, Chrome, Firefox and others.</p>
+
+<h2 id="unlock">Unlocking</h2>
+<figure><div class="shot" style="max-width:516px"><img src="../assets/shots/unlock-card.webp" alt="Unlock screen with master password field" loading="lazy" width="516" height="306"></div></figure>
+<p>A vault can be protected by a master password, a key file, a YubiKey (HMAC challenge-response, the same slots as KeePassXC) or any combination. All of them are set in <b>Settings, Security</b>, where you can also change them later. Key files are created in the KeePassXC format.</p>
+<p>The vault locks itself after a period of inactivity, when the screen locks and before the computer sleeps. Lock it by hand with <kbd>Ctrl+L</kbd> in the window or <code>kw lock</code>.</p>
+<div class="note">YubiKey support is Linux-only for now.</div>
+
+<h2 id="window">Main window</h2>
+<figure><div class="shot"><img src="../assets/shots/main.webp" alt="Main window: sidebar, entry list, entry details" loading="lazy" width="1276" height="771"></div></figure>
+<p>The sidebar has the vault sections (all entries, 2FA codes, password health, recycle bin), <b>types</b>, <b>folders</b> and <b>tags</b>. Drag entries onto a folder or a tag to move or tag them; the "+" next to Folders and Tags creates a new one.</p>
+<p>Entry types: <b>login</b>, <b>card</b>, <b>identity</b>, <b>note</b>, <b>SSH key</b>, <b>passkey</b> and <b>crypto wallet</b>. Each type shows its own fields, but underneath it is a normal KeePass entry, so other KeePass apps still see every field. You can add your own fields, hidden fields, attachments and an expiry date to any entry; every change goes to the entry history, and any old version can be restored.</p>
+<figure><div class="shot"><img src="../assets/shots/edit.webp" alt="Editing a card entry" loading="lazy" width="1276" height="771"></div><figcaption>Editing an entry. The type can be changed with the picker next to the title.</figcaption></figure>
+
+<h2 id="search">Search</h2>
+<p>The search box understands a small query language. Words are matched fuzzily against title, username, URL and tags.</p>
+<div class="table-wrap"><table>
+  <thead><tr><th>Query</th><th>Finds</th></tr></thead>
+  <tbody>
+    <tr><td><code>github</code></td><td>entries matching "github" anywhere</td></tr>
+    <tr><td><code>#work</code> or <code>tag:work</code></td><td>entries with the tag</td></tr>
+    <tr><td><code>user:octo</code> <code>url:gitlab</code> <code>title:bank</code> <code>notes:pin</code> <code>group:Finance</code></td><td>a match in one field</td></tr>
+    <tr><td><code>pass:1234</code></td><td>entries whose password contains the text</td></tr>
+    <tr><td><code>is:expired</code> <code>is:otp</code></td><td>expired entries, entries with 2FA</td></tr>
+    <tr><td><code>-old</code></td><td>excludes entries matching "old"</td></tr>
+    <tr><td><code>"exact phrase"</code> <code>/regex/</code></td><td>a phrase, a regular expression</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="shortcuts">Keyboard shortcuts</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>Ctrl+F</kbd></td><td>search</td></tr>
+    <tr><td><kbd>Ctrl+N</kbd></td><td>new entry</td></tr>
+    <tr><td><kbd>Ctrl+E</kbd> · <kbd>Ctrl+S</kbd> · <kbd>Esc</kbd></td><td>edit · save · cancel</td></tr>
+    <tr><td><kbd>Ctrl+D</kbd> · <kbd>Shift+Del</kbd></td><td>duplicate · delete</td></tr>
+    <tr><td><kbd>Ctrl+Shift+C</kbd> · <kbd>Ctrl+U</kbd> · <kbd>Ctrl+T</kbd></td><td>copy password · username · 2FA code</td></tr>
+    <tr><td><kbd>Ctrl+J</kbd> / <kbd>Ctrl+K</kbd></td><td>next / previous entry</td></tr>
+    <tr><td><kbd>Alt+↑</kbd> / <kbd>Alt+↓</kbd></td><td>previous / next sidebar section</td></tr>
+    <tr><td><kbd>Ctrl+G</kbd></td><td>password generator</td></tr>
+    <tr><td><kbd>Ctrl+Tab</kbd></td><td>switch to the next open vault</td></tr>
+    <tr><td><kbd>Ctrl+,</kbd></td><td>settings (<kbd>Alt+1</kbd>..<kbd>Alt+6</kbd> switch tabs)</td></tr>
+    <tr><td><kbd>Ctrl+L</kbd></td><td>lock</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="launcher">Launcher</h2>
+<figure><div class="shot" style="max-width:560px"><img src="../assets/shots/launcher.webp" alt="Launcher with recent entries from all open vaults" loading="lazy" width="698" height="578"></div></figure>
+<p>The launcher is a search box over all windows. Type a few letters, then:</p>
+<ul>
+  <li><kbd>Enter</kbd> copies the password, <kbd>Ctrl+U</kbd> the username, <kbd>Ctrl+T</kbd> the 2FA code;</li>
+  <li><kbd>Esc</kbd> closes it. If the vault is locked, the launcher asks for the master password first.</li>
+</ul>
+<p>The copied value is hidden from clipboard history and cloud clipboard and is cleared after 30 seconds, but only if the clipboard still holds it. With several vaults open, the launcher searches all of them.</p>
+<h3>Binding a hotkey</h3>
+<p>The launcher is the command <code>keywarden-ui --launcher</code>. Bind it to a key in your system:</p>
+<div class="os-tabs">
+  <div class="tabs" role="tablist" aria-label="Desktop">
+    <button class="tab" role="tab" aria-selected="true" aria-controls="hk-niri" id="t-hk-niri">niri</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="hk-de" id="t-hk-de">GNOME, KDE, Sway</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="hk-win" id="t-hk-win">Windows</button>
+    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="hk-mac" id="t-hk-mac">macOS</button>
+  </div>
+  <div class="panel" id="hk-niri" role="tabpanel" aria-labelledby="t-hk-niri">
+    <p>Copy <code>dist/niri/keywarden.kdl</code> next to your niri config and add <code>include "keywarden.kdl"</code>. It binds:</p>
+<pre><code>Mod+Shift+P { spawn "keywarden-ui" "--launcher"; }   // launcher
+Mod+Shift+A { spawn "kw" "autotype"; }               // autotype
+Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
+  </div>
+  <div class="panel" id="hk-de" role="tabpanel" aria-labelledby="t-hk-de" hidden>
+    <p><b>GNOME</b>: Settings, Keyboard, View and Customize Shortcuts, Custom Shortcuts, add <code>keywarden-ui --launcher</code>.</p>
+    <p><b>KDE Plasma</b>: System Settings, Shortcuts, Add New, Command or Script.</p>
+    <p><b>Sway</b>: <code>bindsym $mod+Shift+p exec keywarden-ui --launcher</code></p>
+  </div>
+  <div class="panel" id="hk-win" role="tabpanel" aria-labelledby="t-hk-win" hidden>
+    <p>Create a shortcut to <code>keywarden-ui.exe</code> on the desktop or in the Start menu, open its Properties, set the target to <code>keywarden-ui.exe --launcher</code> and choose a key in the "Shortcut key" field, for example <kbd>Ctrl+Alt+K</kbd>.</p>
+  </div>
+  <div class="panel" id="hk-mac" role="tabpanel" aria-labelledby="t-hk-mac" hidden>
+    <p>In the Shortcuts app create a shortcut with the "Run Shell Script" action <code>/path/to/keywarden-ui --launcher</code>, then assign it a keyboard shortcut in its details.</p>
+  </div>
+</div>
+<p>Settings, <b>This computer</b>, shows the exact instructions for the system you are on.</p>
+
+<h2 id="browser">Browser extension</h2>
+<p>The extension fills logins, picks an account when there are several, fills 2FA codes, offers to save new and changed passwords and suggests a generated password on sign-up forms. It never fills invisible fields or frames.</p>
+<h3>Install</h3>
+<ol>
+  <li>Install the extension. Until it is in the stores, use the zip from the release: in Chromium-based browsers open <code>chrome://extensions</code>, turn on Developer mode and load the unpacked folder; in Firefox open <code>about:debugging</code> and load it as a temporary add-on.</li>
+  <li>Register the host so the browser can reach Keywarden. The Linux installer does it; otherwise run <code>kw browser-setup</code>. For Chromium-based browsers pass the extension id shown on <code>chrome://extensions</code>: <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</li>
+  <li>Click the Keywarden icon in the toolbar and press <b>Connect</b>. Confirm in the Keywarden window.</li>
+</ol>
+<h3>Confirmations</h3>
+<figure><div class="shot" style="max-width:560px"><img src="../assets/shots/confirm.webp" alt="Confirmation window asking to fill a login on github.com" loading="lazy" width="658" height="228"></div></figure>
+<p>The first time a site asks for a login, Keywarden shows a confirmation over all windows: <kbd>Enter</kbd> allows once, <kbd>Ctrl+Enter</kbd> always for this site, <kbd>Esc</kbd> denies. Sites are matched by registrable domain using the Public Suffix List, so <code>login.example.com</code> and <code>example.com</code> share logins but <code>example.co.uk</code> and <code>other.co.uk</code> do not.</p>
+<p>The browser and Keywarden use an encrypted channel (the same crypto_box scheme as KeePassXC-Browser); the host in between only forwards opaque messages. Every automatic behavior can be turned off in the extension settings.</p>
+<p>Shortcut in the browser: <kbd>Ctrl+Shift+L</kbd> fills the login on the current page.</p>
+
+<h2 id="passkeys">Passkeys</h2>
+<p>When a site offers to create a passkey, the extension handles it and stores the key in your vault in the KeePassXC format (<code>KPEX_PASSKEY_*</code> fields), so KeePassXC can use the same passkeys. Signing in with a passkey asks for your confirmation like any other login. Keys use ES256, which nearly every site requires; for anything else the browser's own WebAuthn takes over.</p>
+
+<h2 id="otp">2FA codes</h2>
+<figure><div class="shot"><img src="../assets/shots/otp.webp" alt="2FA codes page" loading="lazy" width="1276" height="771"></div></figure>
+<p>The <b>2FA codes</b> section works like an authenticator app: live codes with a countdown, the next code shown near the end of a period, click to copy.</p>
+<ul>
+  <li>Add a code from a secret, an <code>otpauth://</code> link, a QR in the clipboard or a QR image. Take a screenshot of the QR with <kbd>Win+Shift+S</kbd> on Windows or <kbd>Cmd+Ctrl+Shift+4</kbd> on macOS, then add it from the clipboard.</li>
+  <li>Show a QR to move a code to your phone.</li>
+  <li>Import and export <code>.2fas</code> backups (unencrypted ones).</li>
+  <li>Steam Guard codes and the old KeePass <code>TOTP Seed</code> fields are understood.</li>
+</ul>
+<pre><code>kw totp github -c     # copy the current code
+kw otp qr github      # show the QR in the terminal</code></pre>
+
+<h2 id="autotype">Autotype</h2>
+<p>Autotype types into the active window: by default username, <kbd>Tab</kbd>, password, <kbd>Enter</kbd>. An entry can have its own sequence in KeePass syntax, like <code>{USERNAME}{TAB}{TAB}{PASSWORD}{ENTER}</code>, and window associations that pick the right entry by window title. Keywarden checks that the focused window has not changed before typing.</p>
+<pre><code>kw autotype           # entry for the active window
+kw autotype github    # a specific entry</code></pre>
+<div class="table-wrap"><table>
+  <thead><tr><th>System</th><th>How it types</th></tr></thead>
+  <tbody>
+    <tr><td>niri</td><td><code>wtype</code>, the active window comes from niri</td></tr>
+    <tr><td>Sway, other wlroots</td><td><code>wtype</code>; pick the entry in the launcher</td></tr>
+    <tr><td>X11</td><td><code>xdotool</code></td></tr>
+    <tr><td>GNOME on Wayland</td><td>not possible: GNOME does not let apps type into other windows</td></tr>
+    <tr><td>Windows</td><td>SendInput</td></tr>
+    <tr><td>macOS</td><td>needs the Accessibility permission, and Screen Recording to read window titles</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="ssh">SSH agent</h2>
+<p>Keywarden is an SSH agent: keys live in entries of type <b>SSH key</b>, the agent offers them while the vault is unlocked and forgets them when it locks. The private key never touches the disk. Everything lives on the <b>Settings, SSH</b> tab: agent status and a <b>Connect to all programs</b> button on top, keys still sitting on disk below, then behavior. Every part can be turned off there.</p>
+<h3>Get a key in</h3>
+<ul>
+  <li><b>Create one</b>: New entry, SSH key, the <b>Create</b> tab. Algorithm: Ed25519 (recommended), ECDSA P-256, or RSA 4096 for old servers. You get the key and its public key with Copy, Add to GitHub and GitLab buttons. From the terminal: <code>kw ssh-generate --title GitHub --host github.com</code> (<code>-t ecdsa</code>, <code>-t rsa</code>).</li>
+  <li><b>Add an existing one</b>: the <b>Add existing</b> tab lists keys in <code>~/.ssh</code> that are not in the vault yet, one click to pick. You can also choose a file or paste the key text; a key with a passphrase asks for it. Or <code>kw ssh-import ~/.ssh/id_ed25519 --host github.com</code>.</li>
+  <li><b>Move everything from ~/.ssh</b>: the <b>Keys on disk</b> card on the SSH tab, <b>Move to the vault…</b>: tick the keys you want and choose whether to delete the private files (the <code>.pub</code> files stay). Or <code>kw ssh-migrate --import [--delete]</code>.</li>
+</ul>
+<h3>Works for every app</h3>
+<p>Press <b>Connect to all programs</b> (or run <code>kw ssh-setup</code>): Keywarden puts <code>SSH_AUTH_SOCK</code> into the session environment, so ssh, git, IDEs and git clients see the agent after the next login. On Linux this is <code>~/.config/environment.d</code>, on macOS a LaunchAgent, on Windows the user environment. Settings shows whether it is active or another agent (like GNOME's gcr-ssh-agent) holds the variable. In terminals that are already open:</p>
+<pre><code># bash, zsh
+eval "$(kw ssh-env)"
+# fish
+kw ssh-env | source
+# PowerShell
+kw ssh-env | Invoke-Expression</code></pre>
+<h3>The right key for each server</h3>
+<p>Put the server into the key's <b>Host</b> field (<code>github.com</code>, <code>git@host</code>, <code>ssh://user@host:2222</code>, several separated by commas) and turn on <b>Servers in ssh</b> (<code>kw ssh-setup --hosts</code>). Keywarden keeps <code>~/.ssh/keywarden/config</code> with <code>IdentitiesOnly yes</code> for each host and includes it from <code>~/.ssh/config</code> with one line. ssh then offers exactly one key instead of trying them all, so "Too many authentication failures" goes away.</p>
+<h3>SSH servers in the vault: settings travel to every computer</h3>
+<p>An <b>SSH server</b> entry holds what usually lives in <code>~/.ssh/config</code>: the address (<code>user@host:port</code>), which vault key to log in with, ProxyJump, port forwarding (<code>8080, 5432:db:5432</code>), any other ssh_config lines separated by <code>;</code>, and a port knocking sequence. The entries sync with the vault, and with <b>Servers in ssh</b> on, Keywarden writes them as <code>Host</code> blocks into <code>~/.ssh/keywarden/config</code>, so <code>ssh prod</code>, scp, rsync, git and IDEs see them as ordinary hosts. Your <code>~/.ssh/config</code> stays as it is (apart from one Include line), and when a name exists in both, the vault entry wins.</p>
+<p>To move what you already have: the <b>Servers from ~/.ssh/config</b> card on the SSH tab (the window shows which folder and key each host gets; untick what you do not need), or <code>kw ssh-import-config</code>. Every <code>Host</code> without wildcards becomes an entry in the "SSH" folder, with the same automatic subfolders as <code>kw ssh</code>. An IdentityFile that is already in the vault (matched by public key) becomes a link to that entry; otherwise the IdentityFile line stays among the other lines. Hosts imported earlier are skipped.</p>
+<p><b>Port knocking.</b> Put the ports into the <b>Port knocking</b> field: <code>7000 8000:udp 9000</code> (tcp unless <code>:udp</code>). Keywarden adds <code>Match originalhost prod exec "kw knock prod"</code> to the config, so ssh knocks by itself before connecting, for scp and rsync too. The sequence stays encrypted in the vault and is never written to files; while the vault is locked, no knock happens. You can run <code>kw knock prod</code> by hand, and <code>kw ssh</code> knocks by itself even with <b>Servers in ssh</b> off.</p>
+<h3>Locked vault</h3>
+<p>When ssh needs a key and the vault is locked, Keywarden shows its unlock window; after you unlock, <code>git push</code> continues by itself.</p>
+<h3>Confirmations</h3>
+<p>A key can ask before every use. The window says where you are signing in, for example "Signing in to github.com with GitHub" (OpenSSH 8.9+), warns when the request came through agent forwarding, and offers <b>Allow for 15 min</b> so a series of <code>git fetch</code> does not ask each time. Locking the vault cancels that.</p>
+<h3>Sign git commits</h3>
+<p>The <b>Sign git commits and tags with this key</b> switch on an SSH key entry (or <code>kw ssh-git-sign GitHub</code>) sets up git to sign with SSH through the agent; GitHub and GitLab show the commits as Verified. Turning it off removes the settings again.</p>
+<h3>Pick a server in the terminal: kw ssh</h3>
+<p><code>kw ssh</code> opens two panes in the terminal: folders on the left, hosts on the right, details of the selected one below (key, ProxyJump, command). Vault folders are used as they are; hosts from <code>~/.ssh/config</code> sort themselves by a shared name prefix (<code>prod-api</code> and <code>prod-db</code> land in "prod") or by domain. <code>kw ssh</code> never reads private keys. Keys: <kbd>Enter</kbd> connect in this terminal, <kbd>o</kbd> open in a new window, <kbd>s</kbd> sftp, <kbd>f</kbd> port forward, <kbd>c</kbd> copy the command, <kbd>e</kbd> and <kbd>n</kbd> edit or add an address of a vault key, <kbd>/</kbd> search all folders, <kbd>?</kbd> all keys. <code>kw ssh prod</code> connects straight away when there is one match; <code>kw ssh --list</code> prints the list for scripts. If the vault is locked, <code>kw ssh</code> asks for the master password.</p>
+<pre><code> Keywarden SSH   / search
+╭ Folders ─────────────────╮╭ prod ───────────────────────────────╮
+│◆ All hosts            9  ││› prod-api   deploy@10.0.1.5        │
+│• Work                 2  ││  prod-db    root@10.0.1.9:2222     │
+│▾ ~/.ssh/config        7  ││                                    │
+│    prod               2  ││                                    │
+│    web                3  ││                                    │
+╰──────────────────────────╯╰────────────────────────────────────╯
+╭────────────────────────────────────────────────────────────────╮
+│prod-api  deploy@10.0.1.5                                       │
+│key: id_work  •  via bastion                                    │
+│~/.ssh/config / prod, read only  •  ssh prod-api                │
+╰────────────────────────────────────────────────────────────────╯
+ Enter connect  o new window  c command  / search  ? all keys</code></pre>
+<h3>Connect from the launcher</h3>
+<p>Search for an SSH key with a host and press <kbd>Enter</kbd>: a terminal opens with <code>ssh</code> to that server. Keywarden finds ghostty, kitty, foot, alacritty, WezTerm, GNOME Terminal, Konsole or xterm (Terminal on macOS, Windows Terminal on Windows); pick another one on the SSH tab, Terminal row.</p>
+<p>ed25519, ECDSA and RSA keys are supported; entries keep KeeAgent settings, so KeePassXC sees the same keys.</p>
+
+<h2 id="sync">Sync</h2>
+<figure><div class="shot"><img src="../assets/shots/sync.webp" alt="Sync settings" loading="lazy" width="1276" height="771"></div></figure>
+<p>Keywarden syncs through files. Put the vault into a folder synced by Syncthing, Nextcloud, Dropbox or anything else, and open the same file on your phone with KeePassDX (Android) or KeePassium (iOS).</p>
+<p>When the file changes on disk while the vault is open, Keywarden merges it entry by entry: newer edits win, deletions are respected, nothing is silently lost. Syncthing conflict copies are merged and moved to backups automatically, and you get a notification. If a merge would delete many entries at once, Keywarden asks first.</p>
+
+<h2 id="import">Import and export</h2>
+<p>From <b>Settings, Transfer</b> or the command line:</p>
+<ul>
+  <li><b>Import</b>: Bitwarden (JSON and CSV), 1Password, Proton Pass, Chrome, Firefox and KeePassXC CSV, another <code>.kdbx</code> or old <code>.kdb</code>, 2FAS backups. You get a report: what was moved and what needs a manual look.</li>
+  <li><b>Export</b>: CSV in the KeePassXC format, a copy of the vault with a different password, a <code>.2fas</code> backup of your codes.</li>
+  <li><b>Merge</b> another copy of the same vault.</li>
+</ul>
+<pre><code>kw import bitwarden_export.json
+kw export ~/backup.kdbx -f kdbx
+kw merge ~/old-laptop.kdbx</code></pre>
+
+<h2 id="profiles">Several vaults</h2>
+<p>Each vault gets its own daemon, called a profile. Switch between open vaults with the selector at the top of the sidebar or <kbd>Ctrl+Tab</kbd>; the launcher searches all of them.</p>
+<pre><code>kw profile-add work ~/Work/work.kdbx
+kw --profile work unlock
+kw profiles</code></pre>
+<p>On Linux each profile is a systemd unit: <code>systemctl --user start keywardend@work</code>.</p>
+
+<h2 id="backups">Backups and safety</h2>
+<ul>
+  <li>Before every save the previous file is kept as a backup (the last few are kept).</li>
+  <li>A save goes to a temporary file, which is decrypted again and compared with what is in memory, then atomically replaces the original.</li>
+  <li>If another app changed the file since it was opened, Keywarden merges instead of overwriting.</li>
+  <li>Old KDBX 3.1 and 4.0 files are upgraded to 4.1 on the first save, which KeePassXC 2.7+ and current mobile apps read.</li>
+</ul>
+
+<h2 id="keyring">Secret Service (Linux)</h2>
+<p>Keywarden can replace gnome-keyring or KWallet as the system keyring (<code>org.freedesktop.secrets</code>): apps that store tokens in the keyring then keep them in your vault, in a separate folder, and Keywarden asks before an app reads a secret.</p>
+<ol>
+  <li>In <b>Settings, Keyring</b> press "Move from the current keyring".</li>
+  <li>Disable the secrets component of gnome-keyring and restart <code>keywardend</code>. Keywarden never takes the name over by force.</li>
+</ol>
+
+<h2 id="cli">kw command line</h2>
+<p><code>kw --help</code> and <code>kw &lt;command&gt; --help</code> describe every option. The most used commands:</p>
+<pre><code>kw unlock [--db PATH] [-k KEYFILE]     kw lock     kw status
+kw search QUERY                        kw show QUERY [-r]
+kw copy QUERY [-f password|username|totp|FIELD]
+kw totp QUERY [-c]                     kw generate [-l 24] [-p -w 6] [-c]
+kw add -t login|card|identity|note|ssh-key|ssh-host --title ...
+kw edit ...   kw rm ...   kw dup ...   kw mv ...   kw tags
+kw groups     kw mkgroup A/B           kw attach / kw attachment
+kw health [--breaches]                 kw icon QUERY
+kw import FILE   kw export PATH [-f csv|kdbx|2fas]   kw merge FILE.kdbx
+kw ssh-import FILE [--confirm]         kw ssh-env
+kw ssh-import-config                   kw knock NAME
+kw otp set|scan|qr                     kw autotype [QUERY]
+kw passwd [-k KEYFILE]   kw keyfile PATH   kw db-settings [--tune]
+kw profiles   kw profile-add NAME FILE.kdbx   kw --profile NAME ...
+kw browser-setup [--chrome-id ID]      kw new PATH</code></pre>
+
+<h2 id="platforms">Platform support</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Feature</th><th>Linux</th><th>Windows</th><th>macOS</th></tr></thead>
+  <tbody>
+    <tr><td>Window, launcher, kw, extension, sync</td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td></tr>
+    <tr><td>Launcher over all windows</td><td><span class="pill ok">Yes</span><small>layer-shell on niri, Sway, KDE; centered window elsewhere</small></td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td></tr>
+    <tr><td>Clipboard hidden from history</td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td></tr>
+    <tr><td>Autotype</td><td><span class="pill part">Most</span><small>not GNOME on Wayland</small></td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td></tr>
+    <tr><td>Lock on screen lock and sleep</td><td><span class="pill ok">Yes</span><small>systemd-logind</small></td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td></tr>
+    <tr><td>SSH agent</td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td></tr>
+    <tr><td>YubiKey</td><td><span class="pill ok">Yes</span></td><td><span class="pill part">Beta</span><small>via system HID</small></td><td><span class="pill part">Beta</span><small>via system HID</small></td></tr>
+    <tr><td>Tray icon</td><td><span class="pill ok">Yes</span><small>KDE, waybar, noctalia; GNOME needs the AppIndicator extension</small></td><td><span class="pill ok">Yes</span></td><td><span class="pill no">Not yet</span></td></tr>
+    <tr><td>Start at login</td><td><span class="pill ok">Yes</span><small>systemd service</small></td><td><span class="pill ok">Yes</span><small>Windows startup</small></td><td><span class="pill ok">Yes</span><small>LaunchAgent</small></td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="security">Security model</h2>
+<p><b>What Keywarden protects against:</b> other users on the machine, websites, other browser extensions, malware that reads files but cannot run as you, clipboard history and cloud clipboard, crash dumps, swap, and data loss from crashes or sync conflicts.</p>
+<ul>
+  <li>The vault file uses KDBX 4 encryption (AES-256 or ChaCha20, Argon2 key derivation tuned to your computer).</li>
+  <li>Decrypted data lives only in the daemon. Secrets are zeroized after use and never printed to logs.</li>
+  <li>The daemon disables core dumps and debugger attachment (<code>PR_SET_DUMPABLE</code> and <code>RLIMIT_CORE</code> on Linux, <code>PT_DENY_ATTACH</code> on macOS, no WER dumps on Windows) and locks its memory where allowed.</li>
+  <li>Local sockets are <code>0600</code> and check the peer user id; Windows named pipes compare the client's user SID and refuse remote clients.</li>
+  <li>The browser channel is encrypted end to end; each new site is confirmed by you.</li>
+  <li>Network access happens only on request: a Have I Been Pwned check with k-anonymity (only 5 characters of the SHA-1 hash leave your computer) and fetching a site icon.</li>
+</ul>
+<p><b>What it does not protect against:</b> malware already running as your user while the vault is unlocked. It can read the screen, the keyboard and process memory; no local password manager can stop that. Lock the vault when you step away.</p>
+<p>Found a problem? Please report it privately, see <a href="https://github.com/onokashino/keywarden/security">SECURITY</a>.</p>
+
+<h2 id="api">Local API</h2>
+<p>A separate socket lets assistants and scripts work with the vault without ever seeing a secret: list entries, put a secret into the clipboard, or create an entry from the clipboard. The protocol is one JSON line per request; see <a href="https://github.com/onokashino/keywarden/blob/main/docs/local-api.md">docs/local-api.md</a>.</p>
+
+<h2 id="faq">FAQ</h2>
+<h3>Can I keep using KeePassXC?</h3>
+<p>Yes. Both apps read and write the same file, even at the same time: Keywarden merges changes KeePassXC makes while the vault is open.</p>
+<h3>Where are settings stored?</h3>
+<p>Linux: <code>~/.config/keywarden</code>. macOS: <code>~/Library/Application Support/Keywarden</code>. Windows: <code>%APPDATA%\Keywarden</code>.</p>
+<h3>Is there a mobile app?</h3>
+<p>Not yet. Use KeePassDX on Android or KeePassium on iOS with the same synced file.</p>
+<h3>How do I change the language?</h3>
+<p>Settings, General, Interface language: system default or any available language. The window switches at once; the background service follows after a restart. The browser extension follows the browser language.</p>
+<h3>Can I help translate Keywarden?</h3>
+<p>Yes, please. Any language can be added without touching the code, and a partial translation already helps: whatever is not translated yet appears in English. See <a href="https://github.com/onokashino/keywarden/blob/main/docs/translating.md">docs/translating.md</a>.</p>
+</main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Keywarden · GPL-3.0-or-later</span>
+    <a href="../">Home</a>
+    <a href="https://github.com/onokashino/keywarden">GitHub</a>
+    <a href="https://github.com/onokashino/keywarden/releases">Releases</a>
+    <span class="spacer"></span>
+    <a href="https://github.com/onokashino/keywarden/edit/main/site/docs/index.html">Edit this page</a>
+  </div>
+</footer>
+<script src="../assets/site.js" defer></script>
+</body>
+</html>

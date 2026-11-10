@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<KeePassFile>
+<Meta>
+<Generator>KeePassXC</Generator>
+<DatabaseName>Compat Fixture</DatabaseName>
+<DatabaseNameChanged>2026-01-02T03:04:05Z</DatabaseNameChanged>
+<DatabaseDescription>Все типы полей</DatabaseDescription>
+<DatabaseDescriptionChanged>2026-01-02T03:04:05Z</DatabaseDescriptionChanged>
+<DefaultUserName>sekra</DefaultUserName>
+<DefaultUserNameChanged>2026-01-02T03:04:05Z</DefaultUserNameChanged>
+<MaintenanceHistoryDays>365</MaintenanceHistoryDays>
+<Color>#3366FF</Color>
+<MasterKeyChanged>2026-01-02T03:04:05Z</MasterKeyChanged>
+<MasterKeyChangeRec>-1</MasterKeyChangeRec>
+<MasterKeyChangeForce>-1</MasterKeyChangeForce>
+<MemoryProtection><ProtectTitle>False</ProtectTitle><ProtectUserName>False</ProtectUserName><ProtectPassword>True</ProtectPassword><ProtectURL>False</ProtectURL><ProtectNotes>False</ProtectNotes></MemoryProtection>
+<CustomIcons><Icon><UUID>AAAAAAAAAAAAAAAAAAAACw==</UUID><Data>iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP4z8DwHwAFAAIBo8iysQAAAABJRU5ErkJggg==</Data><Name>dot</Name><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime></Icon></CustomIcons>
+<RecycleBinEnabled>True</RecycleBinEnabled>
+<RecycleBinUUID>AAAAAAAAAAAAAAAAAAAACQ==</RecycleBinUUID>
+<RecycleBinChanged>2026-01-02T03:04:05Z</RecycleBinChanged>
+<EntryTemplatesGroup>AAAAAAAAAAAAAAAAAAAAAA==</EntryTemplatesGroup>
+<EntryTemplatesGroupChanged>2026-01-02T03:04:05Z</EntryTemplatesGroupChanged>
+<LastSelectedGroup>AAAAAAAAAAAAAAAAAAAAAg==</LastSelectedGroup>
+<LastTopVisibleGroup>AAAAAAAAAAAAAAAAAAAAAQ==</LastTopVisibleGroup>
+<HistoryMaxItems>10</HistoryMaxItems>
+<HistoryMaxSize>6291456</HistoryMaxSize>
+<SettingsChanged>2026-01-02T03:04:05Z</SettingsChanged>
+<Binaries>
+<Binary ID="0">aGVsbG8gYXR0YWNobWVudAo=</Binary>
+<Binary ID="1">PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTE2Ij8+CjxFbnRyeVNldHRpbmdzIHhtbG5zOnhzZD0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiPgogIDxBbGxvd1VzZU9mU3NoS2V5PnRydWU8L0FsbG93VXNlT2ZTc2hLZXk+CiAgPEFkZEF0RGF0YWJhc2VPcGVuPnRydWU8L0FkZEF0RGF0YWJhc2VPcGVuPgogIDxSZW1vdmVBdERhdGFiYXNlQ2xvc2U+dHJ1ZTwvUmVtb3ZlQXREYXRhYmFzZUNsb3NlPgogIDxVc2VDb25maXJtQ29uc3RyYWludFdoZW5BZGRpbmc+ZmFsc2U8L1VzZUNvbmZpcm1Db25zdHJhaW50V2hlbkFkZGluZz4KICA8VXNlTGlmZXRpbWVDb25zdHJhaW50V2hlbkFkZGluZz5mYWxzZTwvVXNlTGlmZXRpbWVDb25zdHJhaW50V2hlbkFkZGluZz4KICA8TGlmZXRpbWVDb25zdHJhaW50RHVyYXRpb24+NjAwPC9MaWZldGltZUNvbnN0cmFpbnREdXJhdGlvbj4KICA8TG9jYXRpb24+CiAgICA8U2VsZWN0ZWRUeXBlPmF0dGFjaG1lbnQ8L1NlbGVjdGVkVHlwZT4KICAgIDxBdHRhY2htZW50TmFtZT5pZF9lZDI1NTE5PC9BdHRhY2htZW50TmFtZT4KICAgIDxTYXZlQXR0YWNobWVudFRvVGVtcEZpbGU+ZmFsc2U8L1NhdmVBdHRhY2htZW50VG9UZW1wRmlsZT4KICA8L0xvY2F0aW9uPgo8L0VudHJ5U2V0dGluZ3M+Cg==</Binary>
+<Binary ID="2">LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KZmFrZQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K</Binary>
+</Binaries>
+<CustomData><Item><Key>KPXC_DECRYPTION_TIME_PREFERENCE</Key><Value>1000</Value><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime></Item><Item><Key>FDO_SECRETS_EXPOSED_GROUP</Key><Value>{00000000-0000-0000-0000-000000000002}</Value></Item></CustomData>
+</Meta>
+<Root>
+<Group><UUID>AAAAAAAAAAAAAAAAAAAAAQ==</UUID><Name>Root</Name><Notes/><IconID>48</IconID><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times><IsExpanded>True</IsExpanded><DefaultAutoTypeSequence/><EnableAutoType>null</EnableAutoType><EnableSearching>null</EnableSearching><LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAw==</LastTopVisibleEntry>
+<Entry><UUID>AAAAAAAAAAAAAAAAAAAAAw==</UUID><IconID>1</IconID><ForegroundColor>#FF0000</ForegroundColor><BackgroundColor>#00FF00</BackgroundColor><OverrideURL>cmd://firefox {URL}</OverrideURL><Tags>work;dev</Tags><QualityCheck>False</QualityCheck><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times>
+<String><Key>Title</Key><Value>GitHub</Value></String><String><Key>UserName</Key><Value>octo</Value></String><String><Key>Password</Key><Value ProtectInMemory="True">s3cr3t-пароль</Value></String><String><Key>URL</Key><Value>https://github.com</Value></String><String><Key>Notes</Key><Value>многострочная
+заметка &amp; &lt;xml&gt;</Value></String><String><Key>otp</Key><Value ProtectInMemory="True">otpauth://totp/GitHub:octo?secret=JBSWY3DPEHPK3PXP&amp;period=30&amp;digits=6&amp;issuer=GitHub</Value></String><String><Key>Recovery code</Key><Value ProtectInMemory="True">ABCD-EFGH</Value></String><String><Key>KP2A_URL_1</Key><Value>https://gist.github.com</Value></String>
+<Binary><Key>notes.txt</Key><Value Ref="0"/></Binary>
+<AutoType><Enabled>True</Enabled><DataTransferObfuscation>1</DataTransferObfuscation><DefaultSequence>{USERNAME}{TAB}{PASSWORD}{ENTER}</DefaultSequence><Association><Window>*GitHub*</Window><KeystrokeSequence>{PASSWORD}{ENTER}</KeystrokeSequence></Association></AutoType>
+<CustomData><Item><Key>KPXC_BROWSER_HIDE_ENTRY</Key><Value>false</Value><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime></Item></CustomData>
+<History><Entry><UUID>AAAAAAAAAAAAAAAAAAAAAw==</UUID><IconID>0</IconID><ForegroundColor/><BackgroundColor/><OverrideURL/><Tags/><Times><LastModificationTime>2025-12-01T00:00:00Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2025-12-01T00:00:00Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times><String><Key>Title</Key><Value>GitHub</Value></String><String><Key>UserName</Key><Value>octo</Value></String><String><Key>Password</Key><Value ProtectInMemory="True">old-pass</Value></String><String><Key>URL</Key><Value>https://github.com</Value></String><String><Key>Notes</Key><Value></Value></String><AutoType><Enabled>True</Enabled><DataTransferObfuscation>0</DataTransferObfuscation></AutoType></Entry></History>
+</Entry>
+<Group><UUID>AAAAAAAAAAAAAAAAAAAAAg==</UUID><Name>Finance</Name><Notes>банк</Notes><IconID>66</IconID><CustomIconUUID>AAAAAAAAAAAAAAAAAAAACw==</CustomIconUUID><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times><IsExpanded>False</IsExpanded><DefaultAutoTypeSequence>{PASSWORD}</DefaultAutoTypeSequence><EnableAutoType>false</EnableAutoType><EnableSearching>true</EnableSearching><LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry><CustomData><Item><Key>group.meta</Key><Value>1</Value><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime></Item></CustomData>
+<Entry><UUID>AAAAAAAAAAAAAAAAAAAABA==</UUID><IconID>66</IconID><CustomIconUUID>AAAAAAAAAAAAAAAAAAAACw==</CustomIconUUID><ForegroundColor/><BackgroundColor/><OverrideURL/><Tags/><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>True</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times>
+<String><Key>Title</Key><Value>Visa</Value></String><String><Key>UserName</Key><Value></Value></String><String><Key>Password</Key><Value ProtectInMemory="True"></Value></String><String><Key>URL</Key><Value></Value></String><String><Key>Notes</Key><Value></Value></String><String><Key>Cardholder</Key><Value>IVAN IVANOV</Value></String><String><Key>Card Number</Key><Value ProtectInMemory="True">4111111111111111</Value></String><String><Key>CVV</Key><Value ProtectInMemory="True">123</Value></String><String><Key>Expiry</Key><Value>12/29</Value></String>
+<CustomData><Item><Key>keywarden.type</Key><Value>card</Value><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime></Item></CustomData>
+</Entry>
+</Group>
+<Group><UUID>AAAAAAAAAAAAAAAAAAAABQ==</UUID><Name>SSH</Name><Notes/><IconID>30</IconID><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times><IsExpanded>True</IsExpanded><DefaultAutoTypeSequence/><EnableAutoType>null</EnableAutoType><EnableSearching>null</EnableSearching><LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+<Entry><UUID>AAAAAAAAAAAAAAAAAAAABg==</UUID><IconID>30</IconID><ForegroundColor/><BackgroundColor/><OverrideURL/><Tags/><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times>
+<String><Key>Title</Key><Value>github ssh</Value></String><String><Key>UserName</Key><Value>git</Value></String><String><Key>Password</Key><Value ProtectInMemory="True">key-passphrase</Value></String><String><Key>URL</Key><Value>ssh://github.com</Value></String><String><Key>Notes</Key><Value></Value></String>
+<Binary><Key>KeeAgent.settings</Key><Value Ref="1"/></Binary><Binary><Key>id_ed25519</Key><Value Ref="2"/></Binary>
+<AutoType><Enabled>True</Enabled><DataTransferObfuscation>0</DataTransferObfuscation></AutoType>
+</Entry>
+<Entry><UUID>AAAAAAAAAAAAAAAAAAAABw==</UUID><IconID>0</IconID><ForegroundColor/><BackgroundColor/><OverrideURL/><Tags>Passkey</Tags><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times>
+<String><Key>Title</Key><Value>webauthn.io</Value></String><String><Key>UserName</Key><Value>alice</Value></String><String><Key>Password</Key><Value ProtectInMemory="True"></Value></String><String><Key>URL</Key><Value>https://webauthn.io</Value></String><String><Key>Notes</Key><Value></Value></String><String><Key>KPEX_PASSKEY_USERNAME</Key><Value>alice</Value></String><String><Key>KPEX_PASSKEY_CREDENTIAL_ID</Key><Value ProtectInMemory="True">Y3JlZC1pZA</Value></String><String><Key>KPEX_PASSKEY_GENERATED_USER_ID</Key><Value ProtectInMemory="True">dXNlci1pZA</Value></String><String><Key>KPEX_PASSKEY_PRIVATE_KEY_PEM</Key><Value ProtectInMemory="True">-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg
+-----END PRIVATE KEY-----</Value></String><String><Key>KPEX_PASSKEY_RELYING_PARTY</Key><Value>webauthn.io</Value></String><String><Key>KPEX_PASSKEY_USER_HANDLE</Key><Value ProtectInMemory="True">dXNlci1pZA</Value></String>
+</Entry>
+</Group>
+<Group><UUID>AAAAAAAAAAAAAAAAAAAACA==</UUID><Name>Legacy TOTP</Name><Notes/><IconID>0</IconID><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times><IsExpanded>True</IsExpanded><DefaultAutoTypeSequence/><EnableAutoType>null</EnableAutoType><EnableSearching>null</EnableSearching><LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry>
+<Entry><UUID>AAAAAAAAAAAAAAAAAAAACg==</UUID><IconID>0</IconID><ForegroundColor/><BackgroundColor/><OverrideURL/><Tags/><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times>
+<String><Key>Title</Key><Value>Old 2FA</Value></String><String><Key>UserName</Key><Value>bob</Value></String><String><Key>Password</Key><Value ProtectInMemory="True">pw</Value></String><String><Key>URL</Key><Value></Value></String><String><Key>Notes</Key><Value></Value></String><String><Key>TOTP Seed</Key><Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value></String><String><Key>TOTP Settings</Key><Value>30;8</Value></String>
+</Entry>
+</Group>
+<Group><UUID>AAAAAAAAAAAAAAAAAAAACQ==</UUID><Name>Recycle Bin</Name><Notes/><IconID>43</IconID><Times><LastModificationTime>2026-01-02T03:04:05Z</LastModificationTime><CreationTime>2025-06-01T10:00:00Z</CreationTime><LastAccessTime>2026-01-02T03:04:05Z</LastAccessTime><ExpiryTime>2030-01-01T00:00:00Z</ExpiryTime><Expires>False</Expires><UsageCount>3</UsageCount><LocationChanged>2025-06-01T10:00:00Z</LocationChanged></Times><IsExpanded>False</IsExpanded><DefaultAutoTypeSequence/><EnableAutoType>false</EnableAutoType><EnableSearching>false</EnableSearching><LastTopVisibleEntry>AAAAAAAAAAAAAAAAAAAAAA==</LastTopVisibleEntry></Group>
+</Group>
+<DeletedObjects><DeletedObject><UUID>AAAAAAAAAAAAAAAAAAAAzw==</UUID><DeletionTime>2026-01-02T03:04:05Z</DeletionTime></DeletedObject></DeletedObjects>
+</Root>
+</KeePassFile>
