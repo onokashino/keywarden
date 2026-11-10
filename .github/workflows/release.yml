@@ -22,7 +22,7 @@ jobs:
   version:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
       - name: тег совпадает с версией в Cargo.toml и package.json
@@ -43,7 +43,7 @@ jobs:
           - { os: macos-14, name: macos-arm64 }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
@@ -67,7 +67,7 @@ jobs:
           else
             tar czf "$d.tar.gz" "$d"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.name }}
           path: keywarden-*.*
@@ -77,7 +77,7 @@ jobs:
     needs: version
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
@@ -87,7 +87,7 @@ jobs:
         with:
           tool: wasm-bindgen@0.2.130
       - run: sh scripts/build-wasm.sh
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -98,7 +98,7 @@ jobs:
         run: |
           rm extension/.output/*-sources.zip
           git archive --format=zip -o "extension/.output/keywarden-$TAG-sources.zip" HEAD
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: extension
           path: extension/.output/*.zip
@@ -110,7 +110,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: out
           merge-multiple: true
