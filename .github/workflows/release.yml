@@ -67,7 +67,7 @@ jobs:
           else
             tar czf "$d.tar.gz" "$d"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.name }}
           path: keywarden-*.*
@@ -98,7 +98,7 @@ jobs:
         run: |
           rm extension/.output/*-sources.zip
           git archive --format=zip -o "extension/.output/keywarden-$TAG-sources.zip" HEAD
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: extension
           path: extension/.output/*.zip
