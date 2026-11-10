@@ -33,7 +33,7 @@ p256 = { version = "0.13", features = ["ecdsa", "pkcs8", "pem"] }
 rand_core06 = { package = "rand_core", version = "0.6", features = ["getrandom"] }
 psl = "2"
 crypto_box = { version = "0.9", features = ["std"] }
-bip39 = "2"
+bip39 = "3"
 bs58 = { version = "0.5", features = ["check"] }
 printpdf = "0.7"
 k256 = "0.13"
