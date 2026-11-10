@@ -20,7 +20,7 @@ csv = "1"
 regex = "1"
 zxcvbn = "3"
 # сессии Secret Service (dh-ietf1024-sha256-aes128-cbc-pkcs7)
-num-bigint = "0.4"
+num-bigint = "0.5"
 aes = "0.8"
 cbc = { version = "0.1", features = ["alloc"] }
 qrcode = { version = "0.14", default-features = false }
