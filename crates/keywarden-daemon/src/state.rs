@@ -1698,7 +1698,7 @@ mod tests {
             panic!()
         };
         assert_eq!(folder.unwrap().kind, "syncthing");
-        assert!(db_path.unwrap().ends_with("Sync/t.kdbx"));
+        assert!(std::path::Path::new(&db_path.unwrap()).ends_with("Sync/t.kdbx"));
         // дальше база пишется уже в новое место
         add_titles(&d, 1).await;
         assert_eq!(live_count(&st.join("t.kdbx")), 3);
@@ -1726,7 +1726,13 @@ mod tests {
         assert!(crate::sync::detect_folder(&db).is_none());
         std::fs::write(dir.path().join("a/.dropbox"), b"").unwrap();
         let f = crate::sync::detect_folder(&db).unwrap();
-        assert_eq!((f.kind.as_str(), f.root.ends_with("/a")), ("dropbox", true));
+        assert_eq!(
+            (
+                f.kind.as_str(),
+                std::path::Path::new(&f.root).ends_with("a")
+            ),
+            ("dropbox", true)
+        );
         std::fs::create_dir(dir.path().join("a/b/.stfolder")).unwrap();
         assert_eq!(crate::sync::detect_folder(&db).unwrap().kind, "syncthing");
     }
