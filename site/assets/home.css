@@ -314,3 +314,11 @@ footer a:hover { color: var(--ink); }
   .pre .steps::before, .pre .step .key > span { transform: none; }
   .pre .duel-row { opacity: 1; transform: none; }
 }
+@media (max-width: 400px) {
+  .wrap { width: calc(100% - 32px); }
+  .nav.open .nav-links { padding-inline: 16px; }
+  .nav .wrap { gap: 12px; }
+  .nav-right { gap: 8px; }
+  .brand { flex: none; }
+}
+@media (max-width: 360px) { .nav .gh { display: none; } }

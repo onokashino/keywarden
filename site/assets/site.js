@@ -43,6 +43,15 @@
   addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
+  // --- section menu on narrow screens ---
+  const menuBtn = document.getElementById('menuBtn');
+  if (nav && menuBtn) {
+    const setOpen = (on) => { nav.classList.toggle('open', on); menuBtn.setAttribute('aria-expanded', on); };
+    menuBtn.addEventListener('click', () => setOpen(!nav.classList.contains('open')));
+    document.querySelectorAll('#navLinks a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+    addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+  }
+
   // --- reveal on scroll (only when JS runs: html.js hides .reveal until seen) ---
   const reveals = document.querySelectorAll('.reveal');
   if (reduced || !('IntersectionObserver' in window)) {
