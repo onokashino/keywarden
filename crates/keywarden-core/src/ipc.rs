@@ -1029,10 +1029,18 @@ mod tests {
         assert!(valid_profile("work-2"));
         assert!(!valid_profile("../etc"));
         assert!(!valid_profile(""));
-        assert!(runtime_dir_for(Some("work")).ends_with("keywarden/profiles/work"));
-        assert!(runtime_dir_for(Some("default")).ends_with("keywarden"));
-        assert!(config_file_for(Some("work")).ends_with("keywarden/profiles/work.toml"));
-        assert!(config_file_for(None).ends_with("keywarden/config.toml"));
+        let run = platform::runtime_base();
+        assert_eq!(
+            runtime_dir_for(Some("work")),
+            run.join("profiles").join("work")
+        );
+        assert_eq!(runtime_dir_for(Some("default")), run);
+        let conf = config_dir();
+        assert_eq!(
+            config_file_for(Some("work")),
+            conf.join("profiles").join("work.toml")
+        );
+        assert_eq!(config_file_for(None), conf.join("config.toml"));
         assert!(set_profile(Some("../x")).is_err());
     }
 }

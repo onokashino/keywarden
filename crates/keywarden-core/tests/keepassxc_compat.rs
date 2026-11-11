@@ -63,7 +63,11 @@ fn normalize(xml: &str) -> String {
     let mut out = Vec::new();
     let mut lines = xml.lines();
     while let Some(line) = lines.next() {
-        out.push(line.to_string());
+        // номер вложения в общем пуле зависит от версии KeePassXC и сдвигается от чужих вложений
+        out.push(match line.split_once("<Value Ref=\"") {
+            Some((head, _)) => format!("{head}<Value Ref/>"),
+            None => line.to_string(),
+        });
         if line.trim() != "<CustomData>" {
             continue;
         }
