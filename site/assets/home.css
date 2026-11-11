@@ -322,3 +322,5 @@ footer a:hover { color: var(--ink); }
   .brand { flex: none; }
 }
 @media (max-width: 360px) { .nav .gh { display: none; } }
+/* на узком экране длинная команда переносится целиком, без полосы прокрутки */
+@media (max-width: 620px) { .term { white-space: pre-wrap; overflow-wrap: anywhere; } }

@@ -229,8 +229,8 @@
 <pre class="term"><span class="c"># Arch Linux, AUR</span>
 <span class="p">$ </span><span data-type>paru -S keywarden-bin</span>
 
-<span class="c"># другие дистрибутивы: архив с GitHub Releases</span>
-<span class="p">$ </span><span data-type>tar xf keywarden-*-linux-x86_64.tar.gz</span></pre>
+<span class="c"># другие дистрибутивы</span>
+<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
       <div>
         <h3>Linux</h3>
         <p>Полная поддержка: Wayland, значок в трее, YubiKey, SSH-агент, связка ключей вместо gnome-keyring, автоввод в niri.</p>
@@ -248,7 +248,10 @@
     </div>
     <div class="os-panel" id="os-macos" role="tabpanel">
 <pre class="term"><span class="c"># Apple Silicon</span>
-<span class="p">$ </span><span data-type>brew install onokashino/tap/keywarden</span></pre>
+<span class="p">$ </span><span data-type>brew install onokashino/tap/keywarden</span>
+
+<span class="c"># или без Homebrew</span>
+<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
       <div>
         <h3>macOS<span class="badge">бета</span></h3>
         <p>Окно, лаунчер, расширение браузера, SSH-агент и автозапуск. Значка в строке меню пока нет.</p>

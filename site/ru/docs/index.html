@@ -87,6 +87,8 @@
     <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-mac" id="t-inst-mac">macOS</button>
   </div>
   <div class="panel" id="inst-linux" role="tabpanel" aria-labelledby="t-inst-linux">
+<pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
+    <p>Команда скачивает архив последнего релиза, сверяет его с <code>SHA256SUMS</code> и запускает установку из архива. Определённая версия: <code>... | KEYWARDEN_VERSION=v0.1.0 sh</code>. Скрипт можно сначала <a href="../../install.sh">прочитать</a>. То же вручную:</p>
 <pre><code>tar xzf keywarden-*-linux-x86_64.tar.gz
 cd keywarden-*-linux-x86_64
 ./install.sh</code></pre>
@@ -100,6 +102,8 @@ cd keywarden-*-linux-x86_64
 <pre><code>.\kw.exe browser-setup</code></pre>
   </div>
   <div class="panel" id="inst-mac" role="tabpanel" aria-labelledby="t-inst-mac" hidden>
+<pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
+    <p>Ставит бинарники в <code>~/.local/bin</code> и регистрирует хост браузера. Файл, скачанный через curl, macOS не помечает карантином, так что <code>xattr</code> не нужен. Вручную из архива:</p>
 <pre><code>tar xzf keywarden-*-macos-arm64.tar.gz
 cd keywarden-*-macos-arm64
 xattr -dr com.apple.quarantine .
