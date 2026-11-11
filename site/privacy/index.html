@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · Keywarden</title>
+<meta name="description" content="Keywarden collects nothing. What the app and the browser extension store, and the few network requests they make only when you ask.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/privacy/">
+<link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/privacy/">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/logo.svg" alt="" width="28" height="28">Keywarden</a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="../#tour">Features</a>
+      <a href="../#security">Security</a>
+      <a href="../#move">Switching</a>
+      <a href="../docs/">Docs</a>
+    </nav>
+    <div class="nav-right">
+      <div class="lang" aria-label="Language">
+        <a href="./" aria-current="page" data-lang="en">EN</a>
+        <a href="../ru/privacy/" data-lang="ru" hreflang="ru">RU</a>
+      </div>
+      <a class="btn small" href="https://github.com/onokashino/keywarden"><svg aria-hidden="true"><use href="../assets/icons.svg#i-code"/></svg>GitHub</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<main class="doc" id="main" style="max-width: 72ch; padding-block: 40px 80px;">
+<h1>Privacy policy</h1>
+<p class="lead">Keywarden collects nothing. There are no accounts, no servers of ours, no analytics and no crash reports. Your passwords stay in a <code>.kdbx</code> file on your computer.</p>
+<p>Last updated: 11 November 2026. Applies to the Keywarden app (<code>keywardend</code>, <code>keywarden-ui</code>, <code>kw</code>, <code>keywarden-host</code>) and the Keywarden browser extension for Firefox, Chrome and Edge.</p>
+
+<h2 id="stored">What is stored and where</h2>
+<ul>
+  <li><b>Your vault.</b> A KeePass <code>.kdbx</code> file in a folder you choose, encrypted with your master password (and key file or YubiKey, if you use them). If you put it in Syncthing, Dropbox or another sync folder, that service handles the file under its own terms; Keywarden only reads and writes the file.</li>
+  <li><b>Settings.</b> A config file in your user's config folder (for example <code>~/.config/keywarden</code>). It holds preferences, never passwords.</li>
+  <li><b>Browser extension.</b> In the browser's local extension storage: its preferences, password generator options, the keys that pair it with the app, and for each site where you filled a login, which entry you picked last (the site's host name and the entry id, so it is offered first next time). It does not store passwords, page contents, form contents or browsing history. Removing the extension deletes all of it.</li>
+</ul>
+
+<h2 id="extension">The browser extension</h2>
+<p>The extension talks only to the Keywarden app on the same computer, through the browser's native messaging channel. Messages are encrypted end to end between the extension and the app. It sends nothing to the internet and has no remote code.</p>
+<p>To fill a login it reads the address of the current tab and finds the login form on the page. The address is used to pick matching entries in your vault; only the host name of a site where you actually filled a login is remembered, as described above. Permissions and why they are needed:</p>
+<ul>
+  <li><code>nativeMessaging</code>: connect to the Keywarden app on your computer.</li>
+  <li><code>activeTab</code>, <code>tabs</code>, <code>scripting</code>: see the current tab's address and fill the login form on it.</li>
+  <li><code>storage</code>: keep the extension's own preferences.</li>
+  <li><code>favicon</code> (Chrome and Edge): show site icons from the browser's own cache in the popup.</li>
+</ul>
+
+<h2 id="network">Network requests</h2>
+<p>The app works fully offline. It goes online only in the cases below, and each one starts from your action or a setting you turned on. Requests go straight from your computer to the named service; we never see them.</p>
+<ul>
+  <li><b>Update check</b>, off by default. When on, it asks GitHub (<code>api.github.com</code>) for the latest release number.</li>
+  <li><b>Leaked password check</b>, when you run it in Vault health or turn on scheduled checks (off by default). Uses the Have I Been Pwned range API (<code>api.pwnedpasswords.com</code>): only the first 5 characters of each password's SHA-1 hash are sent, never the password or the full hash.</li>
+  <li><b>2FA and passkey hints</b>, when you press the button in Vault health. Downloads public lists from <code>2fa.directory</code>. Nothing about your vault is sent.</li>
+  <li><b>Site icon</b>, when you ask for an entry's icon. Loads the icon from that entry's website, like opening the site would.</li>
+  <li><b>Block explorer links</b> for crypto wallet entries open in your browser only when you click them.</li>
+</ul>
+
+<h2 id="third">Third parties</h2>
+<p>We do not sell, share or transfer any data, because we do not have any. This website is static, hosted on GitHub Pages, and loads nothing from third parties (fonts are self-hosted). GitHub may keep standard server logs for it under the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>.</p>
+
+<h2 id="contact">Changes and contact</h2>
+<p>Changes to this policy are made in the open in the <a href="https://github.com/onokashino/keywarden">repository</a>, with the date above updated. Questions: <a href="https://github.com/onokashino/keywarden/issues">open an issue</a>, or for a security problem use <a href="https://github.com/onokashino/keywarden/security">private vulnerability reporting</a>.</p>
+</main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Keywarden · GPL-3.0-or-later</span>
+    <a href="../">Home</a>
+    <a href="../docs/">Docs</a>
+    <a href="https://github.com/onokashino/keywarden">GitHub</a>
+    <span class="spacer"></span>
+    <a href="https://github.com/onokashino/keywarden/edit/main/site/privacy/index.html">Edit this page</a>
+  </div>
+</footer>
+<script src="../assets/site.js" defer></script>
+</body>
+</html>

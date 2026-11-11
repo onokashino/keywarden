@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Приватность · Keywarden</title>
+<meta name="description" content="Keywarden ничего не собирает. Что хранят приложение и расширение браузера и какие запросы в сеть они делают, только когда вы просите.">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/privacy/">
+<link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/privacy/">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">К содержимому</a>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../../assets/logo.svg" alt="" width="28" height="28">Keywarden</a>
+    <nav class="nav-links" aria-label="Главное меню">
+      <a href="../#tour">Возможности</a>
+      <a href="../#security">Безопасность</a>
+      <a href="../#move">Переезд</a>
+      <a href="../docs/">Документация</a>
+    </nav>
+    <div class="nav-right">
+      <div class="lang" aria-label="Язык">
+        <a href="../../privacy/" data-lang="en" hreflang="en">EN</a>
+        <a href="./" aria-current="page" data-lang="ru">RU</a>
+      </div>
+      <a class="btn small" href="https://github.com/onokashino/keywarden"><svg aria-hidden="true"><use href="../../assets/icons.svg#i-code"/></svg>GitHub</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<main class="doc" id="main" style="max-width: 72ch; padding-block: 40px 80px;">
+<h1>Политика приватности</h1>
+<p class="lead">Keywarden ничего не собирает. Нет аккаунтов, нет наших серверов, нет аналитики и отчётов о сбоях. Пароли лежат в файле <code>.kdbx</code> на вашем компьютере.</p>
+<p>Обновлено 11 ноября 2026. Относится к приложению Keywarden (<code>keywardend</code>, <code>keywarden-ui</code>, <code>kw</code>, <code>keywarden-host</code>) и расширению Keywarden для Firefox, Chrome и Edge.</p>
+
+<h2 id="stored">Что хранится и где</h2>
+<ul>
+  <li><b>База.</b> Файл KeePass <code>.kdbx</code> в папке, которую вы выбрали, зашифрованный мастер-паролем (и ключевым файлом или YubiKey, если они есть). Если база лежит в папке Syncthing, Dropbox или другой синхронизации, файлом распоряжается этот сервис по своим правилам; Keywarden только читает и пишет файл.</li>
+  <li><b>Настройки.</b> Файл в папке настроек пользователя (например <code>~/.config/keywarden</code>). В нём предпочтения, паролей там нет.</li>
+  <li><b>Расширение браузера.</b> В локальном хранилище расширения: свои настройки, параметры генератора паролей, ключи сопряжения с приложением и для каждого сайта, где вы заполняли вход, какую запись выбрали последней (имя сайта и id записи, чтобы в следующий раз предложить её первой). Пароли, содержимое страниц и форм и историю посещений оно не хранит. При удалении расширения всё это удаляется.</li>
+</ul>
+
+<h2 id="extension">Расширение браузера</h2>
+<p>Расширение общается только с приложением Keywarden на этом же компьютере через канал native messaging браузера. Сообщения между расширением и приложением зашифрованы. В интернет оно ничего не отправляет и не загружает код со стороны.</p>
+<p>Чтобы заполнить вход, оно читает адрес текущей вкладки и находит форму входа на странице. Адрес нужен, чтобы подобрать записи из базы; запоминается только имя сайта, где вы действительно заполнили вход, как описано выше. Разрешения и зачем они нужны:</p>
+<ul>
+  <li><code>nativeMessaging</code>: связь с приложением Keywarden на компьютере.</li>
+  <li><code>activeTab</code>, <code>tabs</code>, <code>scripting</code>: узнать адрес текущей вкладки и заполнить на ней форму входа.</li>
+  <li><code>storage</code>: хранить настройки самого расширения.</li>
+  <li><code>favicon</code> (Chrome и Edge): показывать значки сайтов из кэша самого браузера.</li>
+</ul>
+
+<h2 id="network">Запросы в сеть</h2>
+<p>Приложение полностью работает без сети. В интернет оно ходит только в случаях ниже, и каждый начинается с вашего действия или включённой вами настройки. Запросы идут с вашего компьютера прямо в указанный сервис, мы их не видим.</p>
+<ul>
+  <li><b>Проверка обновлений</b>, по умолчанию выключена. Если включить, спрашивает у GitHub (<code>api.github.com</code>) номер последней версии.</li>
+  <li><b>Проверка утёкших паролей</b>, когда вы запускаете её в «Здоровье базы» или включаете проверку по расписанию (по умолчанию выключена). Использует range API Have I Been Pwned (<code>api.pwnedpasswords.com</code>): уходят только первые 5 символов SHA-1 хеша каждого пароля, но не пароль и не хеш целиком.</li>
+  <li><b>Подсказки про 2FA и ключи доступа</b>, по кнопке в «Здоровье базы». Скачивает открытые списки с <code>2fa.directory</code>. Ничего о вашей базе не отправляется.</li>
+  <li><b>Значок сайта</b>, когда вы просите значок для записи. Загружает его с сайта этой записи, как при обычном открытии сайта.</li>
+  <li><b>Ссылки на обозреватели блоков</b> у криптокошельков открываются в браузере, только когда вы по ним нажимаете.</li>
+</ul>
+
+<h2 id="third">Третьи лица</h2>
+<p>Мы не продаём, не передаём и не пересылаем данные: у нас их просто нет. Этот сайт статический, размещён на GitHub Pages и ничего не грузит со сторонних серверов (шрифты лежат здесь же). GitHub может вести обычные журналы сервера по своему <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">заявлению о конфиденциальности</a>.</p>
+
+<h2 id="contact">Изменения и связь</h2>
+<p>Политика меняется открыто в <a href="https://github.com/onokashino/keywarden">репозитории</a>, дата выше обновляется. Вопросы: <a href="https://github.com/onokashino/keywarden/issues">создайте issue</a>, а о проблеме безопасности сообщите через <a href="https://github.com/onokashino/keywarden/security">закрытый отчёт об уязвимости</a>.</p>
+</main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Keywarden · GPL-3.0-or-later</span>
+    <a href="../">Главная</a>
+    <a href="../docs/">Документация</a>
+    <a href="https://github.com/onokashino/keywarden">GitHub</a>
+    <span class="spacer"></span>
+    <a href="https://github.com/onokashino/keywarden/edit/main/site/ru/privacy/index.html">Редактировать страницу</a>
+  </div>
+</footer>
+<script src="../../assets/site.js" defer></script>
+</body>
+</html>
