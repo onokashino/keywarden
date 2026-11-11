@@ -206,7 +206,8 @@ mod wayland {
     }
 }
 
-#[cfg(test)]
+// на Windows и macOS буфер есть всегда, проверка имеет смысл только для Wayland
+#[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
     fn fails_cleanly_without_wayland() {
