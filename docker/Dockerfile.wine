@@ -1,4 +1,4 @@
-# Проверка Windows-сборки (keywardend.exe, kw.exe) под Wine: именованные каналы, пути, буфер.
+# Checks the Windows build (keywardend.exe, kw.exe) under Wine: named pipes, paths, clipboard.
 FROM debian:trixie-slim
 RUN apt-get update && apt-get install -y --no-install-recommends wine wine64 ca-certificates \
     && rm -rf /var/lib/apt/lists/*

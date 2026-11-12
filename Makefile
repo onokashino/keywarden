@@ -1,10 +1,10 @@
-# Всё запускается в Docker с лимитом 8 ГБ без свопа (правило этой машины).
-# Кэш cargo и npm лежит в ~/.cache/keywarden-docker, чтобы не качать заново.
+# Everything runs in Docker with an 8 GB memory limit and no swap.
+# cargo and npm caches live in ~/.cache/keywarden-docker so nothing is downloaded twice.
 
 IMAGE   := keywarden-dev
 MEM     := 8g
 CACHE   := $(HOME)/.cache/keywarden-docker
-# метка контейнеров проверок: docker ps --filter label=$(LABEL)
+# label of check containers: docker ps --filter label=$(LABEL)
 LABEL  ?= keywarden-dev=1
 DOCKER  = docker run --rm --label $(LABEL) --memory $(MEM) --memory-swap $(MEM) \
           --user "$$(id -u):$$(id -g)" -v "$(CURDIR)":/app -w /app \
@@ -15,14 +15,14 @@ NODE    = $(DOCKER) --name keywarden-$@ -v $(CACHE)/npm:/npm -e npm_config_cache
 
 .PHONY: image check test clippy build wasm ext ext-firefox clean e2e e2e-crash ui-shots e2e-ext e2e-ssh e2e-secrets check-cross e2e-wine site-shots ui-ssh i18n-new i18n-status
 
-# перевод: заготовка нового языка (make i18n-new CODE=de NAME=Deutsch) и сколько переведено
+# translation: scaffold a new language (make i18n-new CODE=de NAME=Deutsch) and show progress
 i18n-new:
 	$(DOCKER) --name keywarden-$@ $(IMAGE) sh scripts/i18n-new.sh "$(CODE)" "$(NAME)"
 i18n-status:
 	docker run --rm --label $(LABEL) --memory 512m --memory-swap 512m --name keywarden-$@ \
 	  --user "$$(id -u):$$(id -g)" -v "$(CURDIR)":/app -w /app python:3.13-slim python scripts/i18n-status.py
 
-# кадры для сайта: витринная база на двух языках -> site/assets/shots и site/assets/shots/ru
+# site screenshots: showcase database in two languages -> site/assets/shots and site/assets/shots/ru
 site-shots:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli -p keywarden-ui
 	$(DOCKER) --name keywarden-site-shots-en -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro -e KEYWARDEN_LANG=en -e SHOWCASE=1 -e DB_NAME=vault -e WORK_TITLE=GitLab \
@@ -42,7 +42,7 @@ test:  ; $(CARGO) test --workspace
 clippy:; $(CARGO) clippy --workspace --all-targets -- -D warnings
 build: ; $(CARGO) build --workspace --release
 
-# Rust -> WASM -> extension/wasm (импортируется из background.ts)
+# Rust -> WASM -> extension/wasm (imported by background.ts)
 wasm:
 	$(DOCKER) --name keywarden-wasm -e PATH=/opt/cargo/bin:/usr/bin $(IMAGE) sh scripts/build-wasm.sh
 
@@ -54,7 +54,7 @@ ext-firefox: wasm
 clean:
 	rm -rf target extension/.output extension/.wxt extension/wasm
 
-# демон + kw на базе из KeePassXC, проверка результата через keepassxc-cli
+# daemon + kw on a KeePassXC database, result checked with keepassxc-cli
 e2e:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli
 	$(DOCKER) --name keywarden-e2e $(IMAGE) sh scripts/e2e-cli.sh
@@ -63,8 +63,8 @@ e2e-crash:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli
 	$(DOCKER) --name keywarden-e2e-crash $(IMAGE) sh scripts/e2e-crash-clipboard.sh
 
-# UI в headless sway с программным Vulkan; скриншоты в target/shots
-# Windows и macOS из Linux: clippy (без линковки; UI под macOS так не проверить, см. .github)
+# UI in headless sway with software Vulkan; screenshots in target/shots
+# Windows and macOS from Linux: clippy (no linking; the macOS UI cannot be checked this way, see .github)
 check-cross:
 	$(DOCKER) --name keywarden-$@ -e HOME=/tmp -e CC_aarch64_apple_darwin=zigcc-macos \
 	  -e PATH=/opt/cargo/bin:/usr/bin:/usr/local/bin $(IMAGE) sh -c '\
@@ -73,7 +73,7 @@ check-cross:
 	      -p keywarden-host --all-targets -- -D warnings || exit 1; done; \
 	  cargo clippy -q --target x86_64-pc-windows-gnu -p keywarden-ui --all-targets -- -D warnings'
 
-# демон и kw для Windows под Wine: именованный канал, разблокировка, запись, блокировка
+# daemon and kw for Windows under Wine: named pipe, unlock, write, lock
 e2e-wine:
 	$(CARGO) build -q --release --target x86_64-pc-windows-gnu -p keywarden-daemon -p keywarden-cli
 	docker build -q -t keywarden-wine -f docker/Dockerfile.wine docker
@@ -81,8 +81,8 @@ e2e-wine:
 	$(DOCKER) --name keywarden-$@-db $(IMAGE) sh -c "printf 'pw\\npw\\n' | keepassxc-cli db-create -p target/wine/test.kdbx >/dev/null && printf 'pw\\n' | keepassxc-cli add -u octo target/wine/test.kdbx GitHub -g >/dev/null"
 	$(DOCKER) --name keywarden-$@ keywarden-wine sh scripts/e2e-wine.sh
 
-# SSH в окне: разблокировка по запросу ssh, подключение из лаунчера (терминал-заглушка пишет
-# команду в файл), вкладка настроек целиком, окно нового ключа (создать и добавить с клавиатуры)
+# SSH in the window: unlock on an ssh request, connect from the launcher (a stub terminal writes
+# the command to a file), the whole settings tab, the new key window (create and add by keyboard)
 ui-ssh:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli -p keywarden-ui
 	awk -F: -v OFS=: -v u=$$(id -u) '$$3 == u { $$7 = "/bin/sh" } 1' /etc/passwd > $(CACHE)/passwd-sh
@@ -113,8 +113,8 @@ e2e-ext: ext
 
 e2e-ssh:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli
-	# ssh-keygen и ssh-add требуют запись uid в /etc/passwd; sshd в тесте ещё и существующую
-	# оболочку, а у пользователя хоста её в образе может не быть: копия с /bin/sh
+	# ssh-keygen and ssh-add need the uid in /etc/passwd; sshd in the test also needs an existing
+	# shell, which the host user may lack in the image: a copy with /bin/sh
 	awk -F: -v OFS=: -v u=$$(id -u) '$$3 == u { $$7 = "/bin/sh" } 1' /etc/passwd > $(CACHE)/passwd-sh
 	$(DOCKER) --name keywarden-e2e-ssh -v $(CACHE)/passwd-sh:/etc/passwd:ro -v /etc/group:/etc/group:ro $(IMAGE) sh scripts/e2e-ssh.sh
 

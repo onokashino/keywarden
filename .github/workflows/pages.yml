@@ -1,4 +1,4 @@
-# Сайт и документация из site/ на GitHub Pages (Settings, Pages, Source: GitHub Actions).
+# Site and docs from site/ on GitHub Pages (Settings, Pages, Source: GitHub Actions).
 name: pages
 
 on:
@@ -24,7 +24,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
-      - name: ссылки внутри сайта не битые
+      - name: no broken links inside the site
         run: sh scripts/check-site-links.sh
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

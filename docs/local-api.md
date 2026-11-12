@@ -1,23 +1,23 @@
-# Локальный API Keywarden (ассистенты и скрипты)
+# Keywarden local API (assistants and scripts)
 
-Сокет: `$XDG_RUNTIME_DIR/keywarden/api.sock` (права 0600, принимаются только процессы того же
-пользователя). Одна строка JSON на запрос, одна строка JSON на ответ, соединение можно
-переиспользовать.
+Socket: `$XDG_RUNTIME_DIR/keywarden/api.sock` (mode 0600, only processes of the same user are
+accepted). One line of JSON per request, one line of JSON per response; the connection can be
+reused.
 
-**Значений секретов API не выдаёт никогда**: ни в ответах, ни в ошибках. Секрет можно только
-положить в буфер обмена (он очистится сам через 30 с и помечен для менеджеров истории буфера
-как секрет) или взять из буфера при создании записи.
+**The API never returns secret values**: not in responses, not in errors. A secret can only be
+put into the clipboard (it clears itself after 30 s and is marked as a secret for clipboard
+history managers) or taken from the clipboard when creating an entry.
 
 ## list
 
 ```json
-{"method": "list", "query": "почта"}
+{"method": "list", "query": "mail"}
 ```
 ```json
-{"ok": true, "items": [{"id": "6f2a…", "title": "Почта", "type": "login"}]}
+{"ok": true, "items": [{"id": "6f2a…", "title": "Mail", "type": "login"}]}
 ```
-Нечёткий поиск по названию, логину, адресу. Пустой `query`: недавно использованные.
-Типы: `login`, `card`, `identity`, `note`, `ssh_key`, `passkey`.
+Fuzzy search by title, username, address. An empty `query` returns recently used entries.
+Types: `login`, `card`, `identity`, `note`, `ssh_key`, `passkey`.
 
 ## secret_copy
 
@@ -27,27 +27,28 @@
 ```json
 {"ok": true}
 ```
-Копирует основной секрет записи: пароль (`login`, `ssh_key`), номер карты (`card`),
-текст заметки (`note`), номер паспорта (`identity`). У `passkey` секрета для копирования нет.
+Copies the main secret of the entry: password (`login`, `ssh_key`), card number (`card`),
+note text (`note`), passport number (`identity`). A `passkey` has no secret to copy.
 
 ## save_from_clipboard
 
 ```json
-{"method": "save_from_clipboard", "title": "Wi-Fi дома", "type": "login"}
+{"method": "save_from_clipboard", "title": "Home Wi-Fi", "type": "login"}
 ```
 ```json
 {"ok": true, "id": "9c01…"}
 ```
-Создаёт запись, основной секрет берётся из буфера обмена (пароль для `login`, текст для `note`
-и т. д., см. выше). Значение в ответ не возвращается.
+Creates an entry whose main secret is taken from the clipboard (the password for `login`, the
+text for `note` and so on, see above). The value is not returned.
 
-## Ошибки
+## Errors
 
 ```json
-{"ok": false, "error": "база заблокирована"}
+{"ok": false, "error": "vault is locked"}
 ```
+The error text follows the app language.
 
-## Пример (shell)
+## Example (shell)
 
 ```sh
 printf '%s\n' '{"method":"list","query":"git"}' | socat - UNIX-CONNECT:$XDG_RUNTIME_DIR/keywarden/api.sock

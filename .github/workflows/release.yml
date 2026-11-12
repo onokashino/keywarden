@@ -1,5 +1,5 @@
-# Релиз по тегу vX.Y.Z: сборка на трёх системах, архивы, расширение, контрольные суммы.
-# Релиз публикуется сразу (текст из .github/release-notes.md), затем запускаются packages и extension-stores.
+# Release on a vX.Y.Z tag: builds on three systems, archives, extension, checksums.
+# The release is published at once (text from .github/release-notes.md), then packages and extension-stores run.
 name: release
 
 on:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Тег, например v0.1.0
+        description: Tag, for example v0.1.0
         required: true
 
 permissions:
@@ -25,13 +25,13 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
-      - name: тег совпадает с версией в Cargo.toml и package.json
+      - name: tag matches the version in Cargo.toml and package.json
         run: |
           v=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
           e=$(node -p "require('./extension/package.json').version")
-          # пре-релиз v0.2.0-rc.1 собирается из версии 0.2.0: Firefox не принимает буквы в версии
-          [ "v$v" = "${TAG%%-*}" ] || { echo "::error::тег $TAG, а в Cargo.toml $v"; exit 1; }
-          [ "$e" = "$v" ] || { echo "::error::extension/package.json $e, а Cargo.toml $v"; exit 1; }
+          # prerelease v0.2.0-rc.1 is built from version 0.2.0: Firefox does not accept letters in a version
+          [ "v$v" = "${TAG%%-*}" ] || { echo "::error::tag $TAG, but Cargo.toml has $v"; exit 1; }
+          [ "$e" = "$v" ] || { echo "::error::extension/package.json has $e, but Cargo.toml has $v"; exit 1; }
 
   build:
     needs: version
@@ -50,9 +50,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: ./.github/actions/linux-deps
         if: runner.os == 'Linux'
-      - name: сборка
+      - name: build
         run: cargo build --release --locked -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui
-      - name: архив
+      - name: archive
         shell: bash
         run: |
           d=keywarden-$TAG-${{ matrix.name }}
@@ -95,7 +95,7 @@ jobs:
           cache-dependency-path: extension/package-lock.json
       - working-directory: extension
         run: npm ci && npm run zip
-      - name: исходники для AMO (WASM собирается из Rust, нужен весь репозиторий)
+      - name: sources for AMO (WASM is built from Rust, so the whole repository)
         run: |
           rm extension/.output/*-sources.zip
           git archive --format=zip -o "extension/.output/keywarden-$TAG-sources.zip" HEAD
@@ -103,6 +103,8 @@ jobs:
         with:
           name: extension
           path: extension/.output/*.zip
+          # .output is a hidden folder, skipped by default
+          include-hidden-files: true
           if-no-files-found: error
 
   publish:
@@ -120,7 +122,7 @@ jobs:
         with:
           path: out
           merge-multiple: true
-      - name: релиз
+      - name: release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -130,9 +132,9 @@ jobs:
           pre=; case "$TAG" in *-*) pre=--prerelease;; esac
           gh release create "$TAG" ./* --repo "$GITHUB_REPOSITORY" $pre \
             --title "Keywarden $TAG" --notes-file ../notes.md --generate-notes
-      # релиз от GITHUB_TOKEN не вызывает событие release: published, поэтому запускаем сами
-      - name: пакеты и магазины
-        # пре-релиз (v0.2.0-rc.1) только для проверки: в менеджеры пакетов и магазины не идёт
+      # a release made with GITHUB_TOKEN does not fire release: published, so start them here
+      - name: packages and stores
+        # a prerelease (v0.2.0-rc.1) is for testing only: no package managers, no stores
         if: ${{ !contains(env.TAG, '-') }}
         env:
           GH_TOKEN: ${{ github.token }}

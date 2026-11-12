@@ -1,10 +1,10 @@
-# Образ для сборок и тестов. Arch, как целевая система: свежий keepassxc-cli для тестов совместимости.
-# Запускается через Makefile с лимитом памяти.
+# Image for builds and tests. Arch as the target system: a fresh keepassxc-cli for compatibility tests.
+# Run through the Makefile with a memory limit.
 FROM archlinux:latest
 
-# Системные библиотеки GPUI + keepassxc-cli + wl-clipboard и headless sway (тесты буфера) + openssh (тесты агента)
-# + программный Vulkan (lavapipe), grim и шрифты: UI запускается в headless sway и снимается скриншотами
-# + chromium и node: e2e расширения (playwright-core, headless Chromium с настоящим native messaging)
+# GPUI system libraries + keepassxc-cli + wl-clipboard and headless sway (clipboard tests) + openssh (agent tests)
+# + software Vulkan (lavapipe), grim and fonts: the UI runs in headless sway and is screenshotted
+# + chromium and node: extension e2e (playwright-core, headless Chromium with real native messaging)
 RUN pacman -Syu --noconfirm --needed \
       base-devel rustup clang pkgconf fontconfig wayland libxkbcommon libxkbcommon-x11 \
       libxcb vulkan-icd-loader vulkan-swrast grim wtype noto-fonts chromium nodejs npm openssl zstd keepassxc wl-clipboard openssh git sway \
@@ -18,14 +18,14 @@ RUN rustup default stable \
     && rm -rf /opt/cargo/registry \
     && chmod -R a+rwX /opt/rustup
 
-# pdftoppm: просмотр PDF во вложениях (отдельным слоем, чтобы не пересобирать образ целиком)
+# pdftoppm: PDF attachment preview (separate layer so the whole image is not rebuilt)
 RUN pacman -Syu --noconfirm --needed poppler && pacman -Scc --noconfirm
 
-# Кроссплатформенность: проверка сборки под Windows и macOS (cargo check, без линковки)
+# Cross-platform: build checks for Windows and macOS (cargo check, no linking)
 RUN rustup target add x86_64-pc-windows-msvc x86_64-pc-windows-gnu aarch64-apple-darwin \
     && pacman -Syu --noconfirm --needed mingw-w64-gcc && pacman -Scc --noconfirm \
     && chmod -R a+rwX /opt/rustup
 
-# zig как C-компилятор под macOS (проверка сборки C-зависимостей вроде ring без Xcode)
+# zig as the macOS C compiler (builds C dependencies like ring without Xcode)
 RUN pacman -Syu --noconfirm --needed zig && pacman -Scc --noconfirm
 COPY bin/zigcc-macos /usr/local/bin/zigcc-macos

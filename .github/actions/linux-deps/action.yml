@@ -1,5 +1,5 @@
 name: linux-deps
-description: Системные библиотеки для сборки GPUI на Ubuntu
+description: System libraries for building GPUI on Ubuntu
 runs:
   using: composite
   steps:

@@ -1,6 +1,6 @@
-# Проверка каждого push и PR: формат, clippy и тесты на трёх системах, сборка расширения.
-# Интерфейс (GPUI) собирается только на своей системе: шейдеры DirectX и Metal
-# компилируются инструментами Windows и Xcode, поэтому без матрицы ОС не обойтись.
+# Every push and PR: format, clippy and tests on three systems, extension build.
+# The GPUI interface builds only on its own system: DirectX and Metal shaders are
+# compiled by Windows and Xcode tools, hence the OS matrix.
 name: ci
 
 on:
@@ -20,7 +20,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
   RUSTFLAGS: -D warnings
-  # тесты сверяют русские сообщения; перевод проверяет i18n::tests::every_key_is_translated
+  # tests compare Russian messages; i18n::tests::every_key_is_translated checks the translation
   KEYWARDEN_LANG: ru
 
 jobs:
@@ -50,11 +50,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: clippy
         run: cargo clippy --workspace --exclude keywarden-ext --all-targets
-      - name: тесты
+      - name: tests
         run: cargo test --workspace --exclude keywarden-ext --exclude keywarden-ui
-      - name: сборка
+      - name: build
         run: cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui
-      - name: бинарники запускаются
+      - name: binaries start
         shell: bash
         run: target/release/kw --help >/dev/null
 
@@ -68,7 +68,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
-          # версия совпадает с wasm-bindgen в crates/keywarden-ext/Cargo.toml
+          # same version as wasm-bindgen in crates/keywarden-ext/Cargo.toml
           tool: wasm-bindgen@0.2.130
       - run: sh scripts/build-wasm.sh
       - uses: actions/setup-node@v4

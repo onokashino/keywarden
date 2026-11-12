@@ -1,4 +1,4 @@
-# Формула для tap onokashino/homebrew-tap. Обновляется из .github/workflows/packages.yml.
+# Formula for the onokashino/homebrew-tap tap. Updated by .github/workflows/packages.yml.
 class Keywarden < Formula
   desc "Keyboard-first password manager on the KeePass format (KDBX 4)"
   homepage "https://onokashino.github.io/keywarden/"

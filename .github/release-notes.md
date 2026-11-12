@@ -20,7 +20,7 @@ Unpack `keywarden-{TAG}-windows-x86_64.zip` to a folder you keep, for example `%
 
 **Browser extension**
 
-Firefox: https://addons.mozilla.org/firefox/addon/keywarden/. The extension talks only to the Keywarden app on the same computer.
+Coming to Firefox Add-ons soon. The extension talks only to the Keywarden app on the same computer.
 
 ## Verify
 

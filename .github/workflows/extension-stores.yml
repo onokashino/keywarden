@@ -1,6 +1,5 @@
-# Отправка расширения в магазины, после публикации релиза (release.yml запускает сам).
-# Магазин без секретов пропускается. Как получить секреты: site/docs (раздел для разработчиков)
-# и CONTRIBUTING.md.
+# Submits the extension to the browser stores after a release is published (started by release.yml).
+# A store without secrets is skipped. How to get the secrets: docs/publishing.md and CONTRIBUTING.md.
 name: extension-stores
 
 on:
@@ -9,10 +8,10 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Тег релиза, например v0.1.0
+        description: Release tag, for example v0.1.0
         required: true
       dry_run:
-        description: Только проверить секреты
+        description: Only check the secrets
         type: boolean
         default: true
 
@@ -36,7 +35,7 @@ jobs:
           cache-dependency-path: extension/package-lock.json
       - working-directory: extension
         run: npm ci --ignore-scripts
-      - name: zip из релиза
+      - name: zips from the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release download "$TAG" -p 'keywarden-extension-*.zip' -p '*-sources.zip' -D zips
@@ -61,6 +60,6 @@ jobs:
           [ -n "$CHROME_EXTENSION_ID" ] && set -- "$@" --chrome-zip $z/*-chrome.zip
           [ -n "$FIREFOX_EXTENSION_ID" ] && set -- "$@" --firefox-zip $z/*-firefox.zip --firefox-sources-zip $z/*-sources.zip
           [ -n "$EDGE_PRODUCT_ID" ] && set -- "$@" --edge-zip $z/*-chrome.zip
-          if [ $# -eq 0 ]; then echo "::warning::нет секретов ни одного магазина, пропуск"; exit 0; fi
+          if [ $# -eq 0 ]; then echo "::warning::no store secrets, skipping"; exit 0; fi
           # shellcheck disable=SC2086
           npx wxt submit $DRY "$@"

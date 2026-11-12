@@ -1,164 +1,165 @@
-# Публикация: GitHub, сайт, релизы, магазины расширений
+# Publishing: GitHub, site, releases, extension stores
 
-## 1. Один раз: репозиторий
+## 1. Once: the repository
 
-1. Создать пустой репозиторий `onokashino/keywarden` (без README и лицензии, они уже есть).
+1. Create an empty repository `onokashino/keywarden` (no README or license, they already exist).
 2. `git remote add origin git@github.com:onokashino/keywarden.git && git push -u origin main`.
-3. Settings, Pages, Source: **GitHub Actions**. После первого push в `site/` сайт появится на
+3. Settings, Pages, Source: **GitHub Actions**. After the first push to `site/` the site appears at
    https://onokashino.github.io/keywarden/.
-4. Settings, Code security: включить **Private vulnerability reporting** (на него ссылается SECURITY.md)
-   и Dependabot alerts.
-5. Settings, Environments: создать окружение **stores** и положить секреты магазинов туда
-   (раздел 4). Можно включить «Required reviewers»: отправка в магазины будет ждать подтверждения.
+4. Settings, Code security: turn on **Private vulnerability reporting** (SECURITY.md links to it)
+   and Dependabot alerts.
+5. Settings, Environments: create the **stores** environment and put the store secrets there
+   (section 4). You can turn on "Required reviewers": store submission then waits for approval.
 
-## 2. Выпуск версии
+## 2. Releasing a version
 
-1. Поднять версию в `Cargo.toml` (`[workspace.package] version`) и `extension/package.json`.
-   Они должны совпадать, иначе релиз остановится на первом шаге.
-2. Закоммитить, поставить тег, отправить:
+1. Bump the version in `Cargo.toml` (`[workspace.package] version`) and `extension/package.json`.
+   They must match, otherwise the release stops at the first step.
+2. Commit, tag, push:
    ```sh
    git tag v0.2.0 && git push origin main v0.2.0
    ```
-3. `release.yml` соберёт архивы под Linux, Windows и macOS, zip расширения для Chrome и Firefox,
-   архив исходников для AMO и `SHA256SUMS`, и сразу опубликует релиз. Текст релиза берётся из
-   `.github/release-notes.md` (`{TAG}` заменяется на тег), ниже GitHub добавляет список изменений.
-4. После публикации `release.yml` запускает `packages.yml` (AUR, Homebrew, winget) и
-   `extension-stores.yml`: расширение уходит на проверку в те магазины, для которых заданы
-   секреты. Остальные пропускаются с предупреждением.
+3. `release.yml` builds archives for Linux, Windows and macOS, extension zips for Chrome and Firefox,
+   the source archive for AMO and `SHA256SUMS`, and publishes the release at once. The release text
+   comes from `.github/release-notes.md` (`{TAG}` is replaced with the tag); GitHub appends the
+   list of changes below it.
+4. After publishing, `release.yml` starts `packages.yml` (AUR, Homebrew, winget) and
+   `extension-stores.yml`: the extension goes to review in every store that has its secrets set.
+   The others are skipped with a warning.
 
-Проверить сборку до выпуска: тег с дефисом, например `v0.2.0-rc.1`, при версии `0.2.0` в
-`Cargo.toml`. Релиз выйдет с пометкой Pre-release: `/releases/latest`, установщик и проверка
-обновлений его не видят, пакеты и магазины не запускаются. Поставить и проверить:
+Test a build before releasing it: tag with a hyphen, for example `v0.2.0-rc.1`, while `Cargo.toml`
+says `0.2.0`. The release comes out marked Pre-release: `/releases/latest`, the installer and the
+update check do not see it, packages and stores are not started. Install and test it:
 `curl -fsSL https://onokashino.github.io/keywarden/install.sh | KEYWARDEN_VERSION=v0.2.0-rc.1 sh`.
-Если всё работает, поставить `v0.2.0` на тот же коммит.
+If everything works, put `v0.2.0` on the same commit.
 
-Проверить секреты без отправки: Actions, extension-stores, Run workflow, указать тег,
-галочка «Только проверить секреты» (включена по умолчанию).
+Check the secrets without submitting: Actions, extension-stores, Run workflow, enter the tag,
+keep "Only check the secrets" ticked (the default).
 
-## 3. Один раз: первая публикация в магазинах (вручную)
+## 3. Once: first submission to the stores (by hand)
 
-Автоматика умеет только обновлять уже существующую карточку. Первый раз загружаем руками.
-Zip берём из первого релиза.
+The automation can only update an existing listing. The first upload is manual.
+Take the zips from the first release.
 
 ### Firefox (addons.mozilla.org)
 
-1. Войти на https://addons.mozilla.org/developers/ и нажать «Submit a New Add-on».
-2. Выбрать «On this site» (листинг в каталоге).
-3. Загрузить `keywarden-extension-X.Y.Z-firefox.zip`.
-4. На вопрос про исходники ответить «Yes» и загрузить `keywarden-vX.Y.Z-sources.zip`.
-   Расширение содержит WASM, собранный из Rust, поэтому нужен весь репозиторий, а инструкция
-   для ревьюеров лежит в `SOURCE_CODE_REVIEW.md`.
-5. Заполнить карточку: описание, категория «Privacy & Security», скриншоты, ссылка на сайт,
-   политика приватности («ничего не собирает», это же указано в манифесте).
-6. id расширения задан в манифесте: `keywarden@onokashino.github.io`. Это и есть секрет
-   `FIREFOX_EXTENSION_ID`.
-7. Ключи API: https://addons.mozilla.org/developers/addon/api/key/. JWT issuer идёт в
-   `FIREFOX_JWT_ISSUER`, JWT secret в `FIREFOX_JWT_SECRET`.
+1. Sign in at https://addons.mozilla.org/developers/ and press "Submit a New Add-on".
+2. Choose "On this site" (listed in the catalog).
+3. Upload `keywarden-extension-X.Y.Z-firefox.zip`.
+4. When asked about source code, answer "Yes" and upload `keywarden-vX.Y.Z-sources.zip`.
+   The extension contains WASM built from Rust, so the whole repository is needed; instructions
+   for reviewers are in `SOURCE_CODE_REVIEW.md`.
+5. Fill in the listing: description, category "Privacy & Security", screenshots, website link,
+   privacy policy ("collects nothing", the manifest says the same).
+6. The extension id is set in the manifest: `keywarden@onokashino.github.io`. That is the
+   `FIREFOX_EXTENSION_ID` secret.
+7. API keys: https://addons.mozilla.org/developers/addon/api/key/. The JWT issuer goes to
+   `FIREFOX_JWT_ISSUER`, the JWT secret to `FIREFOX_JWT_SECRET`.
 
 ### Chrome Web Store
 
-1. Регистрация разработчика: https://chrome.google.com/webstore/devconsole, разовый взнос $5.
-2. «New item», загрузить `keywarden-extension-X.Y.Z-chrome.zip`.
-3. Заполнить карточку и вкладку Privacy. Для каждого разрешения (`nativeMessaging`, `tabs`,
-   `scripting`, `favicon`, `storage`, `activeTab`) нужно обоснование. Основное: «связь с локальным
-   приложением Keywarden для заполнения паролей». Data usage: ничего не собирается.
-4. После проверки появится id расширения (32 буквы). Это `CHROME_EXTENSION_ID`. Его же нужно
-   прописать по умолчанию в `crates/keywarden-cli/src/browser.rs` и
-   `dist/native-messaging/chromium.json`, чтобы `kw browser-setup` работал без `--chrome-id`.
-5. Доступ для CI (API v2, сервисный аккаунт):
-   - в Google Cloud создать проект, включить «Chrome Web Store API», создать сервисный аккаунт
-     и JSON-ключ;
-   - в Developer Dashboard, Account, добавить email сервисного аккаунта;
-   - секреты: `CHROME_PUBLISHER_ID` (id издателя из Dashboard),
-     `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY` (поле
-     `private_key` из JSON целиком, с `-----BEGIN PRIVATE KEY-----`).
+1. Developer registration: https://chrome.google.com/webstore/devconsole, one-time $5 fee.
+2. "New item", upload `keywarden-extension-X.Y.Z-chrome.zip`.
+3. Fill in the listing and the Privacy tab. Every permission (`nativeMessaging`, `tabs`,
+   `scripting`, `favicon`, `storage`, `activeTab`) needs a justification. The main one: "talks to
+   the local Keywarden app to fill passwords". Data usage: nothing is collected.
+4. After review the extension id appears (32 letters). That is `CHROME_EXTENSION_ID`. Also set it
+   as the default in `crates/keywarden-cli/src/browser.rs` and
+   `dist/native-messaging/chromium.json`, so `kw browser-setup` works without `--chrome-id`.
+5. CI access (API v2, service account):
+   - in Google Cloud create a project, enable "Chrome Web Store API", create a service account
+     and a JSON key;
+   - in the Developer Dashboard, Account, add the service account email;
+   - secrets: `CHROME_PUBLISHER_ID` (publisher id from the Dashboard),
+     `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY` (the whole
+     `private_key` field from the JSON, including `-----BEGIN PRIVATE KEY-----`).
 
 ### Microsoft Edge Add-ons
 
-1. Partner Center: https://partner.microsoft.com/dashboard/microsoftedge (бесплатно).
-2. Создать расширение и загрузить тот же zip для Chrome.
-3. После публикации: Publish API, «Create API credentials». Секреты: `EDGE_PRODUCT_ID`,
+1. Partner Center: https://partner.microsoft.com/dashboard/microsoftedge (free).
+2. Create an extension and upload the same Chrome zip.
+3. After publishing: Publish API, "Create API credentials". Secrets: `EDGE_PRODUCT_ID`,
    `EDGE_CLIENT_ID`, `EDGE_API_KEY`.
 
-## 4. Секреты, итог
+## 4. Secrets, summary
 
-| Секрет | Откуда |
+| Secret | Where from |
 | --- | --- |
 | `FIREFOX_EXTENSION_ID` | `keywarden@onokashino.github.io` |
 | `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET` | AMO, Manage API Keys |
-| `CHROME_EXTENSION_ID` | Chrome Web Store, после первой публикации |
+| `CHROME_EXTENSION_ID` | Chrome Web Store, after the first publication |
 | `CHROME_PUBLISHER_ID` | Chrome Developer Dashboard, Account |
-| `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY` | Google Cloud, сервисный аккаунт |
+| `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY` | Google Cloud, service account |
 | `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`, `EDGE_API_KEY` | Partner Center, Publish API |
 
-Секреты кладутся в окружение `stores` (Settings, Environments, stores, Add secret).
+Secrets go into the `stores` environment (Settings, Environments, stores, Add secret).
 
-## 5. Что делает пользователь
+## 5. What users get
 
-- Расширение из магазина обновляется браузером само.
-- Firefox для Android магазин тоже покажет, но без приложения на телефоне расширению не с чем
-  связаться: в карточке AMO отметить только Firefox для компьютера.
+- An extension from a store is updated by the browser.
+- AMO also lists it for Firefox for Android, but without the app on the phone the extension has
+  nothing to talk to: on the AMO listing tick desktop Firefox only.
 
-## 6. Обновления приложения: AUR, Homebrew, winget
+## 6. App updates: AUR, Homebrew, winget
 
-При публикации релиза `packages.yml` обновляет пакеты в трёх каналах. Канал без секрета
-пропускается. Секреты кладутся в окружение `packages` (Settings, Environments). Предрелизы
-(тег с дефисом, например `v0.2.0-rc1`) в пакеты не попадают.
+When a release is published, `packages.yml` updates the packages in three channels. A channel
+without its secret is skipped. Secrets go into the `packages` environment (Settings, Environments).
+Prereleases (a tag with a hyphen, for example `v0.2.0-rc.1`) never reach the packages.
 
 ### AUR (`keywarden-bin`)
 
-1. Аккаунт на https://aur.archlinux.org, в профиле добавить публичный SSH-ключ
-   (отдельный, только для AUR: `ssh-keygen -t ed25519 -f aur -C aur`).
-2. Пакет создаётся первым же push, ничего регистрировать заранее не нужно.
-3. Секрет `AUR_SSH_PRIVATE_KEY`: содержимое файла `aur` (приватный ключ).
-4. Шаблон: `packaging/aur/PKGBUILD`. CI подставляет версию и sha256 архива.
+1. An account on https://aur.archlinux.org with a public SSH key in the profile
+   (a separate one, for AUR only: `ssh-keygen -t ed25519 -f aur -C aur`).
+2. The package is created by the first push, nothing to register in advance.
+3. Secret `AUR_SSH_PRIVATE_KEY`: the contents of the `aur` file (the private key).
+4. Template: `packaging/aur/PKGBUILD`. CI fills in the version and the archive sha256.
 
-Установка: `paru -S keywarden-bin`, обновления приходят вместе с системой.
+Install: `paru -S keywarden-bin`, updates come with the system.
 
 ### Homebrew (macOS)
 
-1. Создать публичный репозиторий `onokashino/homebrew-tap` (пустой).
-2. Fine-grained токен с доступом Contents: Read and write только к `homebrew-tap`,
-   секрет `HOMEBREW_TAP_TOKEN`.
-3. Шаблон: `packaging/homebrew/keywarden.rb`.
+1. Create a public repository `onokashino/homebrew-tap` (empty).
+2. A fine-grained token with Contents: Read and write on `homebrew-tap` only,
+   secret `HOMEBREW_TAP_TOKEN`.
+3. Template: `packaging/homebrew/keywarden.rb`.
 
-Установка: `brew install onokashino/tap/keywarden`, обновление: `brew upgrade`. Homebrew
-качает архив сам, поэтому macOS не ставит карантин и `xattr` не нужен.
+Install: `brew install onokashino/tap/keywarden`, update: `brew upgrade`. Homebrew downloads the
+archive itself, so macOS sets no quarantine and `xattr` is not needed.
 
 ### winget (Windows)
 
-1. Первую версию отправить вручную:
+1. Submit the first version by hand:
    `wingetcreate new https://github.com/onokashino/keywarden/releases/download/v0.1.0/keywarden-v0.1.0-windows-x86_64.zip`
-   (тип установщика zip, вложенный portable, идентификатор `onokashino.Keywarden`), дождаться
-   принятия PR в microsoft/winget-pkgs.
-2. Сделать форк `microsoft/winget-pkgs` в свой аккаунт.
-3. Classic-токен со scope `public_repo`, секрет `WINGET_TOKEN`.
+   (installer type zip, nested portable, identifier `onokashino.Keywarden`), then wait for the PR
+   to microsoft/winget-pkgs to be merged.
+2. Fork `microsoft/winget-pkgs` into your account.
+3. A classic token with the `public_repo` scope, secret `WINGET_TOKEN`.
 
-Дальше каждая версия уходит в winget сама: `winget install onokashino.Keywarden`,
-обновление `winget upgrade`.
+From then on every version reaches winget by itself: `winget install onokashino.Keywarden`,
+update `winget upgrade`.
 
-## 7. Переводы от сообщества: Weblate
+## 7. Community translations: Weblate
 
-Переводить можно и пулл-реквестами (инструкция для переводчиков: `docs/translating.md`), но удобнее
-всего через Weblate: переводчик работает в браузере, Weblate сам проверяет подстановки и присылает
-изменения в репозиторий.
+Translations can come as pull requests (guide for translators: `docs/translating.md`), but Weblate
+is the easiest: translators work in the browser, Weblate checks placeholders and sends the changes
+to the repository.
 
-1. https://hosted.weblate.org, «Add new translation project» (для открытых проектов бесплатно,
-   нужен публичный репозиторий и лицензия, GPL подходит).
-2. Компонент «App», по одному на файл каталога (`core`, `daemon`, `cli`, `ui`, `ui_settings`):
-   - формат: **JSON file**, одноязычный;
-   - маска файлов: `locales/*/ui.json` (и так для каждого файла);
-   - одноязычный образец: `locales/en/ui.json`;
-   - исходный язык проекта: **English** (переводчик видит английский текст, русский ключ
-     остаётся ключом);
-   - шаблон для нового языка: пустой, `{}`.
-3. Компонент «Extension»:
-   - формат: **WebExtension JSON**;
-   - маска: `extension/public/_locales/*/messages.json`, образец `extension/public/_locales/en/messages.json`.
-4. В настройках проекта: «Push on commit», pull-реквесты в `main`; добавить вебхук GitHub из
-   инструкции Weblate, чтобы новые строки появлялись там сразу.
-5. Значок со статусом перевода из Weblate можно добавить в README.
+1. https://hosted.weblate.org, "Add new translation project" (free for open projects; needs a
+   public repository and a license, GPL is fine).
+2. An "App" component per catalog file (`core`, `daemon`, `cli`, `ui`, `ui_settings`):
+   - format: **JSON file**, monolingual;
+   - file mask: `locales/*/ui.json` (and so on for each file);
+   - monolingual base: `locales/en/ui.json`;
+   - project source language: **English** (translators see the English text, the Russian key
+     stays a key);
+   - template for a new language: empty, `{}`.
+3. An "Extension" component:
+   - format: **WebExtension JSON**;
+   - mask: `extension/public/_locales/*/messages.json`, base `extension/public/_locales/en/messages.json`.
+4. In the project settings: "Push on commit", pull requests to `main`; add the GitHub webhook from
+   the Weblate instructions so new strings show up there at once.
+5. A Weblate translation status badge can go into the README.
 
-Новый язык, созданный в Weblate, сразу виден в приложении: каталоги находятся при сборке
-(`crates/keywarden-core/build.rs`), код менять не нужно. Тесты (`cargo test`) не пропустят
-перевод с потерянной подстановкой или устаревшими строками.
+A new language created in Weblate shows up in the app right away: catalogs are found at build time
+(`crates/keywarden-core/build.rs`), no code changes. Tests (`cargo test`) reject a translation
+with a lost placeholder or stale strings.

@@ -1,5 +1,5 @@
 # Maintainer: onokashino
-# Обновляется из .github/workflows/packages.yml при публикации релиза: pkgver и sha256sums.
+# Updated by .github/workflows/packages.yml when a release is published: pkgver and sha256sums.
 pkgname=keywarden-bin
 pkgver=0.1.0
 pkgrel=1
