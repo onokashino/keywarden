@@ -6,7 +6,15 @@ name: ci
 on:
   push:
     branches: [main]
+    paths-ignore: &skip
+      # the site, docs and texts do not touch the build
+      - 'site/**'
+      - 'docs/**'
+      - '**.md'
+      - 'packaging/**'
+      - 'LICENSE'
   pull_request:
+    paths-ignore: *skip
   workflow_dispatch:
 
 concurrency:
