@@ -79,8 +79,8 @@ make e2e-wine     # демон и kw для Windows под Wine
   на Linux, Windows и macOS (интерфейс GPUI собирается только на своей системе), сборка и
   проверка типов расширения.
 - `.github/workflows/release.yml`: по тегу `vX.Y.Z`. Архивы под Linux x86_64, Windows x86_64,
-  macOS arm64, zip расширения для Chrome и Firefox, `SHA256SUMS`. Релиз создаётся черновиком,
-  публикуется вручную на странице Releases.
+  macOS arm64, zip расширения для Chrome и Firefox, `SHA256SUMS`. Релиз публикуется сразу,
+  текст берётся из `.github/release-notes.md`.
 
 Выпуск версии:
 

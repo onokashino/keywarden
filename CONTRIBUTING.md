@@ -41,8 +41,9 @@ git tag v0.2.0 && git push origin v0.2.0
 ```
 
 `.github/workflows/release.yml` builds archives for the three systems and the extension,
-and creates a draft release with `SHA256SUMS`. Review it and publish on the Releases page;
-publishing submits the extension to the browser stores. Step by step (in Russian):
+and publishes the release with `SHA256SUMS` and the notes from `.github/release-notes.md`.
+Then it starts `packages.yml` and `extension-stores.yml`, which update the package managers and
+submit the extension to the browser stores. Step by step (in Russian):
 [docs/publishing.md](docs/publishing.md).
 
 ## Website

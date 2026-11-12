@@ -1,5 +1,5 @@
 # Релиз по тегу vX.Y.Z: сборка на трёх системах, архивы, расширение, контрольные суммы.
-# Релиз создаётся черновиком: проверить и опубликовать вручную на странице Releases.
+# Релиз публикуется сразу (текст из .github/release-notes.md), затем запускаются packages и extension-stores.
 name: release
 
 on:
@@ -29,7 +29,8 @@ jobs:
         run: |
           v=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
           e=$(node -p "require('./extension/package.json').version")
-          [ "v$v" = "$TAG" ] || { echo "::error::тег $TAG, а в Cargo.toml $v"; exit 1; }
+          # пре-релиз v0.2.0-rc.1 собирается из версии 0.2.0: Firefox не принимает буквы в версии
+          [ "v$v" = "${TAG%%-*}" ] || { echo "::error::тег $TAG, а в Cargo.toml $v"; exit 1; }
           [ "$e" = "$v" ] || { echo "::error::extension/package.json $e, а Cargo.toml $v"; exit 1; }
 
   build:
@@ -109,17 +110,32 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: write
     steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+          path: src
       - uses: actions/download-artifact@v4
         with:
           path: out
           merge-multiple: true
-      - name: черновик релиза
+      - name: релиз
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          sed "s/{TAG}/$TAG/g" src/.github/release-notes.md > notes.md
           cd out
           sha256sum -- * > SHA256SUMS
           pre=; case "$TAG" in *-*) pre=--prerelease;; esac
-          gh release create "$TAG" ./* --repo "$GITHUB_REPOSITORY" --draft $pre \
-            --title "Keywarden $TAG" --generate-notes
+          gh release create "$TAG" ./* --repo "$GITHUB_REPOSITORY" $pre \
+            --title "Keywarden $TAG" --notes-file ../notes.md --generate-notes
+      # релиз от GITHUB_TOKEN не вызывает событие release: published, поэтому запускаем сами
+      - name: пакеты и магазины
+        # пре-релиз (v0.2.0-rc.1) только для проверки: в менеджеры пакетов и магазины не идёт
+        if: ${{ !contains(env.TAG, '-') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run packages.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG"
+          gh workflow run extension-stores.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG" -f dry_run=false
