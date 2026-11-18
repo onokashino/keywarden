@@ -10,7 +10,9 @@
 use crate::state::Daemon;
 use crate::sync::Incoming;
 use keywarden_core::ipc::Event;
-use keywarden_core::remote::{self, Beacon, FINISH_LEN, HELLO_LEN, LAN_PORT, Lan, MAX_VAULT_BYTES, REPLY_LEN};
+use keywarden_core::remote::{
+    self, Beacon, FINISH_LEN, HELLO_LEN, LAN_PORT, Lan, MAX_VAULT_BYTES, REPLY_LEN,
+};
 use keywarden_core::tr;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -71,10 +73,11 @@ async fn start(d: &Arc<Daemon>) -> Option<Active> {
     };
     let port = tcp.local_addr().ok()?.port();
     // Argon2 после того, как порты получены: при занятом порте не считаем его каждые 5 с
-    let lan = tokio::task::spawn_blocking(move || reader.key_digest().map(|k| remote::lan_key(&k, root)))
-        .await
-        .ok()?
-        .ok()?;
+    let lan =
+        tokio::task::spawn_blocking(move || reader.key_digest().map(|k| remote::lan_key(&k, root)))
+            .await
+            .ok()?
+            .ok()?;
     let mut instance = [0u8; 8];
     rand_core::RngCore::fill_bytes(&mut rand_core::OsRng, &mut instance);
     tracing::info!("сеть: жду соседей на порту {port}");
@@ -162,11 +165,7 @@ async fn beacon(d: &Daemon, a: &Active) {
         port: a.port,
         tag: a.lan.file_tag(&hash),
     });
-    if let Err(e) = a
-        .udp
-        .send_to(&wire, (Ipv4Addr::BROADCAST, LAN_PORT))
-        .await
-    {
+    if let Err(e) = a.udp.send_to(&wire, (Ipv4Addr::BROADCAST, LAN_PORT)).await {
         tracing::debug!("сеть: маяк не ушёл: {e}");
     }
 }
@@ -217,7 +216,8 @@ async fn pull(d: &Arc<Daemon>, lan: &Lan, addr: SocketAddr) -> Result<(), String
     let reply = read_exact(&mut s, REPLY_LEN).await?;
     let (session, fin) = hello.finish(lan, &reply)?;
     write_all(&mut s, &fin).await?;
-    let len = u32::from_be_bytes(read_exact(&mut s, 4).await?.try_into().expect("4 байта")) as usize;
+    let len =
+        u32::from_be_bytes(read_exact(&mut s, 4).await?.try_into().expect("4 байта")) as usize;
     if len > MAX_VAULT_BYTES + FRAME_OVERHEAD {
         return Err(tr!("файл соседа слишком большой").into());
     }

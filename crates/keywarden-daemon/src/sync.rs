@@ -245,7 +245,10 @@ impl Daemon {
         // версия на паузе: тот же файл заново не разбираем, ждём решения
         let (held_hash, has_incoming) = {
             let g = self.inner();
-            (g.sync.held.as_ref().and_then(|h| h.hash), !g.sync.incoming.is_empty())
+            (
+                g.sync.held.as_ref().and_then(|h| h.hash),
+                !g.sync.incoming.is_empty(),
+            )
         };
         let loaded = tokio::task::spawn_blocking(move || {
             let current = reader.hash_on_disk().map_err(|e| e.to_string())?;
@@ -307,17 +310,38 @@ impl Daemon {
                     if rev > 0 && rev < seen {
                         pass.stale = Some((rev, seen));
                     }
-                    items.push(Item { source: source_name(None), db, hash: Some(hash), file: None });
+                    items.push(Item {
+                        source: source_name(None),
+                        db,
+                        hash: Some(hash),
+                        file: None,
+                    });
                 }
                 for (p, db) in conflicts {
-                    items.push(Item { source: source_name(Some(&p)), db, hash: None, file: Some(p) });
+                    items.push(Item {
+                        source: source_name(Some(&p)),
+                        db,
+                        hash: None,
+                        file: Some(p),
+                    });
                 }
                 for inc in std::mem::take(&mut sync.incoming) {
-                    items.push(Item { source: inc.source, db: inc.db, hash: None, file: None });
+                    items.push(Item {
+                        source: inc.source,
+                        db: inc.db,
+                        hash: None,
+                        file: None,
+                    });
                 }
                 let mut disk_merged = None;
                 let mut remote_changed = false;
-                for Item { source, db, hash, file } in items {
+                for Item {
+                    source,
+                    db,
+                    hash,
+                    file,
+                } in items
+                {
                     let preview = guard::preview(&vault.db, &db).map_err(|e| e.to_string())?;
                     if guard_on && preview.needs_confirmation() && sync.held.is_none() {
                         let h = Held {

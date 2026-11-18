@@ -68,7 +68,8 @@ pub fn set_webdav(db: &mut Database, cfg: Option<&WebDav>) {
 /// Адрес сервера: https; http только для своей машины и домашней сети, иначе пароль от сервера
 /// уйдёт открытым текстом. Адрес папки (с `/` на конце) дополняется именем файла базы.
 pub fn check_webdav_url(raw: &str, file_name: &str) -> Result<String, String> {
-    let mut url = url::Url::parse(raw.trim()).map_err(|e| crate::tr!("неверный адрес: {e}", e = e))?;
+    let mut url =
+        url::Url::parse(raw.trim()).map_err(|e| crate::tr!("неверный адрес: {e}", e = e))?;
     match url.scheme() {
         "https" => {}
         "http" if url.host().is_some_and(|h| is_local_host(&h)) => {}
@@ -90,7 +91,12 @@ pub fn check_webdav_url(raw: &str, file_name: &str) -> Result<String, String> {
 fn is_local_host(h: &url::Host<&str>) -> bool {
     match h {
         // имя без точки (nas, synology) разрешается только в своей сети
-        url::Host::Domain(d) => !d.contains('.') || d.ends_with(".local") || d.ends_with(".lan") || d.ends_with(".home.arpa"),
+        url::Host::Domain(d) => {
+            !d.contains('.')
+                || d.ends_with(".local")
+                || d.ends_with(".lan")
+                || d.ends_with(".home.arpa")
+        }
         url::Host::Ipv4(ip) => ip.is_loopback() || ip.is_private() || ip.is_link_local(),
         url::Host::Ipv6(ip) => ip.is_loopback() || (ip.segments()[0] & 0xfe00) == 0xfc00,
     }
@@ -111,7 +117,9 @@ pub fn lan_key(key_digest: &[u8; 32], root: uuid::Uuid) -> Lan {
     };
     let mut salt = b"keywarden-lan-v1".to_vec();
     salt.extend_from_slice(root.as_bytes());
-    let raw = Zeroizing::new(argon2::hash_raw(key_digest, &salt, &cfg).expect("валидные параметры Argon2"));
+    let raw = Zeroizing::new(
+        argon2::hash_raw(key_digest, &salt, &cfg).expect("валидные параметры Argon2"),
+    );
     let mut key = [0u8; 32];
     key.copy_from_slice(&raw);
     Lan { key }
@@ -195,7 +203,8 @@ impl Lan {
 
     /// `None`: чужая база, подделка или мусор.
     pub fn decode_beacon(&self, data: &[u8]) -> Option<Beacon> {
-        if data.len() != BEACON_LEN || &data[..4] != BEACON_MAGIC || data[4..12] != self.vault_id() {
+        if data.len() != BEACON_LEN || &data[..4] != BEACON_MAGIC || data[4..12] != self.vault_id()
+        {
             return None;
         }
         let (body, tag) = data.split_at(BEACON_LEN - 16);
@@ -289,11 +298,15 @@ pub fn server_reply(lan: &Lan, hello: &[u8]) -> Result<(ServerReply, Vec<u8>), S
 impl ServerReply {
     /// Клиент подтвердил ключ связи: только теперь можно отдавать базу.
     pub fn finish(self, lan: &Lan, fin: &[u8]) -> Result<Session, String> {
-        if !mac_ok(&lan.key, &[b"client", &self.hello, &self.part], fin) || fin.len() != FINISH_LEN {
+        if !mac_ok(&lan.key, &[b"client", &self.hello, &self.part], fin) || fin.len() != FINISH_LEN
+        {
             return Err("handshake: client key mismatch".into());
         }
         let client_pub: [u8; 32] = self.hello[6..38].try_into().expect("32 байта");
-        Ok(Session(SalsaBox::new(&PublicKey::from(client_pub), &self.secret)))
+        Ok(Session(SalsaBox::new(
+            &PublicKey::from(client_pub),
+            &self.secret,
+        )))
     }
 }
 
@@ -404,6 +417,9 @@ mod tests {
         let a = lan_key(&[1; 32], root);
         assert_eq!(a.key, lan_key(&[1; 32], root).key);
         assert_ne!(a.key, lan_key(&[2; 32], root).key);
-        assert_ne!(a.key, lan_key(&[1; 32], uuid::Uuid::from_bytes([6; 16])).key);
+        assert_ne!(
+            a.key,
+            lan_key(&[1; 32], uuid::Uuid::from_bytes([6; 16])).key
+        );
     }
 }

@@ -116,6 +116,9 @@ pub struct SettingsPage {
     sync_path: Option<String>,
     sync_folder: Option<SyncFolder>,
     sync_remote: keywarden_core::ipc::RemoteInfo,
+    dav_url: Entity<InputState>,
+    dav_user: Entity<InputState>,
+    dav_pw: Entity<InputState>,
     /// строка журнала, для которой показан вопрос «точно отменить?»
     confirm_revert: Option<u64>,
     // состояние
@@ -191,6 +194,14 @@ impl SettingsPage {
             sync_path: None,
             sync_folder: None,
             sync_remote: Default::default(),
+            dav_url: field(
+                window,
+                cx,
+                "https://cloud.example.com/remote.php/dav/files/anna/",
+                false,
+            ),
+            dav_user: field(window, cx, tr!("Логин"), false),
+            dav_pw: field(window, cx, tr!("Пароль или пароль приложения"), true),
             confirm_revert: None,
             busy: None,
             message: None,
@@ -205,6 +216,26 @@ impl SettingsPage {
         self.load_prefs(None, window, cx);
         self.load_backups(cx);
         self.load_sync(cx);
+        // поля WebDAV: адрес и логин из базы (пароль не показываем, пустой значит «прежний»)
+        self.tasks.push(client::call_in(
+            window,
+            cx,
+            Request::SyncJournal,
+            |this, res, window, cx| {
+                if let Ok(Response::SyncJournal {
+                    remote: Some(r), ..
+                }) = res
+                {
+                    let url = r.webdav_url.clone().unwrap_or_default();
+                    let user = r.webdav_user.clone().unwrap_or_default();
+                    this.dav_url
+                        .update(cx, |i, cx| i.set_value(url, window, cx));
+                    this.dav_user
+                        .update(cx, |i, cx| i.set_value(user, window, cx));
+                }
+                cx.notify();
+            },
+        ));
         self.tasks.push(client::call_in(
             window,
             cx,
@@ -1277,6 +1308,11 @@ impl SettingsPage {
         }));
     }
 
+    /// Перечитать вкладку синхронизации (демон сообщил об изменениях).
+    pub fn refresh_sync(&mut self, cx: &mut Context<Self>) {
+        self.load_sync(cx);
+    }
+
     fn load_sync(&mut self, cx: &mut Context<Self>) {
         self.tasks
             .push(client::call(cx, Request::SyncJournal, |this, res, cx| {
@@ -1296,6 +1332,57 @@ impl SettingsPage {
                 }
                 cx.notify();
             }));
+    }
+
+    /// Подключить WebDAV (демон сначала проверяет адрес и логин) или выключить.
+    fn webdav_save(&mut self, off: bool, window: &mut Window, cx: &mut Context<Self>) {
+        let url = if off {
+            String::new()
+        } else {
+            self.val(&self.dav_url, cx)
+        };
+        if !off && url.is_empty() {
+            return self.say(tr!("Укажите адрес сервера"), true, cx);
+        }
+        let user = self.val(&self.dav_user, cx);
+        let pw = self.dav_pw.read(cx).value().to_string();
+        self.busy = Some(if off {
+            tr!("Отключаю…")
+        } else {
+            tr!("Проверяю сервер…")
+        });
+        cx.notify();
+        let req = Request::WebdavSet {
+            url,
+            user,
+            password: (!pw.is_empty()).then(|| keywarden_core::secret::Secret::new(pw)),
+        };
+        self.tasks.push(client::call_in(
+            window,
+            cx,
+            req,
+            move |this, res, window, cx| {
+                match res {
+                    Ok(_) => {
+                        this.clear(&[&this.dav_pw], window, cx);
+                        if off {
+                            this.clear(&[&this.dav_url, &this.dav_user], window, cx);
+                        }
+                        this.say(
+                            if off {
+                                tr!("WebDAV отключён")
+                            } else {
+                                tr!("Сервер подключён: база синхронизируется с ним")
+                            },
+                            false,
+                            cx,
+                        );
+                    }
+                    Err(e) => this.say(e.message(), true, cx),
+                }
+                this.load_sync(cx);
+            },
+        ));
     }
 
     fn sync_decide(&mut self, accept: bool, cx: &mut Context<Self>) {
@@ -1637,27 +1724,88 @@ impl SettingsPage {
                             .on_click(cx.listener(|this, _, w, cx| this.move_db(w, cx))),
                     ),
             );
-        let soon = |title: &'static str, hint: &'static str| {
-            panel(&theme).child(
-                h_flex()
-                    .px_4()
-                    .py_3()
-                    .gap_3()
-                    .child(
-                        v_flex()
-                            .flex_1()
-                            .gap_0p5()
-                            .child(div().text_sm().font_weight(FontWeight::MEDIUM).child(title))
-                            .child(
-                                div()
-                                    .text_xs()
-                                    .text_color(theme.muted_foreground)
-                                    .child(hint),
-                            ),
-                    )
-                    .child(crate::ui::badge(tr!("скоро"), theme.muted_foreground)),
-            )
+        let r = &self.sync_remote;
+        let status_line = |ok: bool, text: String| {
+            h_flex()
+                .px_4()
+                .pb_3()
+                .gap_2()
+                .text_sm()
+                .child(
+                    Icon::new(if ok {
+                        IconName::CircleCheck
+                    } else {
+                        IconName::TriangleAlert
+                    })
+                    .text_color(if ok {
+                        theme.success
+                    } else {
+                        theme.danger_foreground
+                    }),
+                )
+                .child(div().min_w_0().child(text))
         };
+        let connected = r.webdav_url.is_some();
+        let webdav = panel(&theme)
+            .child(section(
+                "WebDAV",
+                tr!("Keywarden сам забирает и выкладывает базу: Nextcloud, Synology, любой сервер WebDAV. Настройка хранится в базе и приходит на другие компьютеры вместе с ней"),
+                &theme,
+            ))
+            .child(
+                card(&theme)
+                    .child(row(tr!("Адрес"), Input::new(&self.dav_url), &theme))
+                    .child(row(tr!("Логин"), Input::new(&self.dav_user), &theme))
+                    .child(row(tr!("Пароль"), Input::new(&self.dav_pw).mask_toggle(), &theme)),
+            )
+            .when_some(r.webdav_state.clone().filter(|_| connected), |d, st| {
+                d.child(status_line(r.webdav_ok, st))
+            })
+            .child(
+                footer(&theme)
+                    .child(
+                        Button::new("webdav-save")
+                            .outline()
+                            .icon(IconName::Globe)
+                            .label(if connected { tr!("Сохранить") } else { tr!("Подключить") })
+                            .disabled(busy)
+                            .on_click(cx.listener(|this, _, w, cx| this.webdav_save(false, w, cx))),
+                    )
+                    .when(connected, |d| {
+                        d.child(
+                            Button::new("webdav-off")
+                                .ghost()
+                                .label(tr!("Отключить"))
+                                .disabled(busy)
+                                .on_click(cx.listener(|this, _, w, cx| this.webdav_save(true, w, cx))),
+                        )
+                    }),
+            );
+        let lan = panel(&theme)
+            .child(section(
+                tr!("В одной сети"),
+                tr!("Компьютеры с этой базой и тем же паролем находят друг друга сами и обмениваются изменениями напрямую, без облака. Порт 47470 (UDP и TCP): разрешите его в брандмауэре"),
+                &theme,
+            ))
+            .child(card(&theme).child(row(
+                tr!("Обмен"),
+                switch("lan-sync", p.lan_sync, tr!("Обмениваться с компьютерами в этой сети"), |p, v| p.lan_sync = v, cx),
+                &theme,
+            )))
+            .when(p.lan_sync, |d| {
+                if r.peers.is_empty() {
+                    d.child(
+                        div()
+                            .px_4()
+                            .pb_3()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .child(r.lan_state.clone().unwrap_or_else(|| tr!("Включаю…").into())),
+                    )
+                } else {
+                    d.children(r.peers.iter().map(|peer| status_line(true, peer.clone())))
+                }
+            });
         v_flex()
             .gap_6()
             .children(held)
@@ -1691,14 +1839,8 @@ impl SettingsPage {
                             .child(tr!("Ключ-файл и YubiKey не кладите в синхронизируемую папку: тогда копия на сервере бесполезна без них. Изменения при записи сливаются всегда, даже с выключенным слежением")),
                     ),
             )
-            .child(soon(
-                tr!("WebDAV: Nextcloud, Synology, любой сервер"),
-                tr!("Keywarden сам скачивает и загружает базу, без отдельной программы синхронизации"),
-            ))
-            .child(soon(
-                tr!("Напрямую между компьютерами"),
-                tr!("По локальной сети, связь по коду из 6 слов, без облака"),
-            ))
+            .child(webdav)
+            .child(lan)
             .child(
                 panel(&theme)
                     .child(section(

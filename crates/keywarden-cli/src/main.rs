@@ -952,7 +952,8 @@ fn run(cli: Cli) -> Result<()> {
                     "off" => false,
                     _ => bail!(tr!("укажите on или off")),
                 };
-                let Response::Prefs { mut prefs } = call(&mut c, Request::Prefs { set: None })? else {
+                let Response::Prefs { mut prefs } = call(&mut c, Request::Prefs { set: None })?
+                else {
                     bail!(tr!("нет ответа"))
                 };
                 prefs.lan_sync = on;

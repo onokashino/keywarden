@@ -2671,7 +2671,13 @@ impl MainWindow {
                 self.mode = Mode::Ready;
                 self.reload_all(cx);
             }
-            Event::Changed => self.reload_all(cx),
+            Event::Changed => {
+                self.reload_all(cx);
+                // состояние WebDAV и соседей в сети меняется без участия окна
+                if let Some(page) = &self.settings {
+                    page.update(cx, |p, cx| p.refresh_sync(cx));
+                }
+            }
             Event::Saved => self.flash(tr!("Сохранено"), false, cx),
             Event::SaveFailed { message } => {
                 self.flash(tr!("Не сохранено: {message}", message = message), true, cx)

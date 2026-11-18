@@ -172,7 +172,8 @@ pub async fn watch(daemon: Arc<Daemon>) {
 
 /// Один обход. `Ok(true)`: сервер успел получить чужую версию, обойти сразу ещё раз.
 async fn pass(d: &Arc<Daemon>, link: &mut Link) -> Result<bool, String> {
-    let Some((reader, epoch, cfg)) = d.with_vault(|v, e| (v.reader(), e, remote::webdav(&v.db))) else {
+    let Some((reader, epoch, cfg)) = d.with_vault(|v, e| (v.reader(), e, remote::webdav(&v.db)))
+    else {
         *link = Link::default();
         return Ok(false);
     };

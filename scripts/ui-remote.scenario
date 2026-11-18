@@ -1,0 +1,10 @@
+# синхронизация без папки: форма WebDAV и обмен в сети на вкладке «Синхронизация» (RES=1280x1700)
+echo t | $B/kw unlock --password-stdin
+$B/kw sync lan on
+ui
+sleep 3
+key -M ctrl -k comma -m ctrl
+sleep 1
+key -M alt 7 -m alt
+sleep 6
+shot sync-remote 2
