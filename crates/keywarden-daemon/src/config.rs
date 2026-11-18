@@ -42,6 +42,8 @@ pub struct Config {
     pub sync_watch: bool,
     /// массовое удаление из входящей версии ждёт подтверждения
     pub sync_guard: bool,
+    /// обмениваться базой с компьютерами в той же сети (свой выбор у каждого компьютера)
+    pub lan_sync: bool,
     /// порядок типов в боковой панели окна
     pub kind_order: Vec<String>,
     /// SSH-агент отдаёт ключи из записей (выключен: ключей нет, окон нет)
@@ -88,6 +90,7 @@ impl Default for Config {
             explorers: Default::default(),
             sync_watch: true,
             sync_guard: true,
+            lan_sync: false,
             kind_order: vec![],
             ssh_agent: true,
             ssh_unlock_prompt: true,

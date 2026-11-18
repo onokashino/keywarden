@@ -216,6 +216,7 @@ impl Daemon {
                 c.notify_breaches = p.notify_breaches;
                 c.sync_watch = p.sync_watch;
                 c.sync_guard = p.sync_guard;
+                c.lan_sync = p.lan_sync;
                 if p.check_updates && !c.check_updates {
                     // только что включили: проверить при ближайшем обходе
                     c.last_update_check = None;
@@ -278,6 +279,7 @@ impl Daemon {
                 notify_breaches: c.notify_breaches,
                 sync_watch: c.sync_watch,
                 sync_guard: c.sync_guard,
+                lan_sync: c.lan_sync,
                 kind_order: c.kind_order.clone(),
                 check_updates: c.check_updates,
                 ssh_agent: c.ssh_agent,

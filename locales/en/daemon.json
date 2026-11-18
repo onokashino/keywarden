@@ -153,5 +153,19 @@
   "Keywarden: база открыта": "Keywarden: vault open",
   "Keywarden: база заблокирована": "Keywarden: vault locked",
   "неизвестный алгоритм: {other}": "unknown algorithm: {other}",
-  "нет сервера SSH «{host}»": "no SSH server “{host}”"
+  "нет сервера SSH «{host}»": "no SSH server “{host}”",
+  "{ip}, на связи в {time}": "{ip}, seen at {time}",
+  "ищу компьютеры в сети (порт {port})": "looking for computers on the network (port {port})",
+  "компьютер {ip}": "computer {ip}",
+  "на сервере нет места": "the server is out of space",
+  "на сервере нет такой папки": "the folder does not exist on the server",
+  "нет связи с сервером: {e}": "cannot reach the server: {e}",
+  "нужен пароль от сервера": "the server password is needed",
+  "порт {port} занят: {e}": "port {port} is in use: {e}",
+  "сервер не принял логин или пароль": "the server rejected the username or password",
+  "сервер ответил {code}": "the server answered {code}",
+  "синхронизировано в {time}": "synced at {time}",
+  "файл на сервере не открылся этим паролем: {e}": "the file on the server did not open with this password: {e}",
+  "файл на сервере слишком большой": "the file on the server is too large",
+  "файл соседа слишком большой": "the other computer's file is too large"
 }

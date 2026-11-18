@@ -213,5 +213,10 @@
   "название записи «Ключ SSH»; пусто: любой ключ агента": "title of an SSH key entry; empty: any agent key",
   "по одному на строку": "one per line",
   "порты по порядку: 7000 8000:udp 9000": "ports in order: 7000 8000:udp 9000",
-  "строки ssh_config через ; например ServerAliveInterval 30": "ssh_config lines separated by ; e.g. ServerAliveInterval 30"
+  "строки ssh_config через ; например ServerAliveInterval 30": "ssh_config lines separated by ; e.g. ServerAliveInterval 30",
+  "адрес должен начинаться с https://": "the address must start with https://",
+  "данные из сети повреждены": "data from the network is damaged",
+  "неверный адрес: {e}": "invalid address: {e}",
+  "нужен https: по http пароль от сервера уйдёт открытым текстом (http можно только в своей сети)": "https is required: over http the server password travels in plain text (http is allowed only on your own network)",
+  "соседний компьютер не подтвердил ключ базы": "the other computer did not prove the vault key"
 }

@@ -297,5 +297,18 @@
   "Чтобы ssh видел серверы из базы: kw ssh-setup --hosts": "To let ssh see the vault's servers: kw ssh-setup --hosts",
   "всё остальное у сервера правится в Keywarden": "everything else about a server is edited in Keywarden",
   "имя сервера, как в ssh имя": "server name, as in ssh name",
-  "проброс {f}": "forward {f}"
+  "проброс {f}": "forward {f}",
+  "WebDAV выключен": "WebDAV turned off",
+  "WebDAV подключён: база синхронизируется с сервером": "WebDAV connected: the vault syncs with the server",
+  "Копия базы на сервере WebDAV: адрес файла или папки": "Copy of the vault on a WebDAV server: file or folder address",
+  "Обмен базой с компьютерами в той же сети: on или off": "Exchange the vault with computers on the same network: on or off",
+  "Обмен в сети включён (порт 47470, UDP и TCP)": "Network exchange on (port 47470, UDP and TCP)",
+  "Обмен в сети выключен": "Network exchange off",
+  "Пароль от сервера (Enter: прежний): ": "Server password (Enter: keep the current one): ",
+  "выключить WebDAV": "turn WebDAV off",
+  "нужен адрес или --off": "an address or --off is needed",
+  "пароль от сервера одной строкой из stdin": "server password as one line from stdin",
+  "сеть": "network",
+  "сосед": "peer",
+  "укажите on или off": "say on or off"
 }

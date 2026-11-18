@@ -28,7 +28,31 @@ pub struct SyncState {
     pub records: Vec<SyncRecord>,
     /// наибольшая виденная ревизия базы: файл с меньшей значит подсунутую старую копию
     pub seen_revision: u64,
+    /// версии с сервера WebDAV и соседних компьютеров: сливаются следующим проходом
+    pub incoming: Vec<Incoming>,
+    /// WebDAV: удалось ли последнее обращение и что показать в настройках
+    pub webdav_status: Option<(bool, String)>,
+    /// компьютеры в сети с этой базой: адрес -> когда видели (ЧЧ:ММ)
+    pub peers: std::collections::BTreeMap<std::net::IpAddr, String>,
+    pub lan_state: Option<String>,
     loaded_from: Option<PathBuf>,
+}
+
+/// Версия базы, пришедшая не с диска.
+pub struct Incoming {
+    /// «WebDAV», «компьютер anna-pc»: так и записывается в журнал
+    pub source: String,
+    pub db: Database,
+}
+
+/// Одна входящая версия в проходе слияния.
+struct Item {
+    source: String,
+    db: Database,
+    /// хэш, если это сам файл базы
+    hash: Option<[u8; 32]>,
+    /// путь, если это конфликтная копия
+    file: Option<PathBuf>,
 }
 
 /// Входящая версия, которая убирает слишком много записей: ждёт решения пользователя.
@@ -219,7 +243,10 @@ impl Daemon {
         };
         let guard_on = self.config().sync_guard;
         // версия на паузе: тот же файл заново не разбираем, ждём решения
-        let held_hash = self.inner().sync.held.as_ref().and_then(|h| h.hash);
+        let (held_hash, has_incoming) = {
+            let g = self.inner();
+            (g.sync.held.as_ref().and_then(|h| h.hash), !g.sync.incoming.is_empty())
+        };
         let loaded = tokio::task::spawn_blocking(move || {
             let current = reader.hash_on_disk().map_err(|e| e.to_string())?;
             let conflicts = reader.conflict_files();
@@ -247,8 +274,10 @@ impl Daemon {
         })
         .await
         .map_err(|e| e.to_string())??;
-        let Some((disk, conflicts, unreadable)) = loaded else {
-            return Ok(None);
+        let (disk, conflicts, unreadable) = match loaded {
+            Some(l) => l,
+            None if has_incoming => (None, vec![], vec![]),
+            None => return Ok(None),
         };
 
         // слияние в памяти: быстро, под мьютексом
@@ -272,23 +301,27 @@ impl Daemon {
                     stale: None,
                 };
                 let snapshot = vault.db.clone();
-                let mut items: Vec<(Option<PathBuf>, Database, Option<[u8; 32]>)> = vec![];
+                let mut items: Vec<Item> = vec![];
                 if let Some((db, hash)) = disk {
                     let rev = guard::revision(&db);
                     if rev > 0 && rev < seen {
                         pass.stale = Some((rev, seen));
                     }
-                    items.push((None, db, Some(hash)));
+                    items.push(Item { source: source_name(None), db, hash: Some(hash), file: None });
                 }
                 for (p, db) in conflicts {
-                    items.push((Some(p), db, None));
+                    items.push(Item { source: source_name(Some(&p)), db, hash: None, file: Some(p) });
+                }
+                for inc in std::mem::take(&mut sync.incoming) {
+                    items.push(Item { source: inc.source, db: inc.db, hash: None, file: None });
                 }
                 let mut disk_merged = None;
-                for (file, db, hash) in items {
+                let mut remote_changed = false;
+                for Item { source, db, hash, file } in items {
                     let preview = guard::preview(&vault.db, &db).map_err(|e| e.to_string())?;
                     if guard_on && preview.needs_confirmation() && sync.held.is_none() {
                         let h = Held {
-                            source: source_name(file.as_deref()),
+                            source,
                             db,
                             hash,
                             file,
@@ -304,7 +337,8 @@ impl Daemon {
                     let r = merge::merge(&mut vault.db, &db).map_err(|e| e.to_string())?;
                     guard::keep_max_revision(&mut vault.db, guard::revision(&db));
                     if !r.is_empty() {
-                        pass.sources.push(source_name(file.as_deref()));
+                        pass.sources.push(source);
+                        remote_changed |= hash.is_none() && file.is_none();
                     }
                     pass.report.created += r.created;
                     pass.report.updated += r.updated;
@@ -325,7 +359,7 @@ impl Daemon {
                             .map_err(|e| e.to_string())?
                             .is_empty()
                     }
-                    None => !pass.merged_files.is_empty(),
+                    None => !pass.merged_files.is_empty() || remote_changed,
                 };
                 if !pass.report.is_empty() {
                     pass.before = Some(snapshot);
@@ -455,6 +489,7 @@ impl Daemon {
             held: g.sync.held.as_ref().map(|h| Box::new(held_info(h))),
             db_path: path.as_ref().map(|p| p.display().to_string()),
             folder: path.as_deref().and_then(detect_folder).map(Box::new),
+            remote: Some(Box::new(self.remote_info(&g))),
         })
     }
 

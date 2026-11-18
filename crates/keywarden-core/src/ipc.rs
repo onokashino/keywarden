@@ -371,6 +371,29 @@ pub enum Request {
     MoveDatabase {
         dir: String,
     },
+    /// Копия базы на сервере WebDAV (настройка хранится в базе). Пустой `url`: выключить.
+    /// Перед сохранением демон проверяет связь и логин.
+    WebdavSet {
+        url: String,
+        #[serde(default)]
+        user: String,
+        #[serde(default)]
+        password: Option<crate::secret::Secret>,
+    },
+}
+
+/// Состояние синхронизации без папки.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct RemoteInfo {
+    /// адрес копии на сервере WebDAV, если включено
+    pub webdav_url: Option<String>,
+    pub webdav_user: Option<String>,
+    /// «синхронизировано в 14:03» или текст ошибки
+    pub webdav_state: Option<String>,
+    pub webdav_ok: bool,
+    /// компьютеры в сети с этой же базой: «192.168.1.20, видели 14:03»
+    pub peers: Vec<String>,
+    pub lan_state: Option<String>,
 }
 
 /// Программа синхронизации, в чьей папке лежит база.
@@ -485,6 +508,9 @@ pub struct Prefs {
     pub sync_watch: bool,
     /// входящая версия, которая убирает больше 5 записей или 10% базы, ждёт подтверждения
     pub sync_guard: bool,
+    /// обмениваться базой напрямую с компьютерами в той же сети
+    #[serde(default)]
+    pub lan_sync: bool,
     /// порядок типов в боковой панели (login, card…); пусто: стандартный
     pub kind_order: Vec<String>,
     /// SSH-агент отдаёт ключи из записей
@@ -520,6 +546,7 @@ impl Default for Prefs {
             explorers: crate::wallet::default_explorers(),
             sync_watch: true,
             sync_guard: true,
+            lan_sync: false,
             kind_order: vec![],
             ssh_agent: true,
             ssh_unlock_prompt: true,
@@ -649,6 +676,7 @@ impl Request {
             Self::SyncDecide { .. } => "sync_decide",
             Self::SyncRevert { .. } => "sync_revert",
             Self::MoveDatabase { .. } => "move_database",
+            Self::WebdavSet { .. } => "webdav_set",
         }
     }
 }
@@ -784,6 +812,8 @@ pub enum Response {
         db_path: Option<String>,
         #[serde(default)]
         folder: Option<Box<SyncFolder>>,
+        #[serde(default)]
+        remote: Option<Box<RemoteInfo>>,
     },
     IconData {
         data: String,

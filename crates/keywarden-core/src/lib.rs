@@ -14,6 +14,7 @@ pub mod model;
 pub mod passkey;
 pub mod platform;
 pub mod quick;
+pub mod remote;
 pub mod search;
 pub mod secret;
 pub mod secrets;

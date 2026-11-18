@@ -13,6 +13,7 @@ mod config;
 mod confirm;
 mod favicon;
 mod health;
+mod lan;
 mod local;
 mod maintenance;
 mod otp;
@@ -25,6 +26,7 @@ mod sync;
 #[cfg(any(target_os = "linux", windows))]
 mod tray;
 mod updates;
+mod webdav;
 
 use anyhow::{Context, Result};
 use keywarden_core::ipc::{self, ErrorCode, Request, Response};
@@ -72,6 +74,8 @@ async fn main() -> Result<()> {
     tokio::spawn(autolock::system_watch(daemon.clone()));
     tokio::spawn(ssh_agent::serve(daemon.clone()));
     tokio::spawn(sync::watch(daemon.clone()));
+    tokio::spawn(webdav::watch(daemon.clone()));
+    tokio::spawn(lan::serve(daemon.clone()));
     tokio::spawn(prefs::notifier(daemon.clone()));
     tokio::spawn(updates::watch(daemon.clone()));
     tokio::spawn(api::serve(daemon.clone()));

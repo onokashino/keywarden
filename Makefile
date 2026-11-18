@@ -13,7 +13,7 @@ DOCKER  = docker run --rm --label $(LABEL) --memory $(MEM) --memory-swap $(MEM) 
 CARGO   = $(DOCKER) --name keywarden-$@ -e PATH=/opt/cargo/bin:/usr/bin $(IMAGE) cargo
 NODE    = $(DOCKER) --name keywarden-$@ -v $(CACHE)/npm:/npm -e npm_config_cache=/npm -e HOME=/tmp -w /app/extension node:24
 
-.PHONY: image check test clippy build wasm ext ext-firefox clean e2e e2e-crash ui-shots e2e-ext e2e-ssh e2e-secrets check-cross e2e-wine site-shots ui-ssh i18n-new i18n-status
+.PHONY: image check test clippy build wasm ext ext-firefox clean e2e e2e-remote e2e-crash ui-shots e2e-ext e2e-ssh e2e-secrets check-cross e2e-wine site-shots ui-ssh i18n-new i18n-status
 
 # translation: scaffold a new language (make i18n-new CODE=de NAME=Deutsch) and show progress
 i18n-new:
@@ -58,6 +58,11 @@ clean:
 e2e:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli
 	$(DOCKER) --name keywarden-e2e $(IMAGE) sh scripts/e2e-cli.sh
+
+# WebDAV (Apache mod_dav) и обмен в сети: два демона в одной docker-сети
+e2e-remote:
+	$(CARGO) build -p keywarden-daemon -p keywarden-cli
+	sh scripts/e2e-remote-run.sh $(IMAGE) 2g $(LABEL) $(CACHE)
 
 e2e-crash:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli

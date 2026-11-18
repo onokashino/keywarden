@@ -46,3 +46,10 @@ macOS интерфейс ключа держит системный HID-драй
 - `yubikey_usb` включает прежний путь (`YubikeyChallenge`, `Yubikey`, `get_available_yubikeys`);
 - новый вариант `ChallengeResponseKey::External(ExternalChallenge)`: ответ на challenge считает
   вызывающий код. Keywarden так подключает YubiKey через hidapi (`keywarden-core/src/yubikey.rs`).
+
+## 7. Неизменный отпечаток ключа
+
+`DatabaseKey::stable_digest()`: SHA-256 от пароля и файла-ключа. Не зависит от соли KDF, которая
+меняется при каждой записи, поэтому две копии базы с тем же паролем дают одно значение. Из него
+Keywarden выводит ключ для синхронизации в локальной сети (`keywarden-core/src/remote.rs`).
+Ответ YubiKey зависит от соли KDF и в отпечаток не входит.

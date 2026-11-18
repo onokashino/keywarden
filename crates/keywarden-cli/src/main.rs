@@ -51,6 +51,20 @@ enum SyncCmd {
     Reject,
     #[command(about = tr!("Отменить слияние по номеру из журнала"))]
     Revert { id: u64 },
+    #[command(about = tr!("Копия базы на сервере WebDAV: адрес файла или папки"))]
+    Webdav {
+        url: Option<String>,
+        #[arg(long, short = 'u', default_value = "")]
+        user: String,
+        #[arg(help = tr!("пароль от сервера одной строкой из stdin"))]
+        #[arg(long)]
+        password_stdin: bool,
+        #[arg(help = tr!("выключить WebDAV"))]
+        #[arg(long)]
+        off: bool,
+    },
+    #[command(about = tr!("Обмен базой с компьютерами в той же сети: on или off"))]
+    Lan { state: String },
 }
 
 #[derive(Subcommand)]
@@ -830,11 +844,29 @@ fn run(cli: Cli) -> Result<()> {
         }
         Cmd::Sync { cmd } => match cmd {
             SyncCmd::Status => {
-                let Response::SyncJournal { records, held, .. } =
-                    call(&mut c, Request::SyncJournal)?
+                let Response::SyncJournal {
+                    records,
+                    held,
+                    remote,
+                    ..
+                } = call(&mut c, Request::SyncJournal)?
                 else {
                     bail!(tr!("нет ответа"))
                 };
+                if let Some(r) = remote {
+                    if let Some(url) = &r.webdav_url {
+                        println!(
+                            "WebDAV\t{url}\t{}",
+                            r.webdav_state.as_deref().unwrap_or("…")
+                        );
+                    }
+                    if let Some(s) = &r.lan_state {
+                        println!("{}\t{s}", tr!("сеть"));
+                    }
+                    for p in &r.peers {
+                        println!("{}\t{p}", tr!("сосед"));
+                    }
+                }
                 if let Some(h) = held {
                     println!(
                         "{}",
@@ -878,6 +910,61 @@ fn run(cli: Cli) -> Result<()> {
             SyncCmd::Revert { id } => {
                 call(&mut c, Request::SyncRevert { id })?;
                 eprintln!("{}", tr!("Слияние {id} отменено", id = id));
+            }
+            SyncCmd::Webdav {
+                url,
+                user,
+                password_stdin,
+                off,
+            } => {
+                let url = if off {
+                    String::new()
+                } else {
+                    url.ok_or_else(|| anyhow::anyhow!(tr!("нужен адрес или --off")))?
+                };
+                let password = if off {
+                    None
+                } else if password_stdin {
+                    Some(read_stdin_line()?)
+                } else {
+                    Some(prompt(tr!("Пароль от сервера (Enter: прежний): "))?)
+                };
+                call(
+                    &mut c,
+                    Request::WebdavSet {
+                        url,
+                        user,
+                        password,
+                    },
+                )?;
+                eprintln!(
+                    "{}",
+                    if off {
+                        tr!("WebDAV выключен")
+                    } else {
+                        tr!("WebDAV подключён: база синхронизируется с сервером")
+                    }
+                );
+            }
+            SyncCmd::Lan { state } => {
+                let on = match state.as_str() {
+                    "on" => true,
+                    "off" => false,
+                    _ => bail!(tr!("укажите on или off")),
+                };
+                let Response::Prefs { mut prefs } = call(&mut c, Request::Prefs { set: None })? else {
+                    bail!(tr!("нет ответа"))
+                };
+                prefs.lan_sync = on;
+                call(&mut c, Request::Prefs { set: Some(*prefs) })?;
+                eprintln!(
+                    "{}",
+                    if on {
+                        tr!("Обмен в сети включён (порт 47470, UDP и TCP)")
+                    } else {
+                        tr!("Обмен в сети выключен")
+                    }
+                );
             }
         },
         Cmd::Wallet {

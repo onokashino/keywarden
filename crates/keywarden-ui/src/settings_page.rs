@@ -115,6 +115,7 @@ pub struct SettingsPage {
     sync_held: Option<SyncHeld>,
     sync_path: Option<String>,
     sync_folder: Option<SyncFolder>,
+    sync_remote: keywarden_core::ipc::RemoteInfo,
     /// строка журнала, для которой показан вопрос «точно отменить?»
     confirm_revert: Option<u64>,
     // состояние
@@ -189,6 +190,7 @@ impl SettingsPage {
             sync_held: None,
             sync_path: None,
             sync_folder: None,
+            sync_remote: Default::default(),
             confirm_revert: None,
             busy: None,
             message: None,
@@ -1283,12 +1285,14 @@ impl SettingsPage {
                     held,
                     db_path,
                     folder,
+                    remote,
                 }) = res
                 {
                     this.sync_records = records;
                     this.sync_held = held.map(|h| *h);
                     this.sync_path = db_path;
                     this.sync_folder = folder.map(|f| *f);
+                    this.sync_remote = remote.map(|r| *r).unwrap_or_default();
                 }
                 cx.notify();
             }));

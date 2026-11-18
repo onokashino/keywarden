@@ -529,6 +529,11 @@ impl Daemon {
             Request::SyncDecide { accept } => return self.sync_decide(accept).await,
             Request::SyncRevert { id } => return self.sync_revert(id).await,
             Request::MoveDatabase { dir } => return self.move_database(dir).await,
+            Request::WebdavSet {
+                url,
+                user,
+                password,
+            } => return self.webdav_set(url, user, password).await,
             Request::Duplicate { id } => Response::Created {
                 id: self.mutate(|db| model::duplicate_entry(db, &id)).await?,
             },

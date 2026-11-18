@@ -230,6 +230,28 @@ impl DatabaseKey {
         Ok(out)
     }
 
+    /// KEYWARDEN PATCH: SHA-256 over the password and keyfile parts of the key. It does not change
+    /// between saves (unlike the transformed key, whose KDF seed is new each time), so two copies
+    /// of a vault opened with the same password and keyfile get the same value. The YubiKey
+    /// response depends on the KDF seed and is left out.
+    pub fn stable_digest(&self) -> Result<[u8; 32], DatabaseKeyError> {
+        let mut parts: Vec<Vec<u8>> = Vec::new();
+        if let Some(p) = &self.password {
+            parts.push(calculate_sha256(&[p.as_bytes()]).to_vec());
+        }
+        if let Some(ref f) = self.keyfile {
+            parts.push(parse_keyfile(f)?);
+        }
+        if parts.is_empty() {
+            return Err(DatabaseKeyError::EmptyKey);
+        }
+        let refs: Vec<&[u8]> = parts.iter().map(|p| p.as_slice()).collect();
+        let mut out = [0u8; 32];
+        out.copy_from_slice(calculate_sha256(&refs).as_slice());
+        parts.iter_mut().for_each(|p| p.zeroize());
+        Ok(out)
+    }
+
     /// Returns true if the database key is not associated with any key component.
     pub fn is_empty(&self) -> bool {
         if self.password.is_some() || self.keyfile.is_some() {

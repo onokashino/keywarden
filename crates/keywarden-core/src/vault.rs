@@ -464,6 +464,23 @@ impl DiskReader {
     pub fn parse_file(&self, path: &Path) -> Result<Database> {
         parse(&fs::read(path)?, &self.key)
     }
+
+    /// Версия базы, пришедшая не с диска (WebDAV, соседний компьютер): тот же ключ.
+    pub fn parse_bytes(&self, bytes: &[u8]) -> Result<Database> {
+        parse(bytes, &self.key)
+    }
+
+    /// Зашифрованный файл как есть (его и отдаём наружу) и его sha256.
+    pub fn read_bytes(&self) -> Result<(Vec<u8>, [u8; 32])> {
+        let bytes = fs::read(&self.path)?;
+        let hash = Sha256::digest(&bytes).into();
+        Ok((bytes, hash))
+    }
+
+    /// Отпечаток пароля и файла-ключа, одинаковый у всех копий базы (см. `remote::lan_key`).
+    pub fn key_digest(&self) -> Result<[u8; 32]> {
+        self.key.stable_digest().map_err(|_| VaultError::EmptyKey)
+    }
 }
 
 pub struct SaveJob {
