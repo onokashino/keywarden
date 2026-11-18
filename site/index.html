@@ -219,46 +219,59 @@
 
   <section id="install">
     <h2 class="reveal">Install</h2>
-    <p class="sub reveal" style="--d:1">Pick your system. Updates come through your system's package manager.</p>
+    <p class="sub reveal" style="--d:1">Pick your system. Package managers, archives and the rest are on the <a href="install/">install page</a>.</p>
     <div class="os-keys reveal" style="--d:2" role="tablist" aria-label="System" data-tabs="os">
       <button class="key" role="tab" aria-controls="os-linux" data-os="linux"><span>Linux<small>primary</small></span></button>
       <button class="key" role="tab" aria-controls="os-windows" data-os="windows"><span>Windows<small>beta</small></span></button>
       <button class="key" role="tab" aria-controls="os-macos" data-os="macos"><span>macOS<small>beta</small></span></button>
     </div>
     <div class="os-panel" id="os-linux" role="tabpanel">
-<pre class="term"><span class="c"># Arch Linux, AUR</span>
-<span class="p">$ </span><span data-type>paru -S keywarden-bin</span>
-
-<span class="c"># other distributions</span>
+<pre class="term"><span class="c"># any distribution, no root</span>
 <span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
       <div>
         <h3>Linux</h3>
         <p>Full support: Wayland, a tray icon, YubiKey, the SSH agent, a keyring in place of gnome-keyring, autotype in niri.</p>
-        <a class="btn ghost" href="docs/#install">How to install and set up</a>
+        <a class="btn ghost" href="install/">All install options</a>
       </div>
     </div>
     <div class="os-panel" id="os-windows" role="tabpanel">
-<pre class="term"><span class="c"># PowerShell</span>
-<span class="p">&gt; </span><span data-type>winget install onokashino.Keywarden</span></pre>
+<pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip from Releases</span>
+<span class="c"># unpack it, then in that folder</span>
+<span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span></pre>
       <div>
         <h3>Windows<span class="badge">beta</span></h3>
         <p>The window, the launcher, the browser extension, the SSH agent for the built-in OpenSSH, a tray icon and autostart. YubiKey is so far tested at the protocol level only.</p>
-        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases">Files on GitHub Releases</a>
+        <a class="btn ghost" href="install/">All install options</a>
       </div>
     </div>
     <div class="os-panel" id="os-macos" role="tabpanel">
-<pre class="term"><span class="c"># Apple Silicon</span>
-<span class="p">$ </span><span data-type>brew install onokashino/tap/keywarden</span>
-
-<span class="c"># or without Homebrew</span>
+<pre class="term"><span class="c"># Apple Silicon, no root</span>
 <span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
       <div>
         <h3>macOS<span class="badge">beta</span></h3>
         <p>The window, the launcher, the browser extension, the SSH agent and autostart. No menu bar icon yet.</p>
-        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases">Files on GitHub Releases</a>
+        <a class="btn ghost" href="install/">All install options</a>
       </div>
     </div>
-    <p class="sub" style="margin-top:32px">Browser extension: <a href="https://addons.mozilla.org/firefox/addon/keywarden/">install for Firefox</a>. Chrome is coming.</p>
+    <div class="reach reveal">
+      <div class="reach-group">
+        <h3>Browser extension</h3>
+        <p>Fills logins and 2FA codes, saves new passwords. Talks only to Keywarden on the same computer.</p>
+        <ul class="reach-list">
+          <li><a class="reach-item live" href="https://addons.mozilla.org/firefox/addon/keywarden/"><b>Firefox</b><span class="state"><i></i>available</span><span class="go">Install <span aria-hidden="true">&rarr;</span></span></a></li>
+          <li><div class="reach-item"><b>Chrome</b><span class="state">soon</span></div></li>
+          <li><div class="reach-item"><b>Edge, Brave</b><span class="state">soon</span></div></li>
+        </ul>
+      </div>
+      <div class="reach-group">
+        <h3>Phone</h3>
+        <p>Apps for Android and iOS are in the works. Until then any KeePass app opens the same file from your sync folder.</p>
+        <ul class="reach-list">
+          <li><div class="reach-item"><b>Android</b><span class="state">in the works</span></div></li>
+          <li><div class="reach-item"><b>iOS</b><span class="state">in the works</span></div></li>
+        </ul>
+      </div>
+    </div>
   </section>
 
   <section id="faq">
@@ -289,6 +302,7 @@
   <div class="wrap">
     <span>Keywarden · GPL-3.0-or-later · this site loads nothing from third parties</span>
     <nav aria-label="Links">
+      <a href="install/">Install</a>
       <a href="docs/">Docs</a>
       <a href="https://github.com/onokashino/keywarden">GitHub</a>
       <a href="https://github.com/onokashino/keywarden/releases">Releases</a>

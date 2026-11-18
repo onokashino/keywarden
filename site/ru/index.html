@@ -219,46 +219,59 @@
 
   <section id="install">
     <h2 class="reveal">Установка</h2>
-    <p class="sub reveal" style="--d:1">Выберите систему. Обновления приходят через менеджер пакетов вашей системы.</p>
+    <p class="sub reveal" style="--d:1">Выберите систему. Менеджеры пакетов, архивы и остальное на <a href="install/">странице установки</a>.</p>
     <div class="os-keys reveal" style="--d:2" role="tablist" aria-label="Система" data-tabs="os">
       <button class="key" role="tab" aria-controls="os-linux" data-os="linux"><span>Linux<small>основная</small></span></button>
       <button class="key" role="tab" aria-controls="os-windows" data-os="windows"><span>Windows<small>бета</small></span></button>
       <button class="key" role="tab" aria-controls="os-macos" data-os="macos"><span>macOS<small>бета</small></span></button>
     </div>
     <div class="os-panel" id="os-linux" role="tabpanel">
-<pre class="term"><span class="c"># Arch Linux, AUR</span>
-<span class="p">$ </span><span data-type>paru -S keywarden-bin</span>
-
-<span class="c"># другие дистрибутивы</span>
+<pre class="term"><span class="c"># любой дистрибутив, без root</span>
 <span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
       <div>
         <h3>Linux</h3>
         <p>Полная поддержка: Wayland, значок в трее, YubiKey, SSH-агент, связка ключей вместо gnome-keyring, автоввод в niri.</p>
-        <a class="btn ghost" href="docs/#install">Как установить и настроить</a>
+        <a class="btn ghost" href="install/">Все способы установки</a>
       </div>
     </div>
     <div class="os-panel" id="os-windows" role="tabpanel">
-<pre class="term"><span class="c"># PowerShell</span>
-<span class="p">&gt; </span><span data-type>winget install onokashino.Keywarden</span></pre>
+<pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip из Releases</span>
+<span class="c"># распакуйте и запустите в этой папке</span>
+<span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span></pre>
       <div>
         <h3>Windows<span class="badge">бета</span></h3>
         <p>Окно, лаунчер, расширение браузера, SSH-агент для встроенного OpenSSH, значок в трее и автозапуск. YubiKey пока проверен только на протоколе.</p>
-        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases">Файлы на GitHub Releases</a>
+        <a class="btn ghost" href="install/">Все способы установки</a>
       </div>
     </div>
     <div class="os-panel" id="os-macos" role="tabpanel">
-<pre class="term"><span class="c"># Apple Silicon</span>
-<span class="p">$ </span><span data-type>brew install onokashino/tap/keywarden</span>
-
-<span class="c"># или без Homebrew</span>
+<pre class="term"><span class="c"># Apple Silicon, без root</span>
 <span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
       <div>
         <h3>macOS<span class="badge">бета</span></h3>
         <p>Окно, лаунчер, расширение браузера, SSH-агент и автозапуск. Значка в строке меню пока нет.</p>
-        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases">Файлы на GitHub Releases</a>
+        <a class="btn ghost" href="install/">Все способы установки</a>
       </div>
     </div>
-    <p class="sub" style="margin-top:32px">Расширение браузера: <a href="https://addons.mozilla.org/firefox/addon/keywarden/">установить в Firefox</a>. Chrome на подходе.</p>
+    <div class="reach reveal">
+      <div class="reach-group">
+        <h3>Расширение браузера</h3>
+        <p>Заполняет логины и коды 2FA, сохраняет новые пароли. Общается только с Keywarden на этом же компьютере.</p>
+        <ul class="reach-list">
+          <li><a class="reach-item live" href="https://addons.mozilla.org/firefox/addon/keywarden/"><b>Firefox</b><span class="state"><i></i>доступно</span><span class="go">Установить <span aria-hidden="true">&rarr;</span></span></a></li>
+          <li><div class="reach-item"><b>Chrome</b><span class="state">скоро</span></div></li>
+          <li><div class="reach-item"><b>Edge, Brave</b><span class="state">скоро</span></div></li>
+        </ul>
+      </div>
+      <div class="reach-group">
+        <h3>Телефон</h3>
+        <p>Приложения для Android и iOS в работе. Пока что тот же файл из папки синхронизации открывает любое приложение KeePass.</p>
+        <ul class="reach-list">
+          <li><div class="reach-item"><b>Android</b><span class="state">в работе</span></div></li>
+          <li><div class="reach-item"><b>iOS</b><span class="state">в работе</span></div></li>
+        </ul>
+      </div>
+    </div>
   </section>
 
   <section id="faq">
@@ -289,6 +302,7 @@
   <div class="wrap">
     <span>Keywarden · GPL-3.0-or-later · сайт ничего не загружает со сторонних ресурсов</span>
     <nav aria-label="Ссылки">
+      <a href="install/">Установка</a>
       <a href="docs/">Документация</a>
       <a href="https://github.com/onokashino/keywarden">GitHub</a>
       <a href="https://github.com/onokashino/keywarden/releases">Релизы</a>

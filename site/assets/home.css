@@ -307,6 +307,26 @@ footer a:hover { color: var(--ink); }
   details p { padding: 0 14px 16px 14px; }
   .verdict { grid-template-columns: 1fr; }
 }
+/* где ещё работает: браузеры и телефоны, у каждой платформы свой статус */
+.reach { display: grid; grid-template-columns: 3fr 2fr; gap: 40px; margin-top: 64px; padding-top: 40px; border-top: 1px solid var(--line); }
+.reach-group > p { color: var(--muted); margin: 0 0 18px; max-width: 46ch; }
+.reach-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.reach-item { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 14px; background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink); text-decoration: none; }
+.reach-item b { font: 700 16px var(--display); letter-spacing: -0.01em; }
+.reach-item .state { margin-left: auto; font: 500 13px var(--mono); color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+.reach-item:not(.live) { background: transparent; }
+.reach-item:not(.live) b { color: var(--muted); }
+.reach-item.live { background: linear-gradient(var(--bg-3), var(--bg-2)); box-shadow: inset 0 0 0 1px var(--violet-lo), 0 0 0 0 oklch(0.62 0.2 292 / 0); transition: box-shadow 200ms var(--out), transform 160ms var(--out); }
+.reach-item.live:hover { box-shadow: inset 0 0 0 1px var(--violet), 0 10px 30px -12px oklch(0.62 0.2 292 / 0.6); transform: translateY(-2px); }
+.reach-item.live:active { transform: translateY(0); }
+.reach-item.live .state { margin-left: 0; color: var(--ok); }
+.reach-item.live .state i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 oklch(0.82 0.13 160 / 0.5); animation: live 2.4s var(--out) infinite; }
+.reach-item .go { margin-left: auto; font: 600 15px var(--body); color: var(--violet-hi); white-space: nowrap; }
+.reach-item.live:hover .go span { transform: translateX(3px); }
+.reach-item .go span { display: inline-block; transition: transform 160ms var(--out); }
+@keyframes live { 70% { box-shadow: 0 0 0 7px oklch(0.82 0.13 160 / 0); } 100% { box-shadow: 0 0 0 0 oklch(0.82 0.13 160 / 0); } }
+@media (max-width: 860px) { .reach { grid-template-columns: 1fr; gap: 36px; margin-top: 48px; } }
+@media (max-width: 400px) { .reach-item { padding: 14px; gap: 10px; flex-wrap: wrap; } }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
