@@ -41,7 +41,7 @@
   <section class="inst-hero">
     <div>
       <h1>Синхронизация через <em>вашу папку</em></h1>
-      <p class="lead">База это один зашифрованный файл. Его переносит любая синхронизация папок, а Keywarden сливает изменения по записям. Без нашего сервера и без аккаунта.</p>
+      <p class="lead">База это один зашифрованный файл. Его переносит синхронизация папок, ваш сервер WebDAV или сам Keywarden в одной сети, а сливает изменения по записям Keywarden. Без нашего сервера и без аккаунта.</p>
     </div>
     <figure class="flow" aria-label="Между устройствами ходит только зашифрованный файл.">
       <div class="flow-row">
@@ -78,12 +78,12 @@
     </div>
     <div class="plats stack soon-row reveal" style="--d:3">
         <div class="plat">
-          <div class="plat-top"><h3>WebDAV</h3><span class="chip soon">Скоро</span></div>
-          <p>Keywarden сам ходит на ваш сервер: Nextcloud, Synology, любой с WebDAV. Программа синхронизации не нужна.</p>
+          <div class="plat-top"><h3>WebDAV</h3><span class="chip ok">Встроено</span></div>
+          <p>Keywarden сам ходит на ваш сервер: Nextcloud, Synology, любой с WebDAV. Программа синхронизации не нужна. Настройки, Синхронизация, WebDAV.</p>
         </div>
         <div class="plat">
-          <div class="plat-top"><h3>Напрямую между компьютерами</h3><span class="chip soon">Скоро</span></div>
-          <p>Два компьютера с Keywarden обмениваются базой между собой, без папки и облака.</p>
+          <div class="plat-top"><h3>В одной сети</h3><span class="chip ok">Встроено</span></div>
+          <p>Компьютеры с этой базой и паролем находят друг друга сами и обмениваются изменениями напрямую. Порт 47470, UDP и TCP.</p>
         </div>
     </div>
   </section>
@@ -117,7 +117,8 @@
       <li>Мастер-пароль (и файл-ключ) на всех устройствах должен быть один: копия под другим паролем не сливается, о ней только сообщается.</li>
       <li>Файл-ключ и настройки YubiKey не кладите в синхронизируемую папку.</li>
       <li>Keywarden сохраняет KDBX 4.1. Его читают KeePassXC 2.7+, KeePassDX и KeePassium.</li>
-      <li>Keywarden ничего не отправляет в сеть ради синхронизации: файл переносит только ваша программа синхронизации.</li>
+      <li>Через папку Keywarden сам ничего не отправляет в сеть. WebDAV и обмен в одной сети включаются отдельно и передают только зашифрованный файл.</li>
+      <li>Для обмена в одной сети разрешите порт 47470 (UDP и TCP) в брандмауэре каждого компьютера.</li>
     </ul>
     <div class="cta reveal" style="--d:2"><a class="btn primary" href="../install/">Установить Keywarden</a><a class="btn ghost" href="../docs/#sync">Документация: синхронизация</a></div>
   </section>

@@ -37,7 +37,7 @@
 <main class="doc" id="main" style="max-width: 72ch; padding-block: 40px 80px;">
 <h1>Privacy policy</h1>
 <p class="lead">Keywarden collects nothing. There are no accounts, no servers of ours, no analytics and no crash reports. Your passwords stay in a <code>.kdbx</code> file on your computer.</p>
-<p>Last updated: 11 November 2026. Applies to the Keywarden app (<code>keywardend</code>, <code>keywarden-ui</code>, <code>kw</code>, <code>keywarden-host</code>) and the Keywarden browser extension for Firefox, Chrome and Edge.</p>
+<p>Last updated: 18 November 2026. Applies to the Keywarden app (<code>keywardend</code>, <code>keywarden-ui</code>, <code>kw</code>, <code>keywarden-host</code>) and the Keywarden browser extension for Firefox, Chrome and Edge.</p>
 
 <h2 id="stored">What is stored and where</h2>
 <ul>
@@ -64,6 +64,8 @@
   <li><b>2FA and passkey hints</b>, when you press the button in Vault health. Downloads public lists from <code>2fa.directory</code>. Nothing about your vault is sent.</li>
   <li><b>Site icon</b>, when you ask for an entry's icon. Loads the icon from that entry's website, like opening the site would.</li>
   <li><b>Block explorer links</b> for crypto wallet entries open in your browser only when you click them.</li>
+  <li><b>WebDAV sync</b>, off by default. When you connect a server, the encrypted vault file goes to and from that server only, about once a minute and after each save. The server address, username and password are kept inside the vault.</li>
+  <li><b>Sync on the same network</b>, off by default. When on, the app announces itself on the local network (UDP and TCP port 47470) and exchanges the encrypted vault only with computers that prove they have the same vault and password. Nothing leaves your local network.</li>
 </ul>
 
 <h2 id="third">Third parties</h2>

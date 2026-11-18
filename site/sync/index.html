@@ -41,7 +41,7 @@
   <section class="inst-hero">
     <div>
       <h1>Sync through <em>your folder</em></h1>
-      <p class="lead">The vault is one encrypted file. Any folder sync carries it between devices, and Keywarden merges the changes entry by entry. No server of ours, no account.</p>
+      <p class="lead">The vault is one encrypted file. A folder sync tool, your WebDAV server or Keywarden itself on the same network carries it between devices, and Keywarden merges the changes entry by entry. No server of ours, no account.</p>
     </div>
     <figure class="flow" aria-label="Only the encrypted file travels.">
       <div class="flow-row">
@@ -78,12 +78,12 @@
     </div>
     <div class="plats stack soon-row reveal" style="--d:3">
         <div class="plat">
-          <div class="plat-top"><h3>WebDAV</h3><span class="chip soon">Soon</span></div>
-          <p>Keywarden talks to your server itself: Nextcloud, Synology, any WebDAV. No sync app needed.</p>
+          <div class="plat-top"><h3>WebDAV</h3><span class="chip ok">Built in</span></div>
+          <p>Keywarden talks to your server itself: Nextcloud, Synology, any WebDAV. No sync app needed. Settings, Sync, WebDAV.</p>
         </div>
         <div class="plat">
-          <div class="plat-top"><h3>Directly between computers</h3><span class="chip soon">Soon</span></div>
-          <p>Two computers with Keywarden exchange the vault with each other, no folder or cloud.</p>
+          <div class="plat-top"><h3>Same network</h3><span class="chip ok">Built in</span></div>
+          <p>Computers with this vault and password find each other and swap changes directly. Port 47470, UDP and TCP.</p>
         </div>
     </div>
   </section>
@@ -117,7 +117,8 @@
       <li>Use the same master password (and key file) on every device: a copy under another password is not merged, only reported.</li>
       <li>Keep the key file and YubiKey settings out of the synced folder.</li>
       <li>Keywarden saves KDBX 4.1. KeePassXC 2.7+, KeePassDX and KeePassium read it.</li>
-      <li>Sync makes no network requests from Keywarden: only your sync tool moves the file.</li>
+      <li>Through a folder Keywarden itself sends nothing over the network. WebDAV and same-network sync are turned on separately and carry only the encrypted file.</li>
+      <li>For same-network sync allow port 47470 (UDP and TCP) in the firewall on each computer.</li>
     </ul>
     <div class="cta reveal" style="--d:2"><a class="btn primary" href="../install/">Install Keywarden</a><a class="btn ghost" href="../docs/#sync">Docs: sync</a></div>
   </section>

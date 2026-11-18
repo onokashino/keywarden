@@ -317,6 +317,8 @@ kw ssh-env | Invoke-Expression</code></pre>
 <figure><div class="shot"><img src="../assets/shots/sync.webp" alt="Sync settings" loading="lazy" width="1276" height="771"></div></figure>
 <p>Keywarden syncs through files. Put the vault into a folder synced by Syncthing, Nextcloud, Dropbox or anything else, and open the same file on your phone with KeePassDX (Android) or KeePassium (iOS).</p>
 <p>When the file changes on disk while the vault is open, Keywarden merges it entry by entry: newer edits win, deletions are respected, nothing is silently lost. Syncthing conflict copies are merged and moved to backups automatically, and you get a notification. If a merge would delete many entries at once, Keywarden asks first. Step by step, with every option: <a href="../sync/">sync page</a>.</p>
+<p><b>WebDAV.</b> Without a sync app: Settings, Sync, WebDAV. Enter the file or folder address on your server (Nextcloud, Synology, any WebDAV), the username and the password; Keywarden checks them and then downloads and uploads the vault about once a minute and after each save. The setting is stored inside the vault, so another computer that opens it connects by itself. From the terminal: <code>kw sync webdav https://cloud.example.com/remote.php/dav/files/anna/ -u anna</code>.</p>
+<p><b>On the same network.</b> Turn on Exchange on every computer (or <code>kw sync lan on</code>). Computers with the same vault and password find each other and swap changes directly. Allow port 47470, UDP and TCP, in the firewall. Every incoming version, from a file, a server or another computer, goes through the same merge, mass-deletion check and log.</p>
 
 <h2 id="import">Import and export</h2>
 <p>From <b>Settings, Transfer</b> or the command line:</p>
