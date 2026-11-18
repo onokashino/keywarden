@@ -92,13 +92,20 @@
   // --- вкладки на клавишах: обзор (цифры 1-6) и выбор системы ---
   const typeIn = panel => {
     if (reduced) return;
-    $$('[data-type]', panel).forEach((el, j) => {
-      const full = el.dataset.full || (el.dataset.full = el.textContent);
+    const els = $$('[data-type]', panel);
+    // окно сразу получает высоту готового текста: при печати строки не переносятся по-новому и окно не прыгает
+    els.forEach(el => { el.textContent = el.dataset.full || (el.dataset.full = el.textContent); });
+    const terms = [...new Set(els.map(el => el.closest('pre')))].filter(Boolean);
+    terms.forEach(t => { t.style.minHeight = ''; t.style.minHeight = t.offsetHeight + 'px'; });
+    let left = els.length;
+    els.forEach((el, j) => {
+      const full = el.dataset.full;
       el.textContent = '';
       let n = 0;
       setTimeout(function step() {
         el.textContent = full.slice(0, ++n);
         if (n < full.length) setTimeout(step, 22 + Math.random() * 30);
+        else if (--left === 0) terms.forEach(t => { t.style.minHeight = ''; });
       }, 180 + j * 520);
     });
   };
