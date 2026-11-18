@@ -223,7 +223,9 @@
         setTimeout(() => (b.textContent = ru ? 'Копировать' : 'Copy'), 1400);
       } catch {}
     });
-    el.append(b);
+    // в карточке быстрой установки кнопка стоит в строке подписи, а не поверх команды
+    const label = el.closest('.quick')?.querySelector('.quick-label');
+    (label || el).append(b);
   });
 
   // --- появление разделов ниже первого экрана ---

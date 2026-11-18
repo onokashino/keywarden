@@ -98,57 +98,47 @@
   <section id="extension">
     <h2 class="reveal">2 · The browser extension</h2>
     <p class="sub reveal" style="--d:1">Fills logins and 2FA codes, saves new passwords and passkeys. It talks only to the app on the same computer.</p>
-    <div class="plats reveal" style="--d:2">
+    <div class="plats ext reveal" style="--d:2">
         <div class="plat live">
           <div class="plat-top"><h3>Firefox</h3><span class="chip ok">Available</span></div>
           <p>Signed by Mozilla, updates by itself.</p><a class="btn primary" href="https://addons.mozilla.org/firefox/addon/keywarden/">Add to Firefox</a>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Chrome</h3><span class="chip soon">Soon</span></div>
-          <p>Coming to the Chrome Web Store. Until then load the zip from the release as an unpacked extension.</p>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Edge</h3><span class="chip soon">Soon</span></div>
-          <p>Edge Add-ons after Chrome. The Chrome zip already works in Edge by hand.</p>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Brave</h3><span class="chip soon">Soon</span></div>
-          <p>Brave, Vivaldi, Opera: the Chrome version, from the Chrome Web Store.</p>
         </div>
     </div>
-    <p class="note reveal" style="--d:3">Load by hand: unpack <code>keywarden-extension-*-chrome.zip</code>, open <code>chrome://extensions</code>, turn on Developer mode, "Load unpacked", then <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</p>
   </section>
 
   <section id="phone">
     <h2 class="reveal">On the phone</h2>
-    <p class="sub reveal" style="--d:1">Keywarden apps for Android and iOS are in the works. The vault is a normal KeePass file, so today any KeePass app opens it from your sync folder.</p>
+    <p class="sub reveal" style="--d:1">Apps for Android and iOS are in development.</p>
     <div class="plats two-up reveal" style="--d:2">
         <div class="plat">
-          <div class="plat-top"><h3>Android</h3><span class="chip work">In the works</span></div>
-          <p>Until then: KeePassDX opens the same vault.</p>
+          <div class="plat-top"><h3>Android</h3><span class="chip work">In development</span></div>
         </div>
         <div class="plat">
-          <div class="plat-top"><h3>iOS</h3><span class="chip work">In the works</span></div>
-          <p>Until then: KeePassium or Strongbox open the same vault.</p>
+          <div class="plat-top"><h3>iOS</h3><span class="chip work">In development</span></div>
         </div>
     </div>
   </section>
 
   <section id="packages">
     <h2 class="reveal">Package managers</h2>
-    <p class="sub reveal" style="--d:1">Install and update with tools you already use. Being set up now.</p>
     <div class="plats reveal" style="--d:2">
         <div class="plat">
           <div class="plat-top"><h3>Arch Linux, AUR</h3><span class="chip soon">Soon</span></div>
-          <p><code>paru -S keywarden-bin</code></p>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>macOS, Homebrew</h3><span class="chip soon">Soon</span></div>
-          <p><code>brew install onokashino/tap/keywarden</code></p>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Windows, winget</h3><span class="chip soon">Soon</span></div>
-          <p><code>winget install onokashino.Keywarden</code></p>
         </div>
     </div>
   </section>

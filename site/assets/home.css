@@ -334,13 +334,14 @@ main > section.inst-hero { border-top: 0; }
 .inst-hero .lead { margin: 0; }
 .quick { background: var(--bg-2); border-radius: 24px; padding: 24px; box-shadow: inset 0 0 0 1px var(--line), 0 40px 80px -50px oklch(0.62 0.2 292 / 0.55); }
 .quick .term { font-size: 13.5px; padding-inline: 18px; }
-.quick-label { margin: 0 0 14px; font: 600 13px var(--mono); color: var(--violet-hi); }
+.quick-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 30px; margin: 0 0 14px; font: 600 13px var(--mono); color: var(--violet-hi); }
 .quick-note { margin: 14px 0 0; font-size: 15px; color: var(--muted); }
 .inst main > section, main.inst > section { padding-block: 88px; }
 /* кнопка над командой, команда переносится только по пробелам и целиком видна */
-[data-copy] { position: relative; padding-top: 52px; }
+[data-copy] { position: relative; }
 [data-copy], .inst-more .term, .hand .term { white-space: pre-wrap; }
-.copy-btn { position: absolute; top: 10px; right: 10px; font: 600 12px var(--mono); color: var(--ink); background: var(--bg-3); border: 0; border-radius: 8px; padding: 7px 11px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow 160ms; }
+.copy-btn { position: absolute; top: 12px; right: 12px; font: 600 12px var(--mono); color: var(--ink); background: var(--bg-3); border: 0; border-radius: 8px; padding: 7px 11px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow 160ms; }
+.quick-label .copy-btn { position: static; }
 .copy-btn:hover { box-shadow: inset 0 0 0 1px var(--muted); }
 .hand { margin-top: 6px; background: none; box-shadow: none; }
 .hand:hover { box-shadow: none; }
@@ -351,6 +352,14 @@ main > section.inst-hero { border-top: 0; }
 .plats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
 .plats.two-up { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); max-width: 760px; }
 .plat { display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 20px; background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line); }
+h2 + .plats { margin-top: 32px; }
+/* Firefox на всю строку: текст слева, кнопка справа; ниже компактный ряд «скоро» */
+.plats.ext { grid-template-columns: repeat(3, 1fr); }
+.plats.ext .live { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 24px; padding: 26px 28px; }
+.plats.ext .live .plat-top { justify-content: flex-start; }
+.plats.ext .live p { grid-column: 1; }
+.plats.ext .live .btn { grid-column: 2; grid-row: 1 / span 2; margin: 0; align-self: center; }
+@media (max-width: 620px) { .plats.ext { grid-template-columns: 1fr; } .plats.ext .live { grid-template-columns: 1fr; row-gap: 12px; } .plats.ext .live .btn { grid-column: 1; grid-row: auto; } }
 .plat-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .plat h3 { margin: 0; font-size: 22px; }
 .plat p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; }

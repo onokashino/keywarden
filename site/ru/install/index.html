@@ -98,57 +98,47 @@
   <section id="extension">
     <h2 class="reveal">2 · Расширение браузера</h2>
     <p class="sub reveal" style="--d:1">Заполняет логины и коды 2FA, сохраняет новые пароли и ключи доступа. Общается только с приложением на этом же компьютере.</p>
-    <div class="plats reveal" style="--d:2">
+    <div class="plats ext reveal" style="--d:2">
         <div class="plat live">
           <div class="plat-top"><h3>Firefox</h3><span class="chip ok">Доступно</span></div>
           <p>Подписано Mozilla, обновляется само.</p><a class="btn primary" href="https://addons.mozilla.org/firefox/addon/keywarden/">Добавить в Firefox</a>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Chrome</h3><span class="chip soon">Скоро</span></div>
-          <p>Скоро в Chrome Web Store. Пока что zip из релиза ставится вручную как распакованное расширение.</p>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Edge</h3><span class="chip soon">Скоро</span></div>
-          <p>Edge Add-ons после Chrome. Zip для Chrome уже сейчас ставится в Edge вручную.</p>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Brave</h3><span class="chip soon">Скоро</span></div>
-          <p>Brave, Vivaldi, Opera: версия для Chrome, из Chrome Web Store.</p>
         </div>
     </div>
-    <p class="note reveal" style="--d:3">Вручную: распакуйте <code>keywarden-extension-*-chrome.zip</code>, откройте <code>chrome://extensions</code>, включите режим разработчика, «Загрузить распакованное», затем <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</p>
   </section>
 
   <section id="phone">
     <h2 class="reveal">На телефоне</h2>
-    <p class="sub reveal" style="--d:1">Приложения Keywarden для Android и iOS в работе. База это обычный файл KeePass, поэтому уже сегодня его открывает любое приложение KeePass из папки синхронизации.</p>
+    <p class="sub reveal" style="--d:1">Приложения для Android и iOS в разработке.</p>
     <div class="plats two-up reveal" style="--d:2">
         <div class="plat">
-          <div class="plat-top"><h3>Android</h3><span class="chip work">В работе</span></div>
-          <p>Пока что: KeePassDX открывает ту же базу.</p>
+          <div class="plat-top"><h3>Android</h3><span class="chip work">В разработке</span></div>
         </div>
         <div class="plat">
-          <div class="plat-top"><h3>iOS</h3><span class="chip work">В работе</span></div>
-          <p>Пока что: KeePassium или Strongbox открывают ту же базу.</p>
+          <div class="plat-top"><h3>iOS</h3><span class="chip work">В разработке</span></div>
         </div>
     </div>
   </section>
 
   <section id="packages">
     <h2 class="reveal">Менеджеры пакетов</h2>
-    <p class="sub reveal" style="--d:1">Установка и обновления привычными инструментами. Сейчас подключаются.</p>
     <div class="plats reveal" style="--d:2">
         <div class="plat">
           <div class="plat-top"><h3>Arch Linux, AUR</h3><span class="chip soon">Скоро</span></div>
-          <p><code>paru -S keywarden-bin</code></p>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>macOS, Homebrew</h3><span class="chip soon">Скоро</span></div>
-          <p><code>brew install onokashino/tap/keywarden</code></p>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Windows, winget</h3><span class="chip soon">Скоро</span></div>
-          <p><code>winget install onokashino.Keywarden</code></p>
         </div>
     </div>
   </section>
