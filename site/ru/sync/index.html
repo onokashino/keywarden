@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Синхронизация · Keywarden</title>
+<meta name="description" content="Как Keywarden синхронизирует базу KeePass между компьютерами и телефонами через вашу папку: Syncthing, Nextcloud, Dropbox или любую другую.">
+<meta name="theme-color" content="#17151c">
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/sync/">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/sync/">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/home.css">
+</head>
+<body>
+<a class="skip" href="#main">К содержимому</a>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../../assets/logo.svg" alt="" width="26" height="26">Keywarden</a>
+    <nav class="nav-links" id="navLinks" aria-label="Sections">
+      <a href="../#tour">Возможности</a>
+      <a href="../#security">Безопасность</a>
+      <a href="../install/">Установка</a>
+      <a class="only-narrow" href="../docs/">Документация</a>
+    </nav>
+    <div class="nav-right">
+      <a class="docs" href="../docs/">Документация</a>
+      <a class="gh" href="https://github.com/onokashino/keywarden" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" aria-label="Меню разделов"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="lang" aria-label="Language">
+        <a href="../../sync/" hreflang="en" data-lang="en">EN</a>
+        <a href="./" aria-current="page" data-lang="ru">RU</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap inst">
+  <section class="inst-hero">
+    <div>
+      <h1>Синхронизация через <em>вашу папку</em></h1>
+      <p class="lead">База это один зашифрованный файл. Его переносит любая синхронизация папок, а Keywarden сливает изменения по записям. Без нашего сервера и без аккаунта.</p>
+    </div>
+    <figure class="flow" aria-label="Между устройствами ходит только зашифрованный файл.">
+      <div class="flow-row">
+        <div class="node"><b>Компьютер</b><small>Keywarden</small></div>
+        <span class="link" aria-hidden="true"><i></i></span>
+        <div class="node hub"><b>Папка</b><small>Syncthing, Nextcloud, Dropbox</small></div>
+        <span class="link" aria-hidden="true"><i></i></span>
+        <div class="node"><b>Телефон</b><small>KeePassDX, KeePassium</small></div>
+      </div>
+      <figcaption><span class="file">vault.kdbx</span>Между устройствами ходит только зашифрованный файл.</figcaption>
+    </figure>
+  </section>
+
+  <section id="ways">
+    <h2 class="reveal">1 · Выберите способ</h2>
+    <p class="sub reveal" style="--d:1">Эти папки и их конфликтные копии Keywarden узнаёт сам.</p>
+    <div class="plats stack reveal" style="--d:2">
+        <div class="plat">
+          <div class="plat-top"><h3>Syncthing</h3><span class="chip ok">Определяется</span></div>
+          <p>Напрямую между устройствами, без облака посередине. Лучший вариант.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Nextcloud</h3><span class="chip ok">Определяется</span></div>
+          <p>Свой сервер или чужой.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Dropbox</h3><span class="chip ok">Определяется</span></div>
+          <p>Работает сразу.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Другие папки</h3><span class="chip work">Работает</span></div>
+          <p>Google Drive, OneDrive, iCloud, сетевая папка. Конфликтные копии не распознаются.</p>
+        </div>
+    </div>
+    <div class="plats stack soon-row reveal" style="--d:3">
+        <div class="plat">
+          <div class="plat-top"><h3>WebDAV</h3><span class="chip soon">Скоро</span></div>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Напрямую между компьютерами</h3><span class="chip soon">Скоро</span></div>
+        </div>
+    </div>
+  </section>
+
+  <section id="setup">
+    <h2 class="reveal">2 · Настройте</h2>
+    <p class="sub reveal" style="--d:1">Три шага, один раз на каждом устройстве.</p>
+    <ol class="setup reveal" style="--d:2">
+      <li><span class="num">1</span><h3>Перенесите базу</h3><p>Настройки, Синхронизация, «Перенести в папку». Keywarden запишет базу туда, проверит её и сохранит старый файл в резервных копиях.</p></li>
+      <li><span class="num">2</span><h3>Синхронизируйте папку</h3><p>Добавьте ту же папку в Syncthing, Nextcloud или Dropbox на другом компьютере и на телефоне.</p></li>
+      <li><span class="num">3</span><h3>Откройте тот же файл</h3><p>Keywarden на другом компьютере, KeePassDX на Android, KeePassium или Strongbox на iOS. Мастер-пароль тот же.</p></li>
+    </ol>
+  </section>
+
+  <section id="merge">
+    <h2 class="reveal">Как сливаются изменения</h2>
+    <p class="sub reveal" style="--d:1">Keywarden следит за файлом. Когда он меняется на диске, новая версия вливается в открытую базу.</p>
+    <div class="rules reveal" style="--d:2">
+      <div class="rule"><h3>По записям</h3><p>Побеждает более свежая правка. Другая версия не теряется, а уходит в историю записи.</p></div>
+      <div class="rule"><h3>Удаления учитываются</h3><p>Запись, удалённая на одном устройстве, удаляется везде, если её никто не правил после этого.</p></div>
+      <div class="rule"><h3>Конфликтные копии</h3><p>Копии от Syncthing, Nextcloud и Dropbox сливаются и уходят в резервные копии.</p></div>
+      <div class="rule"><h3>Массовое удаление ждёт</h3><p>Если изменение удаляет больше 5 записей или 10% базы, Keywarden сначала спросит: принять или оставить.</p></div>
+      <div class="rule"><h3>Отмена</h3><p>Перед каждым слиянием сохраняется снимок. Журнал в настройках отменяет слияние, и отмена тоже доходит до других устройств.</p></div>
+      <div class="rule"><h3>Старая копия</h3><p>Если синхронизация вернула более старую версию файла, вы получите предупреждение.</p></div>
+    </div>
+  </section>
+
+  <section id="know">
+    <h2 class="reveal">Полезно знать</h2>
+    <ul class="know reveal" style="--d:1">
+      <li>Мастер-пароль (и файл-ключ) на всех устройствах должен быть один: копия под другим паролем не сливается, о ней только сообщается.</li>
+      <li>Файл-ключ и настройки YubiKey не кладите в синхронизируемую папку.</li>
+      <li>Keywarden сохраняет KDBX 4.1. Его читают KeePassXC 2.7+, KeePassDX и KeePassium.</li>
+      <li>Keywarden ничего не отправляет в сеть ради синхронизации: файл переносит только ваша программа синхронизации.</li>
+    </ul>
+    <div class="cta reveal" style="--d:2"><a class="btn primary" href="../install/">Установить Keywarden</a><a class="btn ghost" href="../docs/#sync">Документация: синхронизация</a></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Keywarden · GPL-3.0-or-later · сайт ничего не грузит со сторонних серверов</span>
+    <nav aria-label="Links">
+      <a href="../">Главная</a>
+      <a href="../install/">Установка</a>
+      <a href="../docs/">Документация</a>
+      <a href="https://github.com/onokashino/keywarden">GitHub</a>
+      <a href="../privacy/">Приватность</a>
+    </nav>
+  </div>
+</footer>
+<script src="../../assets/home.js" defer></script>
+</body>
+</html>

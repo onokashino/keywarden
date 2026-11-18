@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sync · Keywarden</title>
+<meta name="description" content="How Keywarden syncs a KeePass vault between computers and phones through your own folder: Syncthing, Nextcloud, Dropbox or any other.">
+<meta name="theme-color" content="#17151c">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/sync/">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/sync/">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/home.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/logo.svg" alt="" width="26" height="26">Keywarden</a>
+    <nav class="nav-links" id="navLinks" aria-label="Sections">
+      <a href="../#tour">Features</a>
+      <a href="../#security">Security</a>
+      <a href="../install/">Install</a>
+      <a class="only-narrow" href="../docs/">Docs</a>
+    </nav>
+    <div class="nav-right">
+      <a class="docs" href="../docs/">Docs</a>
+      <a class="gh" href="https://github.com/onokashino/keywarden" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" aria-label="Section menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="lang" aria-label="Language">
+        <a href="./" aria-current="page" data-lang="en">EN</a>
+        <a href="../ru/sync/" hreflang="ru" data-lang="ru">RU</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap inst">
+  <section class="inst-hero">
+    <div>
+      <h1>Sync through <em>your folder</em></h1>
+      <p class="lead">The vault is one encrypted file. Any folder sync carries it between devices, and Keywarden merges the changes entry by entry. No server of ours, no account.</p>
+    </div>
+    <figure class="flow" aria-label="Only the encrypted file travels.">
+      <div class="flow-row">
+        <div class="node"><b>Computer</b><small>Keywarden</small></div>
+        <span class="link" aria-hidden="true"><i></i></span>
+        <div class="node hub"><b>Sync folder</b><small>Syncthing, Nextcloud, Dropbox</small></div>
+        <span class="link" aria-hidden="true"><i></i></span>
+        <div class="node"><b>Phone</b><small>KeePassDX, KeePassium</small></div>
+      </div>
+      <figcaption><span class="file">vault.kdbx</span>Only the encrypted file travels.</figcaption>
+    </figure>
+  </section>
+
+  <section id="ways">
+    <h2 class="reveal">1 · Pick a way</h2>
+    <p class="sub reveal" style="--d:1">Keywarden recognises these folders and their conflict copies by itself.</p>
+    <div class="plats stack reveal" style="--d:2">
+        <div class="plat">
+          <div class="plat-top"><h3>Syncthing</h3><span class="chip ok">Recognised</span></div>
+          <p>Device to device, no cloud in between. The best fit.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Nextcloud</h3><span class="chip ok">Recognised</span></div>
+          <p>Your own server or a hosted one.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Dropbox</h3><span class="chip ok">Recognised</span></div>
+          <p>Works out of the box.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Other folders</h3><span class="chip work">Works</span></div>
+          <p>Google Drive, OneDrive, iCloud, a network share. Conflict copies are not recognised.</p>
+        </div>
+    </div>
+    <div class="plats stack soon-row reveal" style="--d:3">
+        <div class="plat">
+          <div class="plat-top"><h3>WebDAV</h3><span class="chip soon">Soon</span></div>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Directly between computers</h3><span class="chip soon">Soon</span></div>
+        </div>
+    </div>
+  </section>
+
+  <section id="setup">
+    <h2 class="reveal">2 · Set it up</h2>
+    <p class="sub reveal" style="--d:1">Three steps, once per device.</p>
+    <ol class="setup reveal" style="--d:2">
+      <li><span class="num">1</span><h3>Move the vault</h3><p>Settings, Sync, "Move to folder". Keywarden writes the vault there, checks it and keeps the old file in backups.</p></li>
+      <li><span class="num">2</span><h3>Sync the folder</h3><p>Add the same folder to Syncthing, Nextcloud or Dropbox on the other computer and on the phone.</p></li>
+      <li><span class="num">3</span><h3>Open the same file</h3><p>Keywarden on another computer, KeePassDX on Android, KeePassium or Strongbox on iOS. Same master password.</p></li>
+    </ol>
+  </section>
+
+  <section id="merge">
+    <h2 class="reveal">How changes merge</h2>
+    <p class="sub reveal" style="--d:1">Keywarden watches the file. When it changes on disk, the new version is merged into the open vault.</p>
+    <div class="rules reveal" style="--d:2">
+      <div class="rule"><h3>Entry by entry</h3><p>The newer edit wins. The other version is not lost, it goes into the entry history.</p></div>
+      <div class="rule"><h3>Deletions count</h3><p>An entry deleted on one device is deleted everywhere, unless someone edited it after that.</p></div>
+      <div class="rule"><h3>Conflict copies</h3><p>Copies made by Syncthing, Nextcloud and Dropbox are merged and moved to backups.</p></div>
+      <div class="rule"><h3>Mass deletion waits</h3><p>If a change removes more than 5 entries or 10% of the vault, Keywarden asks first: accept or keep them.</p></div>
+      <div class="rule"><h3>Undo</h3><p>Before every merge a snapshot is saved. The log in Settings undoes a merge, and the undo reaches other devices too.</p></div>
+      <div class="rule"><h3>Old copy warning</h3><p>If a sync brings back an older version of the file, you get a warning.</p></div>
+    </div>
+  </section>
+
+  <section id="know">
+    <h2 class="reveal">Good to know</h2>
+    <ul class="know reveal" style="--d:1">
+      <li>Use the same master password (and key file) on every device: a copy under another password is not merged, only reported.</li>
+      <li>Keep the key file and YubiKey settings out of the synced folder.</li>
+      <li>Keywarden saves KDBX 4.1. KeePassXC 2.7+, KeePassDX and KeePassium read it.</li>
+      <li>Sync makes no network requests from Keywarden: only your sync tool moves the file.</li>
+    </ul>
+    <div class="cta reveal" style="--d:2"><a class="btn primary" href="../install/">Install Keywarden</a><a class="btn ghost" href="../docs/#sync">Docs: sync</a></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Keywarden · GPL-3.0-or-later · this site loads nothing from third parties</span>
+    <nav aria-label="Links">
+      <a href="../">Home</a>
+      <a href="../install/">Install</a>
+      <a href="../docs/">Docs</a>
+      <a href="https://github.com/onokashino/keywarden">GitHub</a>
+      <a href="../privacy/">Privacy</a>
+    </nav>
+  </div>
+</footer>
+<script src="../assets/home.js" defer></script>
+</body>
+</html>
