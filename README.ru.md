@@ -111,9 +111,9 @@ sh scripts/install.sh          # бинарники в ~/.local/bin, systemd use
    output_path = "$XDG_CONFIG_HOME/keywarden/themes/noctalia.json"
    ```
 3. **База**: `kw unlock --db ~/Sync/keepass/main.kdbx` (путь запомнится) или `kw new ПУТЬ`.
-4. **Firefox**: `about:debugging` → «Загрузить временное дополнение» → `extension/.output/firefox-mv3/manifest.json`
-   (для постоянной установки дополнение нужно подписать в AMO), затем в настройках дополнения
-   разрешить доступ к сайтам. **Chromium**: «Загрузить распакованное» → `extension/.output/chrome-mv3`,
+4. **Firefox**: установить из [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/keywarden/), затем в настройках дополнения разрешить
+   доступ к сайтам. Для разработки: `about:debugging` → «Загрузить временное дополнение» →
+   `extension/.output/firefox-mv3/manifest.json`. **Chromium**: «Загрузить распакованное» → `extension/.output/chrome-mv3`,
    затем `CHROMIUM_EXTENSION_ID=<id> sh scripts/install.sh`. В popup расширения нажать «Подключить».
 
 ## kw

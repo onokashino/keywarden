@@ -56,6 +56,7 @@ main() {
   fi
 
   case ":$PATH:" in *":$bin:"*) ;; *) say "add $bin to PATH, for example: echo 'export PATH=\"$bin:\$PATH\"' >> ~/.profile" ;; esac
+  say "Firefox extension: https://addons.mozilla.org/firefox/addon/keywarden/"
 }
 
 say() { printf 'keywarden: %s\n' "$*"; }

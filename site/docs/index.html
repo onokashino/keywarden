@@ -224,7 +224,7 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
 <p>The extension fills logins, picks an account when there are several, fills 2FA codes, offers to save new and changed passwords and suggests a generated password on sign-up forms. It never fills invisible fields or frames.</p>
 <h3>Install</h3>
 <ol>
-  <li>Install the extension. Until it is in the stores, use the zip from the release: in Chromium-based browsers open <code>chrome://extensions</code>, turn on Developer mode and load the unpacked folder; in Firefox open <code>about:debugging</code> and load it as a temporary add-on.</li>
+  <li>Install the extension: Firefox from <a href="https://addons.mozilla.org/firefox/addon/keywarden/">Firefox Add-ons</a>. For Chromium-based browsers it is not in the store yet: unpack the zip from the release, open <code>chrome://extensions</code>, turn on Developer mode and load the unpacked folder.</li>
   <li>Register the host so the browser can reach Keywarden. The Linux installer does it; otherwise run <code>kw browser-setup</code>. For Chromium-based browsers pass the extension id shown on <code>chrome://extensions</code>: <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</li>
   <li>Click the Keywarden icon in the toolbar and press <b>Connect</b>. Confirm in the Keywarden window.</li>
 </ol>

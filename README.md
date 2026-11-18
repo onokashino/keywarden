@@ -34,7 +34,7 @@ Download an archive for your system from [Releases](https://github.com/onokashin
 | Windows x86_64 | `keywarden-*-windows-x86_64.zip` | unpack, run `keywarden-ui.exe` |
 | macOS (Apple Silicon) | `keywarden-*-macos-arm64.tar.gz` | `xattr -dr com.apple.quarantine keywarden-*` then run `keywarden-ui` |
 
-Then connect the browser extension with `kw browser-setup`. Full guide:
+Then install the [Firefox extension](https://addons.mozilla.org/firefox/addon/keywarden/) and connect it with `kw browser-setup`. Full guide:
 [onokashino.github.io/keywarden/docs](https://onokashino.github.io/keywarden/docs/).
 
 ## Building from source
