@@ -133,7 +133,13 @@ struct Link {
     body_hash: Option<[u8; 32]>,
     /// наш файл с этим sha256 уже ничем не отличается от копии на сервере
     synced: Option<[u8; 32]>,
+    /// сколько следующих обходов скачивают файл целиком, без If-None-Match
+    full_checks: u8,
+    polls: u32,
 }
+
+/// Раз в столько обходов файл скачивается целиком и сверяется по sha256.
+const FULL_CHECK_EVERY: u32 = 5;
 
 pub async fn watch(daemon: Arc<Daemon>) {
     let mut events = daemon.events.subscribe();
@@ -195,7 +201,13 @@ async fn pass(d: &Arc<Daemon>, link: &mut Link) -> Result<bool, String> {
 
     // 1. забрать
     let c = cfg.clone();
-    let etag = link.etag.clone();
+    // Nextcloud не меняет ETag, если файл перезаписан в ту же секунду и того же размера: тогда
+    // чужая запись не видна по ETag. Поэтому после своей записи и время от времени сверяем
+    // сам файл по sha256 (разбираем его, только если он правда другой)
+    let full = link.full_checks > 0 || link.polls.is_multiple_of(FULL_CHECK_EVERY);
+    link.polls = link.polls.wrapping_add(1);
+    link.full_checks = link.full_checks.saturating_sub(1);
+    let etag = if full { None } else { link.etag.clone() };
     match tokio::task::spawn_blocking(move || get(&c, etag.as_deref()))
         .await
         .map_err(|e| e.to_string())??
@@ -270,7 +282,9 @@ async fn pass(d: &Arc<Daemon>, link: &mut Link) -> Result<bool, String> {
             link.etag = etag;
             link.exists = true;
             link.synced = Some(hash);
-            link.body_hash = None;
+            // на сервере должен лежать ровно этот файл: следующие обходы проверят
+            link.body_hash = Some(hash);
+            link.full_checks = 3;
             d.set_webdav_status(true, synced_now());
             Ok(false)
         }

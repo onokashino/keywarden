@@ -8,7 +8,8 @@ export KEYWARDEN_WEBDAV_POLL=3
 B=${CARGO_TARGET_DIR:-target}/debug
 W=$(mktemp -d)
 S=/shared
-DAV=http://dav/dav/vault.kdbx
+DAV=${DAV_URL:-http://dav/dav/vault.kdbx}
+DU=${DAV_USER:-kw} DP=${DAV_PASS:-secret}
 
 $B/keywardend 2>$W/daemon.log &
 DPID=$!
@@ -31,9 +32,9 @@ if [ "$ROLE" = a ]; then
   printf 'pw\npw\n' | keepassxc-cli db-create -q -p $W/vault.kdbx
   echo pw | $B/kw unlock --db $W/vault.kdbx --password-stdin
   $B/kw add --title from-a -u alice
-  ! echo wrong | $B/kw sync webdav $DAV -u kw --password-stdin
-  echo secret | $B/kw sync webdav $DAV -u kw --password-stdin
-  waitfor curl -fsS -u kw:secret -o /dev/null $DAV
+  ! echo wrong | $B/kw sync webdav $DAV -u $DU --password-stdin
+  echo $DP | $B/kw sync webdav $DAV -u $DU --password-stdin
+  waitfor curl -fsS -u $DU:$DP -o /dev/null $DAV
   touch $S/dav-ready
   step "WebDAV: правка с другого компьютера дошла"
   waitfor has from-b bob
@@ -60,7 +61,7 @@ if [ "$ROLE" = a ]; then
 else
   waitfor test -e $S/dav-ready
   step "WebDAV: база с сервера, настройка пришла вместе с ней"
-  curl -fsS -u kw:secret -o $W/vault.kdbx $DAV
+  curl -fsS -u $DU:$DP -o $W/vault.kdbx $DAV
   echo pw | $B/kw unlock --db $W/vault.kdbx --password-stdin
   $B/kw sync status | grep -q "^WebDAV"
   has from-a alice

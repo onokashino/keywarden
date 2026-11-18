@@ -63,6 +63,8 @@ e2e:
 e2e-remote:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli
 	sh scripts/e2e-remote-run.sh $(IMAGE) 2g $(LABEL) $(CACHE)
+	DAV_KIND=nextcloud sh scripts/e2e-remote-run.sh $(IMAGE) 2g $(LABEL) $(CACHE)
+	SPLIT=1 sh scripts/e2e-remote-run.sh $(IMAGE) 2g $(LABEL) $(CACHE)
 
 e2e-crash:
 	$(CARGO) build -p keywarden-daemon -p keywarden-cli

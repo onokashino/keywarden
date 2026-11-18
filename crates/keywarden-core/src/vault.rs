@@ -524,17 +524,55 @@ impl SaveJob {
         let dst = self.backups.dir.join(format!("{stem}.{ts}.kdbx"));
         write_atomic(&dst, &fs::read(&self.path)?)?;
 
-        let mut all: Vec<PathBuf> = fs::read_dir(&self.backups.dir)?
+        let all: Vec<PathBuf> = fs::read_dir(&self.backups.dir)?
             .filter_map(|e| e.ok().map(|e| e.path()))
             .filter(|p| p.extension().is_some_and(|x| x == "kdbx"))
             .collect();
-        all.sort(); // имена с меткой времени сортируются хронологически
-        let extra = all.len().saturating_sub(self.backups.keep);
-        for old in &all[..extra] {
+        // лимит из настроек только для обычных копий: снимки перед слиянием (по ним работает
+        // отмена в журнале) ротирует синхронизация, а архив конфликтных копий держится отдельно
+        let (mut regular, rest): (Vec<_>, Vec<_>) =
+            all.into_iter().partition(|p| is_regular_backup(p, &stem));
+        regular.sort(); // имена с меткой времени сортируются хронологически
+        let extra = regular.len().saturating_sub(self.backups.keep);
+        for old in &regular[..extra] {
             fs::remove_file(old)?;
+        }
+        let mut other: Vec<_> = rest
+            .into_iter()
+            .filter(|p| !p.to_string_lossy().contains(".presync-"))
+            .filter_map(|p| Some((fs::metadata(&p).ok()?.modified().ok()?, p)))
+            .collect();
+        other.sort();
+        let extra = other.len().saturating_sub(KEEP_OTHER_BACKUPS);
+        for (_, old) in &other[..extra] {
+            let _ = fs::remove_file(old);
         }
         Ok(())
     }
+}
+
+/// Сколько держать архивных конфликтных копий, файлов после переноса и несохранённых правок.
+const KEEP_OTHER_BACKUPS: usize = 20;
+
+/// Обычная копия перед записью: `<имя>.ГГГГММДД-ЧЧММСС.ммм.kdbx`.
+fn is_regular_backup(p: &Path, stem: &str) -> bool {
+    let Some(name) = p.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    let Some(ts) = name
+        .strip_prefix(stem)
+        .and_then(|r| r.strip_prefix('.'))
+        .and_then(|r| r.strip_suffix(".kdbx"))
+    else {
+        return false;
+    };
+    let b = ts.as_bytes();
+    b.len() == 19
+        && b[8] == b'-'
+        && b[15] == b'.'
+        && b.iter()
+            .enumerate()
+            .all(|(i, c)| i == 8 || i == 15 || c.is_ascii_digit())
 }
 
 /// Парсер keepass-rs не заполняет обратные ссылки вложений (`Attachment.entries`). Без них удаление
@@ -747,6 +785,37 @@ mod tests {
             v.save().unwrap();
         }
         assert_eq!(fs::read_dir(dir.path().join("bak")).unwrap().count(), 3);
+    }
+
+    #[test]
+    fn rotation_keeps_sync_snapshots_and_conflicts() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut v = new_vault(dir.path());
+        let bak = dir.path().join("bak");
+        fs::create_dir_all(&bak).unwrap();
+        let stem = v.path().file_stem().unwrap().to_string_lossy().into_owned();
+        let snap = bak.join(format!("{stem}.presync-20260101-000000.000.kdbx"));
+        let conflict = bak.join(format!("{stem}.sync-conflict-20260101-000000-ABC.kdbx"));
+        fs::write(&snap, b"x").unwrap();
+        fs::write(&conflict, b"x").unwrap();
+        for _ in 0..5 {
+            v.db.root_mut().add_entry();
+            v.save().unwrap();
+        }
+        assert!(snap.exists() && conflict.exists());
+        let regular = fs::read_dir(&bak)
+            .unwrap()
+            .filter(|e| is_regular_backup(&e.as_ref().unwrap().path(), &stem))
+            .count();
+        assert_eq!(regular, 3);
+        assert!(is_regular_backup(
+            Path::new("a.b.20261118-101010.123.kdbx"),
+            "a.b"
+        ));
+        assert!(!is_regular_backup(
+            Path::new("db.moved-20261118-101010.kdbx"),
+            "db"
+        ));
     }
 
     #[test]

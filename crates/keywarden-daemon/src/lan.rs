@@ -165,9 +165,52 @@ async fn beacon(d: &Daemon, a: &Active) {
         port: a.port,
         tag: a.lan.file_tag(&hash),
     });
-    if let Err(e) = a.udp.send_to(&wire, (Ipv4Addr::BROADCAST, LAN_PORT)).await {
-        tracing::debug!("сеть: маяк не ушёл: {e}");
+    // 255.255.255.255 уходит только через основную карту: шлём ещё в каждую сеть отдельно
+    for to in broadcast_targets() {
+        if let Err(e) = a.udp.send_to(&wire, (to, LAN_PORT)).await {
+            tracing::debug!("сеть: маяк на {to} не ушёл: {e}");
+        }
     }
+}
+
+/// Широковещательные адреса всех поднятых сетей IPv4 (кроме петли) и общий 255.255.255.255.
+fn broadcast_targets() -> Vec<Ipv4Addr> {
+    #[cfg_attr(not(unix), allow(unused_mut))]
+    let mut out = vec![Ipv4Addr::BROADCAST];
+    #[cfg(unix)]
+    // SAFETY: список от getifaddrs читается только до freeifaddrs, указатели проверяются на null
+    unsafe {
+        let mut ifs: *mut libc::ifaddrs = std::ptr::null_mut();
+        if libc::getifaddrs(&mut ifs) == 0 {
+            let mut cur = ifs;
+            while !cur.is_null() {
+                let i = &*cur;
+                let flags = i.ifa_flags as libc::c_int;
+                let up = flags & libc::IFF_UP != 0
+                    && flags & libc::IFF_BROADCAST != 0
+                    && flags & libc::IFF_LOOPBACK == 0;
+                #[cfg(target_os = "linux")]
+                let bcast = i.ifa_ifu;
+                #[cfg(not(target_os = "linux"))]
+                let bcast = i.ifa_dstaddr;
+                if up
+                    && !i.ifa_addr.is_null()
+                    && (*i.ifa_addr).sa_family as libc::c_int == libc::AF_INET
+                    && !bcast.is_null()
+                    && (*bcast).sa_family as libc::c_int == libc::AF_INET
+                {
+                    let sin = &*(bcast as *const libc::sockaddr_in);
+                    let ip = Ipv4Addr::from(u32::from_be(sin.sin_addr.s_addr));
+                    if !out.contains(&ip) {
+                        out.push(ip);
+                    }
+                }
+                cur = i.ifa_next;
+            }
+            libc::freeifaddrs(ifs);
+        }
+    }
+    out
 }
 
 async fn read_exact(s: &mut TcpStream, n: usize) -> Result<Vec<u8>, String> {
@@ -256,5 +299,15 @@ impl Daemon {
             tracing::info!("сеть: рядом {ip} с этой же базой");
             self.events.send(Event::Changed).ok();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn broadcast_targets_include_the_global_one() {
+        let t = super::broadcast_targets();
+        assert_eq!(t[0], std::net::Ipv4Addr::BROADCAST);
+        assert!(t.iter().all(|ip| !ip.is_loopback()));
     }
 }
