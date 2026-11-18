@@ -5,131 +5,182 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Установка · Keywarden</title>
 <meta name="description" content="Все способы установить Keywarden: приложение для Linux, Windows и macOS, расширение браузера и что будет на телефонах.">
+<meta name="theme-color" content="#17151c">
 <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
-<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/install/">
 <link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/install/">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/install/">
+<script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="../../assets/fonts.css">
-<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../../assets/home.css">
 </head>
 <body>
 <a class="skip" href="#main">К содержимому</a>
+
 <header class="nav" id="nav">
   <div class="wrap">
-    <a class="brand" href="../"><img src="../../assets/logo.svg" alt="" width="28" height="28">Keywarden</a>
-    <nav class="nav-links" id="navLinks" aria-label="Main">
+    <a class="brand" href="../"><img src="../../assets/logo.svg" alt="" width="26" height="26">Keywarden</a>
+    <nav class="nav-links" id="navLinks" aria-label="Sections">
       <a href="../#tour">Возможности</a>
       <a href="../#security">Безопасность</a>
       <a href="../#move">Переезд</a>
-      <a href="../docs/">Документация</a>
+      <a class="only-narrow" href="../docs/">Документация</a>
     </nav>
     <div class="nav-right">
+      <a class="docs" href="../docs/">Документация</a>
       <a class="gh" href="https://github.com/onokashino/keywarden" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
       <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" aria-label="Меню разделов"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       <div class="lang" aria-label="Language">
-        <a href="../../install/" data-lang="en" hreflang="en">EN</a>
+        <a href="../../install/" hreflang="en" data-lang="en">EN</a>
         <a href="./" aria-current="page" data-lang="ru">RU</a>
       </div>
     </div>
   </div>
 </header>
 
-<div class="wrap">
-<main class="doc install-page" id="main">
-<h1>Установка Keywarden</h1>
-<p class="lead">Приложение на компьютере хранит базу и делает всю работу. Расширение браузера, а позже и приложения для телефона подключаются к тому же файлу KeePass. Всё бесплатно.</p>
-<div class="quick">
-  <p class="quick-label">Быстрее всего, Linux и macOS:</p>
-<pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
-  <p>Скачивает последний релиз, сверяет с <code>SHA256SUMS</code> и ставит в <code>~/.local/bin</code> без root. Скрипт можно сначала <a href="../../install.sh">прочитать</a>.</p>
-</div>
+<main id="main" class="wrap inst">
+  <section class="inst-hero">
+    <div>
+      <h1>Установка <em>Keywarden</em></h1>
+      <p class="lead">Две части: приложение на компьютере хранит базу, расширение браузера заполняет из неё логины. Бесплатно, без аккаунта.</p>
+    </div>
+    <div class="quick">
+      <p class="quick-label">Linux и macOS, одна команда</p>
+      <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
+      <p class="quick-note">Сверяет загрузку с <code>SHA256SUMS</code> и ставит в <code>~/.local/bin</code> без root. <a href="../../install.sh">Прочитать скрипт</a></p>
+    </div>
+  </section>
 
-<h2 id="app">Приложение для компьютера</h2>
-<div class="os-tabs">
-  <div class="tabs" role="tablist" aria-label="Система">
-    <button class="tab" role="tab" aria-selected="true" aria-controls="inst-linux" id="t-inst-linux">Linux</button>
-    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-win" id="t-inst-win">Windows</button>
-    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-mac" id="t-inst-mac">macOS</button>
-  </div>
-  <div class="panel" id="inst-linux" role="tabpanel" aria-labelledby="t-inst-linux">
-<h3>Скрипт установки</h3>
-<pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
-<p>Ставит программы, службу systemd для демона, ярлык в меню и связь с Firefox. Нужная версия: <code>... | KEYWARDEN_VERSION=v0.1.0 sh</code>.</p>
-<h3>Из архива</h3>
-<p>Скачайте <code>keywarden-*-linux-x86_64.tar.gz</code> из <a href="https://github.com/onokashino/keywarden/releases/latest">последнего релиза</a>, затем:</p>
-<pre><code>tar xzf keywarden-*-linux-x86_64.tar.gz
-cd keywarden-*-linux-x86_64
-./install.sh</code></pre>
-<p>По желанию: <code>wtype</code> (автоввод на Wayland) или <code>xdotool</code> (X11).</p>
-  </div>
-  <div class="panel" id="inst-win" role="tabpanel" aria-labelledby="t-inst-win" hidden>
-<h3>Из архива</h3>
-<p>Скачайте <code>keywarden-*-windows-x86_64.zip</code> из <a href="https://github.com/onokashino/keywarden/releases/latest">последнего релиза</a>, распакуйте в постоянную папку, например <code>%LOCALAPPDATA%\Programs\Keywarden</code>, и запустите <code>keywarden-ui.exe</code>. Затем из этой папки подключите браузер:</p>
-<pre><code>.\kw.exe browser-setup</code></pre>
-<p>Программы пока не подписаны, поэтому SmartScreen один раз спросит: «Подробнее», затем «Выполнить в любом случае».</p>
-  </div>
-  <div class="panel" id="inst-mac" role="tabpanel" aria-labelledby="t-inst-mac" hidden>
-<h3>Скрипт установки</h3>
-<pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
-<p>Apple Silicon. Кладёт программы в <code>~/.local/bin</code> и подключает браузер. Файлы, скачанные через curl, не попадают в карантин, лишних шагов нет.</p>
-<h3>Из архива</h3>
-<pre><code>tar xzf keywarden-*-macos-arm64.tar.gz
-cd keywarden-*-macos-arm64
-xattr -dr com.apple.quarantine .
-./kw browser-setup
-./keywarden-ui</code></pre>
-<p>Сборка пока не нотаризована, отсюда шаг с <code>xattr</code>.</p>
-  </div>
-</div>
+  <section id="app">
+    <h2 class="reveal">1 · Приложение</h2>
+    <p class="sub reveal" style="--d:1">Выберите систему. Приложение работает в фоне и запускается вместе с сеансом.</p>
+    <div class="os-keys reveal" style="--d:2" role="tablist" aria-label="Система" data-tabs="os">
+      <button class="key" role="tab" aria-controls="os-linux" data-os="linux"><span>Linux<small>основная</small></span></button>
+      <button class="key" role="tab" aria-controls="os-windows" data-os="windows"><span>Windows<small>бета</small></span></button>
+      <button class="key" role="tab" aria-controls="os-macos" data-os="macos"><span>macOS<small>бета</small></span></button>
+    </div>
+    <div class="os-panel" id="os-linux" role="tabpanel">
+      <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="c"># x86_64</span>
+<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
+      <div>
+        <h3>Linux</h3>
+        <p>Ставит программы, службу systemd, ярлык в меню и связь с Firefox. Wayland и X11.</p>
+        <details class="hand"><summary>Вручную из архива</summary><pre class="term"><span class="p">$ </span><span data-type>tar xzf keywarden-*-linux-x86_64.tar.gz</span>
+<span class="p">$ </span><span data-type>cd keywarden-*-linux-x86_64</span>
+<span class="p">$ </span><span data-type>./install.sh</span></pre></details>
+      </div>
+    </div>
+    <div class="os-panel" id="os-windows" role="tabpanel">
+      <pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip из Releases</span>
+<span class="c"># распакуйте в постоянную папку и там:</span>
+<span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span>
+<span class="p">&gt; </span><span data-type>.\kw.exe browser-setup</span></pre>
+      <div>
+        <h3>Windows<span class="badge">бета</span></h3>
+        <p>Установщика пока нет: zip с четырьмя программами. SmartScreen один раз спросит, потому что файлы пока не подписаны: «Подробнее», затем «Выполнить в любом случае».</p>
+        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases/latest">Файлы релиза</a>
+      </div>
+    </div>
+    <div class="os-panel" id="os-macos" role="tabpanel">
+      <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="c"># Apple Silicon</span>
+<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
+      <div>
+        <h3>macOS<span class="badge">бета</span></h3>
+        <p>Apple Silicon. Кладёт программы в <code>~/.local/bin</code> и подключает браузер. Файлы из curl не попадают в карантин.</p>
+        <details class="hand"><summary>Вручную из архива</summary><pre class="term"><span class="p">$ </span><span data-type>tar xzf keywarden-*-macos-arm64.tar.gz</span>
+<span class="p">$ </span><span data-type>cd keywarden-*-macos-arm64</span>
+<span class="p">$ </span><span data-type>xattr -dr com.apple.quarantine .</span>
+<span class="p">$ </span><span data-type>./kw browser-setup</span>
+<span class="p">$ </span><span data-type>./keywarden-ui</span></pre></details>
+      </div>
+    </div>
+  </section>
 
-<h2 id="packages">Менеджеры пакетов</h2>
-<p>Установка и обновления привычными инструментами. Эти каналы подключаются после первого релиза.</p>
-<ul class="reach-list">
-  <li><div class="reach-item"><b>Arch Linux, AUR</b><small><code>paru -S keywarden-bin</code></small><span class="state">скоро</span></div></li><li><div class="reach-item"><b>macOS, Homebrew</b><small><code>brew install onokashino/tap/keywarden</code></small><span class="state">скоро</span></div></li><li><div class="reach-item"><b>Windows, winget</b><small><code>winget install onokashino.Keywarden</code></small><span class="state">скоро</span></div></li>
-</ul>
+  <section id="extension">
+    <h2 class="reveal">2 · Расширение браузера</h2>
+    <p class="sub reveal" style="--d:1">Заполняет логины и коды 2FA, сохраняет новые пароли и ключи доступа. Общается только с приложением на этом же компьютере.</p>
+    <div class="plats reveal" style="--d:2">
+        <div class="plat live">
+          <div class="plat-top"><h3>Firefox</h3><span class="chip ok">Доступно</span></div>
+          <p>Подписано Mozilla, обновляется само.</p><a class="btn primary" href="https://addons.mozilla.org/firefox/addon/keywarden/">Добавить в Firefox</a>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Chrome</h3><span class="chip soon">Скоро</span></div>
+          <p>Скоро в Chrome Web Store. Пока что zip из релиза ставится вручную как распакованное расширение.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Edge</h3><span class="chip soon">Скоро</span></div>
+          <p>Edge Add-ons после Chrome. Zip для Chrome уже сейчас ставится в Edge вручную.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Brave</h3><span class="chip soon">Скоро</span></div>
+          <p>Brave, Vivaldi, Opera: версия для Chrome, из Chrome Web Store.</p>
+        </div>
+    </div>
+    <p class="note reveal" style="--d:3">Вручную: распакуйте <code>keywarden-extension-*-chrome.zip</code>, откройте <code>chrome://extensions</code>, включите режим разработчика, «Загрузить распакованное», затем <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</p>
+  </section>
 
-<h2 id="extension">Расширение браузера</h2>
-<p>Заполняет логины и коды 2FA, сохраняет новые пароли и ключи доступа. Общается только с приложением Keywarden на этом же компьютере, поэтому сначала поставьте приложение.</p>
-<ul class="reach-list">
-  <li><a class="reach-item live" href="https://addons.mozilla.org/firefox/addon/keywarden/"><b>Firefox</b><span class="state"><i></i>доступно</span><span class="go">Установить <span aria-hidden="true">&rarr;</span></span></a></li>
-  <li><div class="reach-item"><b>Chrome</b><small>пока что: zip из релиза</small><span class="state">скоро</span></div></li>
-  <li><div class="reach-item"><b>Edge</b><span class="state">скоро</span></div></li>
-  <li><div class="reach-item"><b>Brave</b><small>пока что: zip из релиза</small><span class="state">скоро</span></div></li>
-</ul>
-<p>Для Chrome, Edge или Brave уже сейчас: распакуйте <code>keywarden-extension-*-chrome.zip</code> из релиза, откройте <code>chrome://extensions</code>, включите режим разработчика, нажмите «Загрузить распакованное», затем выполните <code>kw browser-setup --chrome-id &lt;id&gt;</code> с id, который там показан.</p>
+  <section id="phone">
+    <h2 class="reveal">На телефоне</h2>
+    <p class="sub reveal" style="--d:1">Приложения Keywarden для Android и iOS в работе. База это обычный файл KeePass, поэтому уже сегодня его открывает любое приложение KeePass из папки синхронизации.</p>
+    <div class="plats two-up reveal" style="--d:2">
+        <div class="plat">
+          <div class="plat-top"><h3>Android</h3><span class="chip work">В работе</span></div>
+          <p>Пока что: KeePassDX открывает ту же базу.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>iOS</h3><span class="chip work">В работе</span></div>
+          <p>Пока что: KeePassium или Strongbox открывают ту же базу.</p>
+        </div>
+    </div>
+  </section>
 
-<h2 id="phone">Телефон</h2>
-<p>Keywarden для Android и iOS в работе. Пока что тот же файл из папки синхронизации открывает любое приложение KeePass: KeePassDX на Android, KeePassium или Strongbox на iOS.</p>
-<ul class="reach-list">
-  <li><div class="reach-item"><b>Android</b><span class="state">в работе</span></div></li>
-  <li><div class="reach-item"><b>iOS</b><span class="state">в работе</span></div></li>
-</ul>
+  <section id="packages">
+    <h2 class="reveal">Менеджеры пакетов</h2>
+    <p class="sub reveal" style="--d:1">Установка и обновления привычными инструментами. Сейчас подключаются.</p>
+    <div class="plats reveal" style="--d:2">
+        <div class="plat">
+          <div class="plat-top"><h3>Arch Linux, AUR</h3><span class="chip soon">Скоро</span></div>
+          <p><code>paru -S keywarden-bin</code></p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>macOS, Homebrew</h3><span class="chip soon">Скоро</span></div>
+          <p><code>brew install onokashino/tap/keywarden</code></p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Windows, winget</h3><span class="chip soon">Скоро</span></div>
+          <p><code>winget install onokashino.Keywarden</code></p>
+        </div>
+    </div>
+  </section>
 
-<h2 id="verify">Проверка загрузки</h2>
-<p>В каждом релизе есть файл <code>SHA256SUMS</code>. Скрипт установки сверяет его сам, вручную так:</p>
-<pre><code># Linux
-sha256sum -c SHA256SUMS --ignore-missing
-# macOS
-shasum -a 256 -c SHA256SUMS --ignore-missing</code></pre>
-
-<h2 id="source">Из исходников</h2>
-<p>Rust 1.92 или новее. Подробности и зависимости для сборки на Linux в <a href="../docs/#install">документации</a>.</p>
-<pre><code>git clone https://github.com/onokashino/keywarden
-cd keywarden
-cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui</code></pre>
+  <section id="more" class="inst-more">
+    <div class="reveal">
+      <h3>Проверка загрузки</h3>
+      <p>В каждом релизе есть <code>SHA256SUMS</code>. Скрипт сверяет его сам, вручную это одна строка.</p>
+      <pre class="term"><span class="p">$ </span><span data-type>sha256sum -c SHA256SUMS --ignore-missing</span></pre>
+    </div>
+    <div class="reveal" style="--d:1">
+      <h3>Из исходников</h3>
+      <p>Rust 1.92 или новее. Зависимости для сборки в <a href="../docs/#install">документации</a>.</p>
+      <pre class="term"><span class="p">$ </span><span data-type>git clone https://github.com/onokashino/keywarden</span>
+<span class="p">$ </span><span data-type>cd keywarden</span>
+<span class="p">$ </span><span data-type>cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui</span></pre>
+    </div>
+  </section>
 </main>
-</div>
 
 <footer>
   <div class="wrap">
-    <span>Keywarden · GPL-3.0-or-later</span>
-    <a href="../">Главная</a>
-    <a href="../docs/">Документация</a>
-    <a href="../privacy/">Приватность</a>
-    <a href="https://github.com/onokashino/keywarden">GitHub</a>
-    <span class="spacer"></span>
-    <a href="https://github.com/onokashino/keywarden/edit/main/site/ru/install/index.html">Редактировать страницу</a>
+    <span>Keywarden · GPL-3.0-or-later · сайт ничего не грузит со сторонних серверов</span>
+    <nav aria-label="Links">
+      <a href="../">Главная</a>
+      <a href="../docs/">Документация</a>
+      <a href="https://github.com/onokashino/keywarden">GitHub</a>
+      <a href="https://github.com/onokashino/keywarden/releases">Releases</a>
+      <a href="../privacy/">Приватность</a>
+    </nav>
   </div>
 </footer>
-<script src="../../assets/site.js" defer></script>
+<script src="../../assets/home.js" defer></script>
 </body>
 </html>

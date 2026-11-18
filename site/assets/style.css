@@ -428,28 +428,3 @@ code { -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 /* в документации первая колонка таблиц переносится: иначе таблица уезжает вбок */
 .doc td:first-child { white-space: normal; }
 
-/* страница установки: быстрый путь сверху, ниже все варианты со статусом каждой платформы */
-.install-page { max-width: 76ch; padding-block: 40px 96px; }
-.quick { margin: 8px 0 8px; padding: 22px 22px 6px; border-radius: 18px; background: linear-gradient(160deg, var(--accent-bg), transparent 70%), var(--bg-2); box-shadow: inset 0 0 0 1px var(--line-2); }
-.quick .quick-label { margin: 0 0 4px; font: 600 13px var(--mono); color: var(--accent-2); }
-.quick pre { margin: 10px 0 14px; }
-.quick p:last-child { font-size: 15px; }
-.reach-list { list-style: none; margin: 16px 0 18px; padding: 0; display: grid; gap: 10px; }
-.reach-list li { margin: 0; }
-.reach-item { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; padding: 15px 18px; border-radius: var(--radius); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); text-decoration: none; }
-.reach-item b { font: 700 16px var(--display); letter-spacing: -0.01em; color: var(--muted); }
-.reach-item small { color: var(--faint); font-size: 14px; }
-.reach-item small code { font-size: 13px; }
-.reach-item .state { margin-left: auto; font: 500 13px var(--mono); color: var(--faint); display: inline-flex; align-items: center; gap: 8px; }
-.reach-item.live { background: linear-gradient(var(--card-2), var(--card)); box-shadow: inset 0 0 0 1px var(--accent); transition: box-shadow 200ms var(--ease-out), transform 160ms var(--ease-out); }
-.reach-item.live b { color: var(--text); }
-.reach-item.live:hover { box-shadow: inset 0 0 0 1px var(--accent-2), 0 10px 30px -12px rgba(139, 108, 255, 0.6); transform: translateY(-2px); }
-.reach-item.live:active { transform: none; }
-.reach-item.live .state { margin-left: 0; color: var(--ok); }
-.reach-item.live .state i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: live 2.4s var(--ease-out) infinite; }
-.reach-item .go { margin-left: auto; font: 600 15px var(--font); color: var(--accent-2); white-space: nowrap; }
-.reach-item .go span { display: inline-block; transition: transform 160ms var(--ease-out); }
-.reach-item.live:hover .go span { transform: translateX(3px); }
-@keyframes live { 0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5); } 70%, 100% { box-shadow: 0 0 0 7px rgba(74, 222, 128, 0); } }
-@media (prefers-reduced-motion: reduce) { .reach-item.live .state i { animation: none; } .reach-item.live:hover { transform: none; } }
-@media (max-width: 400px) { .reach-item { padding: 14px; } .quick { padding: 18px 16px 4px; } }

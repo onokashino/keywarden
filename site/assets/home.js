@@ -204,6 +204,21 @@
     addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
   }
 
+  // --- кнопка копирования у команд с data-copy ---
+  const ru = document.documentElement.lang === 'ru';
+  $$('[data-copy]').forEach(el => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'copy-btn'; b.textContent = ru ? 'Копировать' : 'Copy';
+    b.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(el.dataset.copy);
+        b.textContent = ru ? 'Скопировано' : 'Copied';
+        setTimeout(() => (b.textContent = ru ? 'Копировать' : 'Copy'), 1400);
+      } catch {}
+    });
+    el.append(b);
+  });
+
   // --- появление разделов ниже первого экрана ---
   if (!reduced && 'IntersectionObserver' in window) {
     const below = $$('main > section').filter(s => s.getBoundingClientRect().top > innerHeight);

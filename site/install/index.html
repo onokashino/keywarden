@@ -5,131 +5,182 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Install · Keywarden</title>
 <meta name="description" content="Every way to install Keywarden: the desktop app for Linux, Windows and macOS, the browser extension, and what is coming for phones.">
+<meta name="theme-color" content="#17151c">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/install/">
 <link rel="alternate" hreflang="en" href="https://onokashino.github.io/keywarden/install/">
+<link rel="alternate" hreflang="ru" href="https://onokashino.github.io/keywarden/ru/install/">
+<script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="../assets/fonts.css">
-<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/home.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+
 <header class="nav" id="nav">
   <div class="wrap">
-    <a class="brand" href="../"><img src="../assets/logo.svg" alt="" width="28" height="28">Keywarden</a>
-    <nav class="nav-links" id="navLinks" aria-label="Main">
+    <a class="brand" href="../"><img src="../assets/logo.svg" alt="" width="26" height="26">Keywarden</a>
+    <nav class="nav-links" id="navLinks" aria-label="Sections">
       <a href="../#tour">Features</a>
       <a href="../#security">Security</a>
       <a href="../#move">Switching</a>
-      <a href="../docs/">Docs</a>
+      <a class="only-narrow" href="../docs/">Docs</a>
     </nav>
     <div class="nav-right">
+      <a class="docs" href="../docs/">Docs</a>
       <a class="gh" href="https://github.com/onokashino/keywarden" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
       <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" aria-label="Section menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       <div class="lang" aria-label="Language">
         <a href="./" aria-current="page" data-lang="en">EN</a>
-        <a href="../ru/install/" data-lang="ru" hreflang="ru">RU</a>
+        <a href="../ru/install/" hreflang="ru" data-lang="ru">RU</a>
       </div>
     </div>
   </div>
 </header>
 
-<div class="wrap">
-<main class="doc install-page" id="main">
-<h1>Install Keywarden</h1>
-<p class="lead">The desktop app keeps your vault and does the work. The browser extension and, later, the phone apps connect to the same KeePass file. Everything is free.</p>
-<div class="quick">
-  <p class="quick-label">Quickest way, Linux and macOS:</p>
-<pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
-  <p>Downloads the latest release, checks it against <code>SHA256SUMS</code> and installs into <code>~/.local/bin</code> without root. <a href="../install.sh">Read the script</a> first if you like.</p>
-</div>
+<main id="main" class="wrap inst">
+  <section class="inst-hero">
+    <div>
+      <h1>Install <em>Keywarden</em></h1>
+      <p class="lead">Two parts: the app on your computer keeps the vault, the browser extension fills logins from it. Free, no account.</p>
+    </div>
+    <div class="quick">
+      <p class="quick-label">Linux and macOS, one command</p>
+      <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
+      <p class="quick-note">Checks the download against <code>SHA256SUMS</code> and installs into <code>~/.local/bin</code> without root. <a href="../install.sh">Read the script</a></p>
+    </div>
+  </section>
 
-<h2 id="app">Desktop app</h2>
-<div class="os-tabs">
-  <div class="tabs" role="tablist" aria-label="System">
-    <button class="tab" role="tab" aria-selected="true" aria-controls="inst-linux" id="t-inst-linux">Linux</button>
-    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-win" id="t-inst-win">Windows</button>
-    <button class="tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inst-mac" id="t-inst-mac">macOS</button>
-  </div>
-  <div class="panel" id="inst-linux" role="tabpanel" aria-labelledby="t-inst-linux">
-<h3>Install script</h3>
-<pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
-<p>Installs the binaries, a systemd user service for the daemon, a menu entry and the Firefox host. A specific version: <code>... | KEYWARDEN_VERSION=v0.1.0 sh</code>.</p>
-<h3>From the archive</h3>
-<p>Download <code>keywarden-*-linux-x86_64.tar.gz</code> from the <a href="https://github.com/onokashino/keywarden/releases/latest">latest release</a>, then:</p>
-<pre><code>tar xzf keywarden-*-linux-x86_64.tar.gz
-cd keywarden-*-linux-x86_64
-./install.sh</code></pre>
-<p>Optional: <code>wtype</code> (autotype on Wayland) or <code>xdotool</code> (X11).</p>
-  </div>
-  <div class="panel" id="inst-win" role="tabpanel" aria-labelledby="t-inst-win" hidden>
-<h3>From the archive</h3>
-<p>Download <code>keywarden-*-windows-x86_64.zip</code> from the <a href="https://github.com/onokashino/keywarden/releases/latest">latest release</a>, unpack it to a folder you keep, for example <code>%LOCALAPPDATA%\Programs\Keywarden</code>, and run <code>keywarden-ui.exe</code>. Then register the browser host from that folder:</p>
-<pre><code>.\kw.exe browser-setup</code></pre>
-<p>The binaries are not signed yet, so SmartScreen asks once: "More info", then "Run anyway".</p>
-  </div>
-  <div class="panel" id="inst-mac" role="tabpanel" aria-labelledby="t-inst-mac" hidden>
-<h3>Install script</h3>
-<pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
-<p>Apple Silicon. Puts the binaries in <code>~/.local/bin</code> and registers the browser host. Files downloaded by curl are not quarantined, so no extra step.</p>
-<h3>From the archive</h3>
-<pre><code>tar xzf keywarden-*-macos-arm64.tar.gz
-cd keywarden-*-macos-arm64
-xattr -dr com.apple.quarantine .
-./kw browser-setup
-./keywarden-ui</code></pre>
-<p>The build is not notarized yet, hence the <code>xattr</code> step.</p>
-  </div>
-</div>
+  <section id="app">
+    <h2 class="reveal">1 · The app</h2>
+    <p class="sub reveal" style="--d:1">Pick your system. The app runs in the background and starts with the session.</p>
+    <div class="os-keys reveal" style="--d:2" role="tablist" aria-label="System" data-tabs="os">
+      <button class="key" role="tab" aria-controls="os-linux" data-os="linux"><span>Linux<small>primary</small></span></button>
+      <button class="key" role="tab" aria-controls="os-windows" data-os="windows"><span>Windows<small>beta</small></span></button>
+      <button class="key" role="tab" aria-controls="os-macos" data-os="macos"><span>macOS<small>beta</small></span></button>
+    </div>
+    <div class="os-panel" id="os-linux" role="tabpanel">
+      <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="c"># x86_64</span>
+<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
+      <div>
+        <h3>Linux</h3>
+        <p>Installs the binaries, a systemd user service, a menu entry and the Firefox connection. Wayland and X11.</p>
+        <details class="hand"><summary>By hand from the archive</summary><pre class="term"><span class="p">$ </span><span data-type>tar xzf keywarden-*-linux-x86_64.tar.gz</span>
+<span class="p">$ </span><span data-type>cd keywarden-*-linux-x86_64</span>
+<span class="p">$ </span><span data-type>./install.sh</span></pre></details>
+      </div>
+    </div>
+    <div class="os-panel" id="os-windows" role="tabpanel">
+      <pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip from Releases</span>
+<span class="c"># unpack it to a folder you keep, then there:</span>
+<span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span>
+<span class="p">&gt; </span><span data-type>.\kw.exe browser-setup</span></pre>
+      <div>
+        <h3>Windows<span class="badge">beta</span></h3>
+        <p>No installer yet: a zip with four programs. SmartScreen asks once because the files are not signed yet: "More info", then "Run anyway".</p>
+        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases/latest">Release files</a>
+      </div>
+    </div>
+    <div class="os-panel" id="os-macos" role="tabpanel">
+      <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="c"># Apple Silicon</span>
+<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
+      <div>
+        <h3>macOS<span class="badge">beta</span></h3>
+        <p>Apple Silicon. Puts the programs in <code>~/.local/bin</code> and connects the browser. Files from curl are not quarantined.</p>
+        <details class="hand"><summary>By hand from the archive</summary><pre class="term"><span class="p">$ </span><span data-type>tar xzf keywarden-*-macos-arm64.tar.gz</span>
+<span class="p">$ </span><span data-type>cd keywarden-*-macos-arm64</span>
+<span class="p">$ </span><span data-type>xattr -dr com.apple.quarantine .</span>
+<span class="p">$ </span><span data-type>./kw browser-setup</span>
+<span class="p">$ </span><span data-type>./keywarden-ui</span></pre></details>
+      </div>
+    </div>
+  </section>
 
-<h2 id="packages">Package managers</h2>
-<p>Install and update with the tools you already use. These channels are being set up after the first release.</p>
-<ul class="reach-list">
-  <li><div class="reach-item"><b>Arch Linux, AUR</b><small><code>paru -S keywarden-bin</code></small><span class="state">soon</span></div></li><li><div class="reach-item"><b>macOS, Homebrew</b><small><code>brew install onokashino/tap/keywarden</code></small><span class="state">soon</span></div></li><li><div class="reach-item"><b>Windows, winget</b><small><code>winget install onokashino.Keywarden</code></small><span class="state">soon</span></div></li>
-</ul>
+  <section id="extension">
+    <h2 class="reveal">2 · The browser extension</h2>
+    <p class="sub reveal" style="--d:1">Fills logins and 2FA codes, saves new passwords and passkeys. It talks only to the app on the same computer.</p>
+    <div class="plats reveal" style="--d:2">
+        <div class="plat live">
+          <div class="plat-top"><h3>Firefox</h3><span class="chip ok">Available</span></div>
+          <p>Signed by Mozilla, updates by itself.</p><a class="btn primary" href="https://addons.mozilla.org/firefox/addon/keywarden/">Add to Firefox</a>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Chrome</h3><span class="chip soon">Soon</span></div>
+          <p>Coming to the Chrome Web Store. Until then load the zip from the release as an unpacked extension.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Edge</h3><span class="chip soon">Soon</span></div>
+          <p>Edge Add-ons after Chrome. The Chrome zip already works in Edge by hand.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Brave</h3><span class="chip soon">Soon</span></div>
+          <p>Brave, Vivaldi, Opera: the Chrome version, from the Chrome Web Store.</p>
+        </div>
+    </div>
+    <p class="note reveal" style="--d:3">Load by hand: unpack <code>keywarden-extension-*-chrome.zip</code>, open <code>chrome://extensions</code>, turn on Developer mode, "Load unpacked", then <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</p>
+  </section>
 
-<h2 id="extension">Browser extension</h2>
-<p>Fills logins and 2FA codes, saves new passwords and passkeys. It talks only to the Keywarden app on the same computer, so install the app first.</p>
-<ul class="reach-list">
-  <li><a class="reach-item live" href="https://addons.mozilla.org/firefox/addon/keywarden/"><b>Firefox</b><span class="state"><i></i>available</span><span class="go">Install <span aria-hidden="true">&rarr;</span></span></a></li>
-  <li><div class="reach-item"><b>Chrome</b><small>until then: zip from the release</small><span class="state">soon</span></div></li>
-  <li><div class="reach-item"><b>Edge</b><span class="state">soon</span></div></li>
-  <li><div class="reach-item"><b>Brave</b><small>until then: zip from the release</small><span class="state">soon</span></div></li>
-</ul>
-<p>For Chrome, Edge or Brave right now: unpack <code>keywarden-extension-*-chrome.zip</code> from the release, open <code>chrome://extensions</code>, turn on Developer mode, press "Load unpacked", then run <code>kw browser-setup --chrome-id &lt;id&gt;</code> with the id shown there.</p>
+  <section id="phone">
+    <h2 class="reveal">On the phone</h2>
+    <p class="sub reveal" style="--d:1">Keywarden apps for Android and iOS are in the works. The vault is a normal KeePass file, so today any KeePass app opens it from your sync folder.</p>
+    <div class="plats two-up reveal" style="--d:2">
+        <div class="plat">
+          <div class="plat-top"><h3>Android</h3><span class="chip work">In the works</span></div>
+          <p>Until then: KeePassDX opens the same vault.</p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>iOS</h3><span class="chip work">In the works</span></div>
+          <p>Until then: KeePassium or Strongbox open the same vault.</p>
+        </div>
+    </div>
+  </section>
 
-<h2 id="phone">Phone</h2>
-<p>Keywarden for Android and iOS is in the works. Until then any KeePass app opens the same file from your sync folder: KeePassDX on Android, KeePassium or Strongbox on iOS.</p>
-<ul class="reach-list">
-  <li><div class="reach-item"><b>Android</b><span class="state">in the works</span></div></li>
-  <li><div class="reach-item"><b>iOS</b><span class="state">in the works</span></div></li>
-</ul>
+  <section id="packages">
+    <h2 class="reveal">Package managers</h2>
+    <p class="sub reveal" style="--d:1">Install and update with tools you already use. Being set up now.</p>
+    <div class="plats reveal" style="--d:2">
+        <div class="plat">
+          <div class="plat-top"><h3>Arch Linux, AUR</h3><span class="chip soon">Soon</span></div>
+          <p><code>paru -S keywarden-bin</code></p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>macOS, Homebrew</h3><span class="chip soon">Soon</span></div>
+          <p><code>brew install onokashino/tap/keywarden</code></p>
+        </div>
+        <div class="plat">
+          <div class="plat-top"><h3>Windows, winget</h3><span class="chip soon">Soon</span></div>
+          <p><code>winget install onokashino.Keywarden</code></p>
+        </div>
+    </div>
+  </section>
 
-<h2 id="verify">Check the download</h2>
-<p>Every release has a <code>SHA256SUMS</code> file. The install script checks it for you; by hand:</p>
-<pre><code># Linux
-sha256sum -c SHA256SUMS --ignore-missing
-# macOS
-shasum -a 256 -c SHA256SUMS --ignore-missing</code></pre>
-
-<h2 id="source">From source</h2>
-<p>Rust 1.92 or newer. Details and Linux build dependencies are in the <a href="../docs/#install">docs</a>.</p>
-<pre><code>git clone https://github.com/onokashino/keywarden
-cd keywarden
-cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui</code></pre>
+  <section id="more" class="inst-more">
+    <div class="reveal">
+      <h3>Check the download</h3>
+      <p>Every release has <code>SHA256SUMS</code>. The script checks it for you, by hand it is one line.</p>
+      <pre class="term"><span class="p">$ </span><span data-type>sha256sum -c SHA256SUMS --ignore-missing</span></pre>
+    </div>
+    <div class="reveal" style="--d:1">
+      <h3>From source</h3>
+      <p>Rust 1.92 or newer. Build dependencies are in the <a href="../docs/#install">docs</a>.</p>
+      <pre class="term"><span class="p">$ </span><span data-type>git clone https://github.com/onokashino/keywarden</span>
+<span class="p">$ </span><span data-type>cd keywarden</span>
+<span class="p">$ </span><span data-type>cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p keywarden-ui</span></pre>
+    </div>
+  </section>
 </main>
-</div>
 
 <footer>
   <div class="wrap">
-    <span>Keywarden · GPL-3.0-or-later</span>
-    <a href="../">Home</a>
-    <a href="../docs/">Docs</a>
-    <a href="../privacy/">Privacy</a>
-    <a href="https://github.com/onokashino/keywarden">GitHub</a>
-    <span class="spacer"></span>
-    <a href="https://github.com/onokashino/keywarden/edit/main/site/install/index.html">Edit this page</a>
+    <span>Keywarden · GPL-3.0-or-later · this site loads nothing from third parties</span>
+    <nav aria-label="Links">
+      <a href="../">Home</a>
+      <a href="../docs/">Docs</a>
+      <a href="https://github.com/onokashino/keywarden">GitHub</a>
+      <a href="https://github.com/onokashino/keywarden/releases">Releases</a>
+      <a href="../privacy/">Privacy</a>
+    </nav>
   </div>
 </footer>
-<script src="../assets/site.js" defer></script>
+<script src="../assets/home.js" defer></script>
 </body>
 </html>

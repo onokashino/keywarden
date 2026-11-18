@@ -327,6 +327,47 @@ footer a:hover { color: var(--ink); }
 @keyframes live { 70% { box-shadow: 0 0 0 7px oklch(0.82 0.13 160 / 0); } 100% { box-shadow: 0 0 0 0 oklch(0.82 0.13 160 / 0); } }
 @media (max-width: 860px) { .reach { grid-template-columns: 1fr; gap: 36px; margin-top: 48px; } }
 @media (max-width: 400px) { .reach-item { padding: 14px; gap: 10px; flex-wrap: wrap; } }
+/* --- страница установки --- */
+.inst-hero { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 56px; align-items: center; padding-block: 64px 88px; }
+main > section.inst-hero { border-top: 0; }
+.inst-hero > * { min-width: 0; }
+.inst-hero .lead { margin: 0; }
+.quick { background: var(--bg-2); border-radius: 24px; padding: 24px; box-shadow: inset 0 0 0 1px var(--line), 0 40px 80px -50px oklch(0.62 0.2 292 / 0.55); }
+.quick .term { font-size: 13.5px; padding-inline: 18px; }
+.quick-label { margin: 0 0 14px; font: 600 13px var(--mono); color: var(--violet-hi); }
+.quick-note { margin: 14px 0 0; font-size: 15px; color: var(--muted); }
+.inst main > section, main.inst > section { padding-block: 88px; }
+/* кнопка над командой, команда переносится только по пробелам и целиком видна */
+[data-copy] { position: relative; padding-top: 52px; }
+[data-copy], .inst-more .term, .hand .term { white-space: pre-wrap; }
+.copy-btn { position: absolute; top: 10px; right: 10px; font: 600 12px var(--mono); color: var(--ink); background: var(--bg-3); border: 0; border-radius: 8px; padding: 7px 11px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow 160ms; }
+.copy-btn:hover { box-shadow: inset 0 0 0 1px var(--muted); }
+.hand { margin-top: 6px; background: none; box-shadow: none; }
+.hand:hover { box-shadow: none; }
+.hand summary { padding: 6px 0; font: 600 15px var(--body); color: var(--violet-hi); justify-content: flex-start; gap: 10px; }
+.hand summary::after { margin-left: 0; font-size: 16px; }
+.hand .term { margin-top: 10px; font-size: 14px; }
+.hand[open] .term { animation: rise 320ms var(--out); }
+.plats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.plats.two-up { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); max-width: 760px; }
+.plat { display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 20px; background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line); }
+.plat-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.plat h3 { margin: 0; font-size: 22px; }
+.plat p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; }
+.plat p code { font-size: 13px; word-break: break-all; }
+.plat .btn { margin-top: auto; align-self: flex-start; }
+.plat.live { background: linear-gradient(170deg, oklch(0.62 0.2 292 / 0.18), transparent 60%), var(--bg-2); box-shadow: inset 0 0 0 1px var(--violet-lo); }
+.chip { flex: none; font: 600 12px var(--mono); padding: 4px 9px; border-radius: 7px; white-space: nowrap; }
+.chip.ok { color: var(--ok); background: oklch(0.82 0.13 160 / 0.14); }
+.chip.ok::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 7px; vertical-align: 1px; animation: live 2.4s var(--out) infinite; }
+.chip.soon { color: var(--warn); background: oklch(0.83 0.13 80 / 0.13); }
+.chip.work { color: var(--violet-hi); background: oklch(0.62 0.2 292 / 0.16); }
+.inst-more { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.inst-more > * { min-width: 0; }
+.inst-more p { color: var(--muted); margin: 0 0 16px; }
+.inst-more .term { font-size: 14px; }
+@media (max-width: 960px) { .inst-hero, .inst-more { grid-template-columns: 1fr; gap: 32px; } .inst-hero { padding-block: 40px 64px; } }
+@media (max-width: 620px) { .quick { padding: 16px; } .plat { padding: 18px; } }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
