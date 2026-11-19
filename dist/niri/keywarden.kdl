@@ -1,24 +1,24 @@
-// Keywarden для niri: включите в ~/.config/niri/config.kdl строкой
+// Keywarden for niri. The installer adds this line to ~/.config/niri/config.kdl:
 //   include "keywarden.kdl"
-// или перенесите блоки вручную.
+// Shortcuts taken? Change them here; niri reloads the config by itself.
 
 binds {
-    // лаунчер: поиск и копирование пароля поверх всех окон
-    Mod+Shift+P hotkey-overlay-title="Keywarden: пароли" { spawn "keywarden-ui" "--launcher"; }
-    // автоввод в активное окно: логин, Tab, пароль, Enter (или последовательность записи)
-    Mod+Shift+A hotkey-overlay-title="Keywarden: автоввод" { spawn "kw" "autotype"; }
-    // заблокировать базу
-    Mod+Shift+Alt+L hotkey-overlay-title="Keywarden: заблокировать" { spawn "kw" "lock"; }
+    // launcher: search and copy a password over any window
+    Mod+Shift+P hotkey-overlay-title="Keywarden: passwords" { spawn "keywarden-ui" "--launcher"; }
+    // autotype into the active window: username, Tab, password, Enter (or the entry's sequence)
+    Mod+Shift+A hotkey-overlay-title="Keywarden: autotype" { spawn "kw" "autotype"; }
+    // lock the vault
+    Mod+Shift+Alt+L hotkey-overlay-title="Keywarden: lock" { spawn "kw" "lock"; }
 }
 
-// главное окно открывается плавающим
+// the main window opens floating
 window-rule {
     match app-id="^keywarden$"
     open-floating true
     default-column-width { fixed 1200; }
 }
 
-// лаунчер: тень, как у остальных окон
+// launcher: a shadow like other windows
 layer-rule {
     match namespace="^keywarden-launcher$"
     shadow { on; }
