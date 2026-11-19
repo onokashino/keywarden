@@ -60,7 +60,10 @@ gpui_kit_assets::icon_assets!(
         FileText,
         Monitor,
         Wallet,
-        Server
+        Server,
+        ShieldKeyhole,
+        ArrowLeft,
+        FilePlus
     ]
 );
 

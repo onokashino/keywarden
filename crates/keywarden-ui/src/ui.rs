@@ -200,6 +200,34 @@ pub fn badge(text: impl Into<SharedString>, color: Hsla) -> Div {
         .child(text.into())
 }
 
+/// Окно «Сохранить как» для файла, которого ещё нет; подсказка: текущий путь из поля.
+pub fn pick_new_file(
+    state: gpui_kit::Entity<gpui_kit::component::input::InputState>,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let cur = std::path::PathBuf::from(state.read(cx).value().trim());
+    let dir = cur
+        .parent()
+        .filter(|d| d.is_dir())
+        .map(|d| d.to_path_buf())
+        .or_else(dirs::home_dir)
+        .unwrap_or_default();
+    let name = cur.file_name().map(|n| n.to_string_lossy().into_owned());
+    let rx = cx.prompt_for_new_path(&dir, name.as_deref());
+    window
+        .spawn(cx, async move |cx| {
+            if let Ok(Ok(Some(p))) = rx.await {
+                let f = p.display().to_string();
+                let _ = cx.update(|window, cx| {
+                    state.update(cx, |i, cx| i.set_value(f, window, cx));
+                    window.refresh();
+                });
+            }
+        })
+        .detach();
+}
+
 /// Открыть системное окно выбора файла и записать путь в поле.
 pub fn pick_file(
     state: gpui_kit::Entity<gpui_kit::component::input::InputState>,
@@ -238,13 +266,37 @@ pub fn file_field(
     icon: IconName,
     cx: &App,
 ) -> AnyElement {
+    let st = state.clone();
+    file_field_with(id, state, empty, icon, cx, move |_, w, cx| {
+        pick_file(st.clone(), prompt, w, cx)
+    })
+}
+
+/// То же поле для нового файла: «Выбрать файл…» открывает окно «Сохранить как».
+pub fn new_file_field(
+    id: &'static str,
+    state: &gpui_kit::Entity<gpui_kit::component::input::InputState>,
+    empty: &'static str,
+    icon: IconName,
+    cx: &App,
+) -> AnyElement {
+    let st = state.clone();
+    file_field_with(id, state, empty, icon, cx, move |_, w, cx| {
+        pick_new_file(st.clone(), w, cx)
+    })
+}
+
+fn file_field_with(
+    id: &'static str,
+    state: &gpui_kit::Entity<gpui_kit::component::input::InputState>,
+    empty: &'static str,
+    icon: IconName,
+    cx: &App,
+    pick: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> AnyElement {
     use gpui_kit::component::button::{Button, ButtonVariants as _};
     let theme = cx.theme();
     let value = state.read(cx).value().trim().to_string();
-    let pick = {
-        let st = state.clone();
-        move |_: &ClickEvent, w: &mut Window, cx: &mut App| pick_file(st.clone(), prompt, w, cx)
-    };
     if value.is_empty() {
         return h_flex()
             .id(id)
@@ -278,10 +330,14 @@ pub fn file_field(
     {
         dir = format!("~{rest}");
     }
+    // одинокая «~» под именем выглядит как мусор
+    if dir == "~" {
+        dir = tr!("Домашняя папка").to_string();
+    }
     let clear = state.clone();
     h_flex()
         .id(id)
-        .h(px(44.))
+        .h(px(54.))
         .pl_3()
         .pr_1()
         .gap_3()
@@ -300,9 +356,11 @@ pub fn file_field(
                 .flex_col()
                 .flex_1()
                 .min_w_0()
+                .gap(px(2.))
                 .child(
                     div()
                         .text_sm()
+                        .line_height(px(18.))
                         .font_weight(FontWeight::MEDIUM)
                         .truncate()
                         .child(name),
@@ -310,6 +368,7 @@ pub fn file_field(
                 .child(
                     div()
                         .text_xs()
+                        .line_height(px(16.))
                         .text_color(theme.muted_foreground)
                         .truncate()
                         .child(dir),

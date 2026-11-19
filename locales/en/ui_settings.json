@@ -302,7 +302,6 @@
   "Слияние: {summary}": "Merge: {summary}",
   "Ключ той базы не подошёл: {m}": "The key of that vault didn't work: {m}",
   "Общие": "General",
-  "Хранятся в самой базе: одинаковы на всех устройствах и в KeePassXC": "Stored in the vault itself: the same on all devices and in KeePassXC",
   "Имя хранилища": "Vault name",
   "Описание": "Description",
   "Корзина": "Recycle bin",
@@ -438,5 +437,6 @@
   "Подключить": "Connect",
   "Проверяю сервер…": "Checking the server…",
   "Сервер подключён: база синхронизируется с ним": "Server connected: the vault syncs with it",
-  "Укажите адрес сервера": "Enter the server address"
+  "Укажите адрес сервера": "Enter the server address",
+  "Хранятся в самой базе: одинаковы на всех устройствах": "Stored in the vault itself: the same on every device"
 }

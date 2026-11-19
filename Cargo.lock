@@ -4540,6 +4540,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "data-encoding",
+ "dirs 6.0.0",
  "flate2",
  "gpui-kit",
  "gpui-kit-assets",

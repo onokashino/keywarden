@@ -410,6 +410,15 @@ impl Sort {
     }
 }
 
+/// О чём сейчас рассказывает подсказка рядом с формой создания базы.
+#[derive(Clone, Copy, PartialEq)]
+enum Guide {
+    Password,
+    File,
+    Keyfile,
+    Yubikey,
+}
+
 #[derive(PartialEq)]
 enum Mode {
     Connecting,
@@ -421,6 +430,16 @@ enum Mode {
 pub struct MainWindow {
     mode: Mode,
     creating: bool,
+    // путь до входа в создание: вернуть его по «У меня уже есть база»
+    path_before_create: Option<String>,
+    // файл-ключ и YubiKey в форме создания раскрыты
+    create_extras: bool,
+    // куда идёт анимация блока: раскрывается или сворачивается (сам блок убирается после неё)
+    extras_open: bool,
+    // меняется при наведении на поле и остаётся до следующего поля
+    guide: Guide,
+    // фокус первого варианта на экране первого запуска: иначе Tab некуда идти
+    welcome_focus: FocusHandle,
     // разблокировка / создание
     db_path: Entity<InputState>,
     keyfile: Entity<InputState>,
@@ -597,6 +616,11 @@ impl MainWindow {
         let mut this = Self {
             mode: Mode::Connecting,
             creating: false,
+            path_before_create: None,
+            create_extras: false,
+            extras_open: false,
+            guide: Guide::Password,
+            welcome_focus: cx.focus_handle(),
             db_path,
             keyfile,
             yubikey,
@@ -1019,6 +1043,8 @@ impl MainWindow {
         self.forget_session(Some(window), cx);
         let h = if self.use_pin && !self.creating {
             self.pin.read(cx).focus_handle(cx)
+        } else if !self.creating && self.db_path.read(cx).value().is_empty() {
+            self.welcome_focus.clone()
         } else {
             self.password.read(cx).focus_handle(cx)
         };
@@ -3091,6 +3117,56 @@ impl MainWindow {
 
     // --- действия ---
 
+    /// Создание сразу предлагает свободный путь, иначе пришлось бы искать файл, которого ещё нет.
+    fn toggle_create(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.creating = !self.creating;
+        self.status = None;
+        self.create_extras = false;
+        self.extras_open = false;
+        self.guide = Guide::Password;
+        let path = if self.creating {
+            self.path_before_create = Some(self.db_path.read(cx).value().to_string());
+            new_vault_path().display().to_string()
+        } else {
+            self.path_before_create.take().unwrap_or_default()
+        };
+        self.db_path
+            .update(cx, |i, cx| i.set_value(path, window, cx));
+        let h = if self.creating || !self.db_path.read(cx).value().is_empty() {
+            self.password.read(cx).focus_handle(cx)
+        } else {
+            self.welcome_focus.clone()
+        };
+        window.focus(&h, cx);
+        cx.notify();
+    }
+
+    /// Новый файл-ключ для создаваемой базы: «Сохранить как», затем путь попадает в поле.
+    fn create_keyfile(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // не рядом с базой: папку с базой часто синхронизируют, а ключ должен лежать отдельно
+        let dir = dirs::home_dir().unwrap_or_default();
+        let rx = cx.prompt_for_new_path(&dir, Some("Keywarden.keyx"));
+        let input = self.keyfile.clone();
+        self.tasks.push(cx.spawn_in(window, async move |this, cx| {
+            let Ok(Ok(Some(path))) = rx.await else { return };
+            let p = path.display().to_string();
+            let res = cx
+                .background_spawn({
+                    let p = p.clone();
+                    async move { client::blocking(&Request::GenerateKeyfile { path: p }) }
+                })
+                .await;
+            let _ = this.update_in(cx, |this, window, cx| match res {
+                Ok(_) => {
+                    input.update(cx, |i, cx| i.set_value(p, window, cx));
+                    this.status = None;
+                    cx.notify();
+                }
+                Err(e) => this.flash(e.message(), true, cx),
+            });
+        }));
+    }
+
     fn submit_unlock(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let path = self.db_path.read(cx).value().trim().to_string();
         let keyfile =
@@ -3167,6 +3243,7 @@ impl MainWindow {
             |this, res, window, cx| match res {
                 Ok(_) => {
                     this.creating = false;
+                    this.path_before_create = None;
                     this.status = None;
                     this.set_ready(window, cx);
                 }
@@ -3803,9 +3880,7 @@ impl MainWindow {
                             .ghost()
                             .small()
                             .icon(IconName::EyeOff)
-                            .tooltip(tr!(
-                                "Не показывать в отчёте (как «исключить из отчётов» в KeePassXC)"
-                            ))
+                            .tooltip(tr!("Не показывать в отчёте"))
                             .on_click(cx.listener(move |this, _, _, cx| {
                                 this.exclude_from_health(skip_id.clone(), cx)
                             })),
@@ -4836,14 +4911,26 @@ impl MainWindow {
         }
     }
 
-    fn render_unlock(&mut self, cx: &mut Context<Self>) -> AnyElement {
+    fn render_unlock(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let theme = cx.theme().clone();
         let busy = matches!(self.mode, Mode::Busy | Mode::Connecting);
         let path = self.db_path.read(cx).value().to_string();
         let error = self.status.clone().filter(|s| s.1).map(|s| s.0);
         let pin = self.use_pin && !self.creating;
-        let advanced = (self.show_advanced && !pin) || self.creating;
-        let first_run = path.is_empty();
+        let advanced = self.show_advanced && !pin && !self.creating;
+        // базы ещё нет: вместо формы выбор «создать или открыть»
+        if path.is_empty() && !self.creating && !pin {
+            if self.mode == Mode::Connecting && error.is_none() {
+                return div().size_full().bg(theme.sidebar).into_any_element();
+            }
+            return self.render_welcome(error, cx);
+        }
+        let keyfile_set = !self.keyfile.read(cx).value().trim().is_empty();
+        // выбранный ключ или YubiKey не прячем: иначе база молча создастся с ними
+        let forced = keyfile_set || !self.yubikey.read(cx).value().trim().is_empty();
+        let extras = self.create_extras || forced;
+        let extras_open = self.extras_open || forced;
+        let hint = |t: &'static str| div().text_xs().text_color(theme.muted_foreground).child(t);
         let label = |t: &'static str| {
             div()
                 .text_xs()
@@ -4853,6 +4940,442 @@ impl MainWindow {
         };
         let field =
             |t: &'static str, input: AnyElement| v_flex().gap_1p5().child(label(t)).child(input);
+        // наведение на поле переключает подсказку справа
+        let zone = |id: &'static str, g: Guide, el: AnyElement| {
+            div()
+                .id(id)
+                .on_hover(cx.listener(move |this, over: &bool, _, cx| {
+                    if *over && this.guide != g {
+                        this.guide = g;
+                        cx.notify();
+                    }
+                }))
+                .child(el)
+        };
+        // подсказка живёт в той же карточке правой половиной: только при создании и если есть место
+        let with_guide = self.creating && window.viewport_size().width >= px(860.);
+        let lit = |g: Guide| with_guide && self.guide == g;
+        let form = v_flex()
+            .w(px(420.))
+            .flex_shrink_0()
+            .gap_5()
+            .p_8()
+            .child(
+                h_flex()
+                    .gap_3()
+                    .child(if self.creating {
+                        Button::new("create-back")
+                            .ghost()
+                            .icon(IconName::ArrowLeft)
+                            .tooltip(tr!("Назад"))
+                            .on_click(cx.listener(|this, _, w, cx| this.toggle_create(w, cx)))
+                            .into_any_element()
+                    } else {
+                        icon_tile(IconName::LockKeyhole, 44., &theme).into_any_element()
+                    })
+                    .child(
+                        v_flex()
+                            .min_w_0()
+                            .child(div().text_lg().font_weight(FontWeight::SEMIBOLD).child(
+                                if self.creating {
+                                    tr!("Новое хранилище")
+                                } else {
+                                    tr!("Разблокировать хранилище")
+                                },
+                            ))
+                            .child(
+                                div()
+                                    .text_sm()
+                                    .truncate()
+                                    .text_color(theme.muted_foreground)
+                                    .child(if self.creating {
+                                        tr!("Мастер-пароль один открывает всю базу").to_string()
+                                    } else {
+                                        file_name(&path)
+                                    }),
+                            ),
+                    )
+                    // редкие действия убраны в меню, чтобы экран был о главном: пароль
+                    .when(!pin && !self.creating, |d| {
+                        let options = if advanced && !self.creating {
+                            tr!("Скрыть параметры входа")
+                        } else {
+                            tr!("Файл-ключ, YubiKey, другой файл")
+                        };
+                        let create = if self.creating {
+                            tr!("Открыть существующую базу")
+                        } else {
+                            tr!("Создать новую базу")
+                        };
+                        let creating = self.creating;
+                        d.child(div().flex_1()).child(
+                            Button::new("unlock-more")
+                                .ghost()
+                                .small()
+                                .icon(IconName::Ellipsis)
+                                .dropdown_menu_with_anchor(Anchor::TopRight, move |menu, _, _| {
+                                    let menu = if creating {
+                                        menu
+                                    } else {
+                                        menu.menu(options, Box::new(UnlockOptions))
+                                    };
+                                    menu.menu(create, Box::new(ToggleCreateVault))
+                                }),
+                        )
+                    }),
+            )
+            // подпись не нужна: что вводить, сказано в самом поле
+            .child(zone(
+                "zone-pw",
+                Guide::Password,
+                Input::new(if pin { &self.pin } else { &self.password })
+                    .large()
+                    .prefix(Icon::new(IconName::Lock).small())
+                    .mask_toggle()
+                    .into_any_element(),
+            ))
+            .when(self.creating, |d| {
+                d.child(zone(
+                    "zone-pw2",
+                    Guide::Password,
+                    field(
+                        tr!("Ещё раз"),
+                        Input::new(&self.password2)
+                            .large()
+                            .prefix(Icon::new(IconName::Lock).small())
+                            .mask_toggle()
+                            .into_any_element(),
+                    )
+                    .into_any_element(),
+                ))
+            })
+            .when(self.creating, |d| {
+                d.child(hint(tr!(
+                    "Пароль нельзя восстановить: без него база не откроется"
+                )))
+                .child(zone(
+                    "zone-file",
+                    Guide::File,
+                    field(
+                        tr!("Файл базы"),
+                        crate::ui::new_file_field(
+                            "unlock-db",
+                            &self.db_path,
+                            tr!("Файл базы не выбран"),
+                            IconName::Database,
+                            cx,
+                        ),
+                    )
+                    .into_any_element(),
+                ))
+                .child(
+                    h_flex().child(
+                        Button::new("create-extras")
+                            .ghost()
+                            .small()
+                            .icon(if extras_open {
+                                IconName::ChevronDown
+                            } else {
+                                IconName::ChevronRight
+                            })
+                            .label(tr!("Дополнительная защита: файл-ключ, YubiKey"))
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.extras_open = !this.extras_open;
+                                if this.extras_open {
+                                    this.create_extras = true;
+                                } else {
+                                    // блок убирается, когда доиграет сворачивание
+                                    this.tasks.push(cx.spawn(async move |this, cx| {
+                                        cx.background_executor()
+                                            .timer(Duration::from_millis(220))
+                                            .await;
+                                        let _ = this.update(cx, |this, cx| {
+                                            if !this.extras_open {
+                                                this.create_extras = false;
+                                                cx.notify();
+                                            }
+                                        });
+                                    }));
+                                }
+                                cx.notify();
+                            })),
+                    ),
+                )
+            })
+            .when(self.creating && extras, |d| {
+                // одна панель: строка на каждый способ, управление справа, пояснение под ней
+                // строка, о которой сейчас подсказка, подсвечена; пояснение под ней нужно, только когда подсказки нет
+                let row =
+                    |on: bool, title: &'static str, control: AnyElement, note: &'static str| {
+                        v_flex()
+                            .gap_2()
+                            .p_3()
+                            .when(on, |d| d.bg(theme.secondary.opacity(0.6)))
+                            .child(
+                                h_flex()
+                                    .gap_2()
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .text_sm()
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .child(title),
+                                    )
+                                    .child(control),
+                            )
+                            .when(!with_guide, |d| d.child(hint(note)))
+                    };
+                let keyfile_row = if keyfile_set {
+                    v_flex()
+                        .gap_2()
+                        .p_3()
+                        .when(lit(Guide::Keyfile), |d| d.bg(theme.secondary.opacity(0.6)))
+                        .child(
+                            div()
+                                .text_sm()
+                                .font_weight(FontWeight::MEDIUM)
+                                .child(tr!("Файл-ключ")),
+                        )
+                        .child(crate::ui::file_field(
+                            "unlock-keyfile",
+                            &self.keyfile,
+                            tr!("Без файла-ключа"),
+                            tr!("Файл-ключ"),
+                            IconName::Key,
+                            cx,
+                        ))
+                        .child(hint(tr!(
+                            "Без этого файла база не откроется. Храните его копию отдельно от базы"
+                        )))
+                } else {
+                    row(
+                        lit(Guide::Keyfile),
+                        tr!("Файл-ключ"),
+                        h_flex()
+                            .gap_1()
+                            .child(
+                                Button::new("create-keyfile")
+                                    .outline()
+                                    .small()
+                                    .label(tr!("Создать"))
+                                    .on_click(
+                                        cx.listener(|this, _, w, cx| this.create_keyfile(w, cx)),
+                                    ),
+                            )
+                            .child(
+                                Button::new("pick-keyfile")
+                                    .ghost()
+                                    .small()
+                                    .label(tr!("Выбрать…"))
+                                    .on_click(cx.listener(|this, _, w, cx| {
+                                        crate::ui::pick_file(
+                                            this.keyfile.clone(),
+                                            tr!("Файл-ключ"),
+                                            w,
+                                            cx,
+                                        )
+                                    })),
+                            )
+                            .into_any_element(),
+                        tr!("Второй ключ в виде файла: базу открывают пароль и этот файл вместе"),
+                    )
+                };
+                d.child(
+                    v_flex()
+                        .overflow_hidden()
+                        .child(
+                            v_flex()
+                                .rounded_lg()
+                                .border_1()
+                                .border_color(theme.border)
+                                .child(zone(
+                                    "zone-keyfile",
+                                    Guide::Keyfile,
+                                    keyfile_row.into_any_element(),
+                                ))
+                                .child(div().h(px(1.)).bg(theme.border))
+                                .child(zone(
+                                    "zone-yk",
+                                    Guide::Yubikey,
+                                    row(
+                                        lit(Guide::Yubikey),
+                                        "YubiKey",
+                                        crate::ui::yubikey_slots("unlock-yk", &self.yubikey, cx),
+                                        tr!("Слот с настроенным challenge-response, обычно второй"),
+                                    )
+                                    .into_any_element(),
+                                )),
+                        )
+                        .with_animation(
+                            if extras_open {
+                                "extras-in"
+                            } else {
+                                "extras-out"
+                            },
+                            Animation::new(Duration::from_millis(220))
+                                .with_easing(ease_out_quint()),
+                            move |el, t| {
+                                let t = if extras_open { t } else { 1. - t };
+                                // отрицательный отступ съедает промежуток карточки, пока блок свёрнут
+                                el.max_h(px(260. * t)).mt(px(-20. * (1. - t))).opacity(t)
+                            },
+                        ),
+                )
+            })
+            .when(advanced, |d| {
+                d.child(field(
+                    tr!("Файл базы"),
+                    crate::ui::file_field(
+                        "unlock-db",
+                        &self.db_path,
+                        tr!("Файл базы не выбран"),
+                        tr!("База .kdbx"),
+                        IconName::Database,
+                        cx,
+                    ),
+                ))
+                .child(field(
+                    tr!("Файл-ключ (если есть)"),
+                    crate::ui::file_field(
+                        "unlock-keyfile",
+                        &self.keyfile,
+                        tr!("Без файла-ключа"),
+                        tr!("Файл-ключ"),
+                        IconName::Key,
+                        cx,
+                    ),
+                ))
+                .child(field(
+                    "YubiKey",
+                    h_flex()
+                        .child(crate::ui::yubikey_slots("unlock-yk", &self.yubikey, cx))
+                        .into_any_element(),
+                ))
+            })
+            .when_some(error, |d, e| d.child(unlock_error(e, &theme)))
+            .child(
+                Button::new("unlock")
+                    .primary()
+                    .large()
+                    .w_full()
+                    .loading(busy)
+                    .label(match (busy, self.creating) {
+                        (true, true) => tr!("Создаю базу…"),
+                        (true, false) => tr!("Расшифровка…"),
+                        (false, true) => tr!("Создать базу"),
+                        (false, false) => tr!("Открыть"),
+                    })
+                    .on_click(cx.listener(|this, _, w, cx| this.submit_unlock(w, cx))),
+            )
+            .when(busy && self.mode == Mode::Busy, |d| {
+                d.child(
+                    div()
+                        .text_xs()
+                        .text_center()
+                        .text_color(theme.muted_foreground)
+                        .child(tr!(
+                            "Argon2id медленный нарочно: так подбор пароля стоит дорого"
+                        )),
+                )
+            })
+            .when(pin, |d| {
+                d.child(
+                    h_flex().justify_center().child(
+                        Button::new("use-master")
+                            .ghost()
+                            .small()
+                            .label(tr!("Ввести мастер-пароль"))
+                            .on_click(cx.listener(|this, _, w, cx| {
+                                this.use_pin = false;
+                                let h = this.password.read(cx).focus_handle(cx);
+                                w.focus(&h, cx);
+                                cx.notify();
+                            })),
+                    ),
+                )
+            })
+            .when(self.creating && !busy && !with_guide, |d| {
+                d.child(
+                    div()
+                        .text_xs()
+                        .text_center()
+                        .text_color(theme.muted_foreground)
+                        .child(tr!("KDBX 4 · AES-256 · Argon2id 256 МиБ")),
+                )
+            });
+        let card = div()
+            .flex()
+            .rounded(px(16.))
+            .border_1()
+            .border_color(theme.border)
+            .bg(theme.background)
+            .shadow_lg()
+            .overflow_hidden()
+            .child(form)
+            .children(with_guide.then(|| guide_panel(self.guide, &theme)))
+            .with_animation(
+                SharedString::from(format!("unlock-card-{}", self.unlock_fails)),
+                Animation::new(Duration::from_millis(if self.unlock_fails == 0 {
+                    260
+                } else {
+                    420
+                }))
+                .with_easing(ease_out_quint()),
+                {
+                    let shake = self.unlock_fails > 0;
+                    move |el, t| {
+                        if shake {
+                            // неверный ключ: короткое затухающее покачивание
+                            let x = (t * std::f32::consts::PI * 6.).sin() * 9. * (1. - t);
+                            el.relative().left(px(x))
+                        } else {
+                            el.opacity(t).relative().top(px(10. * (1. - t)))
+                        }
+                    }
+                },
+            );
+        v_flex()
+            .size_full()
+            .items_center()
+            .justify_center()
+            .bg(theme.sidebar)
+            .child(card)
+            .into_any_element()
+    }
+
+    /// Первый запуск: два понятных пути вместо формы с пустыми полями.
+    fn render_welcome(
+        &mut self,
+        error: Option<SharedString>,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = cx.theme().clone();
+        let row = |id: &'static str, icon: IconName, title: &'static str, sub: &'static str| {
+            Button::new(id).outline().w_full().h(px(68.)).child(
+                h_flex()
+                    .w_full()
+                    .gap_3()
+                    .child(icon_tile(icon, 40., &theme))
+                    .child(
+                        v_flex()
+                            .flex_1()
+                            .min_w_0()
+                            .items_start()
+                            .child(div().text_sm().font_weight(FontWeight::MEDIUM).child(title))
+                            .child(
+                                div()
+                                    .text_xs()
+                                    .text_color(theme.muted_foreground)
+                                    .child(sub),
+                            ),
+                    )
+                    .child(
+                        Icon::new(IconName::ChevronRight)
+                            .small()
+                            .text_color(theme.muted_foreground),
+                    ),
+            )
+        };
         v_flex()
             .size_full()
             .items_center()
@@ -4861,7 +5384,7 @@ impl MainWindow {
             .child(
                 v_flex()
                     .w(px(420.))
-                    .gap_5()
+                    .gap_6()
                     .p_8()
                     .rounded(px(16.))
                     .border_1()
@@ -4869,216 +5392,76 @@ impl MainWindow {
                     .bg(theme.background)
                     .shadow_lg()
                     .child(
-                        h_flex()
+                        v_flex()
+                            .items_center()
                             .gap_3()
-                            .child(icon_tile(IconName::LockKeyhole, 44., &theme))
                             .child(
-                                v_flex()
-                                    .min_w_0()
-                                    .child(div().text_lg().font_weight(FontWeight::SEMIBOLD).child(
-                                        if self.creating {
-                                            tr!("Новое хранилище")
-                                        } else {
-                                            tr!("Разблокировать хранилище")
-                                        },
-                                    ))
+                                div()
+                                    .size(px(56.))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .rounded_xl()
+                                    .border_1()
+                                    .border_color(theme.primary.opacity(0.35))
+                                    .bg(theme.primary.opacity(0.12))
                                     .child(
-                                        div()
-                                            .text_sm()
-                                            .truncate()
-                                            .text_color(theme.muted_foreground)
-                                            .child(if self.creating {
-                                                tr!("KDBX 4 · AES-256 · Argon2id 256 МиБ")
-                                                    .to_string()
-                                            } else if path.is_empty() {
-                                                tr!("Укажите файл базы .kdbx").to_string()
-                                            } else {
-                                                file_name(&path)
-                                            }),
+                                        Icon::new(IconName::ShieldKeyhole)
+                                            .with_size(px(28.))
+                                            .text_color(theme.primary),
                                     ),
                             )
-                            // редкие действия убраны в меню, чтобы экран был о главном: пароль
-                            .when(!pin && !first_run, |d| {
-                                let options = if advanced && !self.creating {
-                                    tr!("Скрыть параметры входа")
-                                } else {
-                                    tr!("Файл-ключ, YubiKey, другой файл")
-                                };
-                                let create = if self.creating {
-                                    tr!("Открыть существующую базу")
-                                } else {
-                                    tr!("Создать новую базу")
-                                };
-                                let creating = self.creating;
-                                d.child(div().flex_1()).child(
-                                    Button::new("unlock-more")
-                                        .ghost()
-                                        .small()
-                                        .icon(IconName::Ellipsis)
-                                        .dropdown_menu_with_anchor(
-                                            Anchor::TopRight,
-                                            move |menu, _, _| {
-                                                let menu = if creating {
-                                                    menu
-                                                } else {
-                                                    menu.menu(options, Box::new(UnlockOptions))
-                                                };
-                                                menu.menu(create, Box::new(ToggleCreateVault))
-                                            },
-                                        ),
+                            .child(
+                                div()
+                                    .text_xl()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .child("Keywarden"),
+                            )
+                            .child(
+                                div()
+                                    .text_sm()
+                                    .text_center()
+                                    .text_color(theme.muted_foreground)
+                                    .child(tr!(
+                                        "Пароли лежат в одном зашифрованном файле .kdbx на этом компьютере"
+                                    )),
+                            ),
+                    )
+                    .child(
+                        v_flex()
+                            .gap_2()
+                            .child(
+                                row(
+                                    "welcome-create",
+                                    IconName::Plus,
+                                    tr!("Создать новую базу"),
+                                    tr!("Пустое хранилище с мастер-паролем"),
                                 )
-                            }),
+                                .track_focus(&self.welcome_focus)
+                                .on_click(cx.listener(|this, _, w, cx| this.toggle_create(w, cx))),
+                            )
+                            .child(
+                                row(
+                                    "welcome-open",
+                                    IconName::FolderOpen,
+                                    tr!("Открыть существующую базу"),
+                                    tr!("Файл .kdbx, который у вас уже есть"),
+                                )
+                                .on_click(cx.listener(|this, _, w, cx| {
+                                    crate::ui::pick_file(
+                                        this.db_path.clone(),
+                                        tr!("База .kdbx"),
+                                        w,
+                                        cx,
+                                    )
+                                })),
+                            ),
                     )
-                    // подпись не нужна: что вводить, сказано в самом поле
-                    .child(
-                        Input::new(if pin { &self.pin } else { &self.password })
-                            .large()
-                            .prefix(Icon::new(IconName::Lock).small())
-                            .mask_toggle(),
-                    )
-                    .when(self.creating, |d| {
-                        d.child(field(
-                            tr!("Ещё раз"),
-                            Input::new(&self.password2)
-                                .large()
-                                .prefix(Icon::new(IconName::Lock).small())
-                                .mask_toggle()
-                                .into_any_element(),
-                        ))
-                    })
-                    .when(advanced, |d| {
-                        d.child(field(
-                            tr!("Файл базы"),
-                            crate::ui::file_field(
-                                "unlock-db",
-                                &self.db_path,
-                                tr!("Файл базы не выбран"),
-                                tr!("База .kdbx"),
-                                IconName::Database,
-                                cx,
-                            ),
-                        ))
-                        .child(field(
-                            tr!("Файл-ключ (если есть)"),
-                            crate::ui::file_field(
-                                "unlock-keyfile",
-                                &self.keyfile,
-                                tr!("Без файла-ключа"),
-                                tr!("Файл-ключ"),
-                                IconName::Key,
-                                cx,
-                            ),
-                        ))
-                        .child(field(
-                            "YubiKey",
-                            h_flex()
-                                .child(crate::ui::yubikey_slots("unlock-yk", &self.yubikey, cx))
-                                .into_any_element(),
-                        ))
-                    })
-                    .when_some(error, |d, e| {
-                        d.child(
-                            h_flex()
-                                .gap_2()
-                                .px_3()
-                                .py_2()
-                                .rounded_lg()
-                                .bg(theme.danger.opacity(0.12))
-                                .border_1()
-                                .border_color(theme.danger.opacity(0.35))
-                                .text_sm()
-                                .text_color(theme.danger_foreground)
-                                .child(Icon::new(IconName::CircleAlert).small())
-                                .child(div().flex_1().child(e))
-                                .with_animation(
-                                    "unlock-error",
-                                    Animation::new(Duration::from_millis(180))
-                                        .with_easing(ease_out_quint()),
-                                    |el, t| el.opacity(t),
-                                ),
-                        )
-                    })
-                    .child(
-                        Button::new("unlock")
-                            .primary()
-                            .large()
-                            .w_full()
-                            .loading(busy)
-                            .label(match (busy, self.creating) {
-                                (true, true) => tr!("Создаю базу…"),
-                                (true, false) => tr!("Расшифровка…"),
-                                (false, true) => tr!("Создать базу"),
-                                (false, false) => tr!("Открыть"),
-                            })
-                            .on_click(cx.listener(|this, _, w, cx| this.submit_unlock(w, cx))),
-                    )
-                    .when(busy && self.mode == Mode::Busy, |d| {
-                        d.child(
-                            div()
-                                .text_xs()
-                                .text_center()
-                                .text_color(theme.muted_foreground)
-                                .child(tr!(
-                                    "Argon2id медленный нарочно: так подбор пароля стоит дорого"
-                                )),
-                        )
-                    })
-                    .when(pin, |d| {
-                        d.child(
-                            h_flex().justify_center().child(
-                                Button::new("use-master")
-                                    .ghost()
-                                    .small()
-                                    .label(tr!("Ввести мастер-пароль"))
-                                    .on_click(cx.listener(|this, _, w, cx| {
-                                        this.use_pin = false;
-                                        let h = this.password.read(cx).focus_handle(cx);
-                                        w.focus(&h, cx);
-                                        cx.notify();
-                                    })),
-                            ),
-                        )
-                    })
-                    // первый запуск: базы ещё нет, выбор «открыть или создать» нужен на виду
-                    .when(first_run && !pin, |d| {
-                        d.child(
-                            h_flex().justify_center().child(
-                                Button::new("toggle-create")
-                                    .ghost()
-                                    .small()
-                                    .label(if self.creating {
-                                        tr!("У меня уже есть база")
-                                    } else {
-                                        tr!("Создать новую базу")
-                                    })
-                                    .on_click(cx.listener(|this, _, _, cx| {
-                                        this.creating = !this.creating;
-                                        this.status = None;
-                                        cx.notify();
-                                    })),
-                            ),
-                        )
-                    })
+                    .when_some(error, |d, e| d.child(unlock_error(e, &theme)))
                     .with_animation(
-                        SharedString::from(format!("unlock-card-{}", self.unlock_fails)),
-                        Animation::new(Duration::from_millis(if self.unlock_fails == 0 {
-                            260
-                        } else {
-                            420
-                        }))
-                        .with_easing(ease_out_quint()),
-                        {
-                            let shake = self.unlock_fails > 0;
-                            move |el, t| {
-                                if shake {
-                                    // неверный ключ: короткое затухающее покачивание
-                                    let x = (t * std::f32::consts::PI * 6.).sin() * 9. * (1. - t);
-                                    el.relative().left(px(x))
-                                } else {
-                                    el.opacity(t).relative().top(px(10. * (1. - t)))
-                                }
-                            }
-                        },
+                        "welcome-card",
+                        Animation::new(Duration::from_millis(260)).with_easing(ease_out_quint()),
+                        |el, t| el.opacity(t).relative().top(px(10. * (1. - t))),
                     ),
             )
             .into_any_element()
@@ -7396,7 +7779,7 @@ impl Render for MainWindow {
                 )
                 .into_any_element()
         } else {
-            self.render_unlock(cx)
+            self.render_unlock(window, cx)
         };
         // уведомление в углу; ошибки разблокировки показываются в самой форме
         let toast = self.status.clone().filter(|_| ready).map(|(msg, err)| {
@@ -7472,11 +7855,7 @@ impl Render for MainWindow {
                 this.show_advanced = !this.show_advanced;
                 cx.notify();
             }))
-            .on_action(cx.listener(|this, _: &ToggleCreateVault, _, cx| {
-                this.creating = !this.creating;
-                this.status = None;
-                cx.notify();
-            }))
+            .on_action(cx.listener(|this, _: &ToggleCreateVault, w, cx| this.toggle_create(w, cx)))
             .on_action(cx.listener(|this, _: &NewLogin, w, cx| {
                 let kind = this.default_kind();
                 this.new_entry(kind, w, cx)
@@ -7575,6 +7954,165 @@ pub fn window_options(cx: &App) -> WindowOptions {
         window_min_size: Some(size(px(860.), px(520.))),
         ..Default::default()
     }
+}
+
+/// Подсказка рядом с формой создания: что это за поле и как с ним поступить.
+fn guide_panel(guide: Guide, theme: &gpui_kit::component::Theme) -> impl IntoElement {
+    // коротко и по делу: что это и зачем, особенности, риски
+    let (key, icon, title, lead, features, risks) = match guide {
+        Guide::Password => (
+            "guide-pw",
+            IconName::Lock,
+            tr!("Мастер-пароль"),
+            tr!("Единственный пароль, который нужно помнить. Им шифруется вся база."),
+            vec![tr!("Длина важнее сложности: четыре-пять случайных слов")],
+            vec![
+                tr!("Восстановить нельзя: забытый пароль означает потерянную базу"),
+                tr!("Не повторяйте его на сайтах: утечка там откроет базу"),
+            ],
+        ),
+        Guide::File => (
+            "guide-file",
+            IconName::Database,
+            tr!("Файл базы"),
+            tr!(
+                "Один зашифрованный файл со всеми записями. Он лежит только там, куда вы его положите."
+            ),
+            vec![
+                tr!("В папке синхронизации база появится на всех ваших устройствах"),
+                tr!("Копия файла это полная резервная копия"),
+            ],
+            vec![tr!("Удалённый файл без копии означает потерянные записи")],
+        ),
+        Guide::Keyfile => (
+            "guide-keyfile",
+            IconName::Key,
+            tr!("Файл-ключ"),
+            tr!("Второй ключ в виде файла. База открывается только паролем и этим файлом вместе."),
+            vec![tr!("Защищает, если пароль подсмотрели или подобрали")],
+            vec![
+                tr!("Без файла база не откроется: держите копию на отдельном носителе"),
+                tr!("Рядом с базой он не защищает: храните в другом месте"),
+            ],
+        ),
+        Guide::Yubikey => (
+            "guide-yk",
+            IconName::KeyRound,
+            "YubiKey",
+            tr!("Аппаратный ключ. База открывается, только когда он вставлен."),
+            vec![
+                tr!(
+                    "Нужен слот с режимом challenge-response (HMAC-SHA1). Обычно это слот 2, долгое касание"
+                ),
+                tr!("Секрет нельзя скопировать с ключа"),
+            ],
+            vec![tr!(
+                "Без ключа база не откроется: настройте второй с тем же секретом"
+            )],
+        ),
+    };
+    let section = |name: &'static str, dot: Hsla, items: Vec<&'static str>| {
+        v_flex()
+            .gap_2()
+            .child(
+                div()
+                    .text_xs()
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(theme.muted_foreground)
+                    .child(name),
+            )
+            .children(items.into_iter().map(move |t| {
+                h_flex()
+                    .items_start()
+                    .gap_2()
+                    .text_sm()
+                    .child(
+                        div()
+                            .mt(px(7.))
+                            .size(px(5.))
+                            .flex_shrink_0()
+                            .rounded_full()
+                            .bg(dot),
+                    )
+                    .child(div().flex_1().min_w_0().child(t))
+            }))
+    };
+    v_flex()
+        .w(px(320.))
+        .flex_shrink_0()
+        .p_8()
+        .gap_4()
+        .border_l_1()
+        .border_color(theme.border)
+        .bg(theme.secondary.opacity(0.35))
+        .child(
+            v_flex()
+                .gap_4()
+                .child(
+                    h_flex()
+                        .gap_3()
+                        .child(icon_tile(icon, 36., theme))
+                        .child(div().font_weight(FontWeight::SEMIBOLD).child(title)),
+                )
+                .child(
+                    div()
+                        .text_sm()
+                        .text_color(theme.muted_foreground)
+                        .child(lead),
+                )
+                .child(section(tr!("Особенности"), theme.primary, features))
+                .child(section(tr!("Риски"), theme.warning, risks))
+                .with_animation(
+                    key,
+                    Animation::new(Duration::from_millis(200)).with_easing(ease_out_quint()),
+                    |el, t| el.opacity(t).relative().top(px(6. * (1. - t))),
+                ),
+        )
+        .child(div().flex_1())
+        .child(
+            h_flex()
+                .gap_2()
+                .text_xs()
+                .text_color(theme.muted_foreground)
+                .child(Icon::new(IconName::ShieldCheck).xsmall())
+                .child(tr!("KDBX 4 · AES-256 · Argon2id 256 МиБ")),
+        )
+}
+
+/// Плашка ошибки на экранах входа.
+fn unlock_error(text: SharedString, theme: &gpui_kit::component::Theme) -> impl IntoElement {
+    h_flex()
+        .gap_2()
+        .px_3()
+        .py_2()
+        .rounded_lg()
+        .bg(theme.danger.opacity(0.12))
+        .border_1()
+        .border_color(theme.danger.opacity(0.35))
+        .text_sm()
+        .text_color(theme.danger_foreground)
+        .child(Icon::new(IconName::CircleAlert).small())
+        .child(div().flex_1().child(text))
+        .with_animation(
+            "unlock-error",
+            Animation::new(Duration::from_millis(180)).with_easing(ease_out_quint()),
+            |el, t| el.opacity(t),
+        )
+}
+
+/// Документы/Keywarden.kdbx, а если файл уже есть, то «Keywarden 2.kdbx» и дальше.
+fn new_vault_path() -> PathBuf {
+    let dir = dirs::document_dir()
+        .filter(|d| d.is_dir())
+        .or_else(dirs::home_dir)
+        .unwrap_or_default();
+    (1..)
+        .map(|n| match n {
+            1 => dir.join("Keywarden.kdbx"),
+            n => dir.join(format!("Keywarden {n}.kdbx")),
+        })
+        .find(|p| !p.exists())
+        .expect("an unused name exists")
 }
 
 #[cfg(test)]

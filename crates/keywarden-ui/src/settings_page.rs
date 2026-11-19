@@ -2484,7 +2484,7 @@ impl Render for SettingsPage {
                 .child(panel(&theme)
                 .child(section(
                     tr!("Общие"),
-                    tr!("Хранятся в самой базе: одинаковы на всех устройствах и в KeePassXC"),
+                    tr!("Хранятся в самой базе: одинаковы на всех устройствах"),
                     &theme,
                 ))
                 .child(
