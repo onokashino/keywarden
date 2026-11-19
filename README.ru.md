@@ -1,4 +1,6 @@
-# Keywarden
+<p align="center"><img src="site/assets/logo.svg" width="96" height="96" alt=""></p>
+
+<h1 align="center">Keywarden</h1>
 
 [English](README.md) · **Русский** · [Сайт и документация](https://onokashino.github.io/keywarden/ru/)
 
