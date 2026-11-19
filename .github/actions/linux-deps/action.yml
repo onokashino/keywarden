@@ -5,7 +5,8 @@ runs:
   steps:
     - shell: bash
       run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends pkg-config libxkbcommon-dev \
+        # a busy Ubuntu mirror fails the whole release now and then: retry downloads
+        sudo apt-get -o Acquire::Retries=5 update
+        sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends pkg-config libxkbcommon-dev \
           libxkbcommon-x11-dev libwayland-dev libxcb1-dev libx11-xcb-dev libvulkan-dev \
-          libfontconfig-dev libfreetype-dev libdbus-1-dev keepassxc
+          libfontconfig-dev libfreetype-dev libdbus-1-dev
