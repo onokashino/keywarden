@@ -46,7 +46,7 @@
     <div class="quick">
       <p class="quick-label">Linux and macOS, one command</p>
       <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
-      <p class="quick-note">Checks the download against <code>SHA256SUMS</code> and installs into <code>~/.local/bin</code> without root. <a href="../install.sh">Read the script</a></p>
+      <p class="quick-note">Checks the download against <code>SHA256SUMS</code> and installs into <code>~/.local/bin</code> without root. <a href="../install.sh" target="_blank" rel="noopener">Read the script</a></p>
     </div>
   </section>
 
@@ -60,7 +60,8 @@
     </div>
     <div class="os-panel" id="os-linux" role="tabpanel">
       <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="c"># x86_64</span>
-<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
+<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh \</span>
+<span data-type>  | sh</span></pre>
       <div>
         <h3>Linux</h3>
         <p>Installs the binaries, a systemd user service, a menu entry and the Firefox connection. Wayland and X11.</p>
@@ -77,12 +78,13 @@
       <div>
         <h3>Windows<span class="badge">beta</span></h3>
         <p>No installer yet: a zip with four programs. SmartScreen asks once because the files are not signed yet: "More info", then "Run anyway".</p>
-        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases/latest">Release files</a>
+        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases/latest" target="_blank" rel="noopener">Release files</a>
       </div>
     </div>
     <div class="os-panel" id="os-macos" role="tabpanel">
       <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="c"># Apple Silicon</span>
-<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
+<span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh \</span>
+<span data-type>  | sh</span></pre>
       <div>
         <h3>macOS<span class="badge">beta</span></h3>
         <p>Apple Silicon. Puts the programs in <code>~/.local/bin</code> and connects the browser. Files from curl are not quarantined.</p>
@@ -101,7 +103,7 @@
     <div class="plats ext reveal" style="--d:2">
         <div class="plat live">
           <div class="plat-top"><h3>Firefox</h3><span class="chip ok">Available</span></div>
-          <p>Signed by Mozilla, updates by itself.</p><a class="btn primary" href="https://addons.mozilla.org/firefox/addon/keywarden/">Add to Firefox</a>
+          <p>Signed by Mozilla, updates by itself.</p><a class="btn primary" href="https://addons.mozilla.org/firefox/addon/keywarden/" target="_blank" rel="noopener">Add to Firefox</a>
         </div>
         <div class="plat">
           <div class="plat-top"><h3>Chrome</h3><span class="chip soon">Soon</span></div>
@@ -166,7 +168,7 @@
       <a href="../">Home</a>
       <a href="../docs/">Docs</a>
       <a href="https://github.com/onokashino/keywarden">GitHub</a>
-      <a href="https://github.com/onokashino/keywarden/releases">Releases</a>
+      <a href="https://github.com/onokashino/keywarden/releases" target="_blank" rel="noopener">Releases</a>
       <a href="../privacy/">Privacy</a>
     </nav>
   </div>

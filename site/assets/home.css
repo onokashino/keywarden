@@ -339,6 +339,8 @@ main > section.inst-hero { border-top: 0; }
 .inst main > section, main.inst > section { padding-block: 88px; }
 /* кнопка над командой, команда переносится только по пробелам и целиком видна */
 [data-copy] { position: relative; }
+/* команда целиком в одну строку рядом с кнопкой; не влезла: перенос по пробелам, без прокрутки */
+.os-panel .term { font-size: 13px; padding-inline: 16px; min-height: calc(4 * 1.85em + 40px); } /* все системы одной высоты: переключение не двигает страницу */
 [data-copy], .inst-more .term, .hand .term { white-space: pre-wrap; }
 .copy-btn { position: absolute; top: 12px; right: 12px; font: 600 12px var(--mono); color: var(--ink); background: var(--bg-3); border: 0; border-radius: 8px; padding: 7px 11px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow 160ms; }
 .quick-label .copy-btn { position: static; }

@@ -113,12 +113,27 @@
   $$('[data-tabs]').forEach(list => {
     const tabs = $$('[role="tab"]', list);
     const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
+    // у вкладок разная высота: раздел плавно перетекает к новой, а не дёргает страницу
+    const host = panels[0].parentElement;
+    let grow = null, primed = false;
     const select = (i, focus) => {
+      const from = host.getBoundingClientRect().height; // посреди анимации: текущая высота
+      if (grow) grow.cancel();
       tabs.forEach((t, j) => { t.setAttribute('aria-selected', j === i); t.tabIndex = j === i ? 0 : -1; });
       panels.forEach((p, j) => {
         p.hidden = j !== i;
         if (j === i && !reduced) { p.classList.remove('enter'); void p.offsetWidth; p.classList.add('enter'); }
       });
+      const to = host.getBoundingClientRect().height;
+      // первый выбор при загрузке: до него видны все вкладки разом, тут анимировать нечего
+      if (!reduced && primed && Math.abs(from - to) > 1) {
+        grow = host.animate(
+          [{ height: from + 'px', overflow: 'hidden' }, { height: to + 'px', overflow: 'hidden' }],
+          { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+        );
+        grow.onfinish = () => { grow = null; };
+      }
+      primed = true;
       if (focus) tabs[i].focus();
       if (list.dataset.tabs === 'os') typeIn(panels[i]);
     };

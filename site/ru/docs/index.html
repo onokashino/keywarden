@@ -79,7 +79,7 @@
 <p>Все клиенты общаются с демоном через локальный сокет (Linux, macOS) или именованный канал (Windows). Демон принимает только процессы вашего пользователя. Если демон не запущен, окно запустит его само.</p>
 
 <h2 id="install">Установка</h2>
-<p>Скачайте архив для своей системы из <a href="https://github.com/onokashino/keywarden/releases/latest">последнего релиза</a>. При желании сверьте его с <code>SHA256SUMS</code>. Все способы, включая расширение браузера и то, что готовится, на <a href="../install/">странице установки</a>.</p>
+<p>Скачайте архив для своей системы из <a href="https://github.com/onokashino/keywarden/releases/latest" target="_blank" rel="noopener">последнего релиза</a>. При желании сверьте его с <code>SHA256SUMS</code>. Все способы, включая расширение браузера и то, что готовится, на <a href="../install/">странице установки</a>.</p>
 <div class="os-tabs">
   <div class="tabs" role="tablist" aria-label="Система">
     <button class="tab" role="tab" aria-selected="true" aria-controls="inst-linux" id="t-inst-linux">Linux</button>
@@ -88,7 +88,7 @@
   </div>
   <div class="panel" id="inst-linux" role="tabpanel" aria-labelledby="t-inst-linux">
 <pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
-    <p>Команда скачивает архив последнего релиза, сверяет его с <code>SHA256SUMS</code> и запускает установку из архива. Определённая версия: <code>... | KEYWARDEN_VERSION=v0.1.0 sh</code>. Скрипт можно сначала <a href="../../install.sh">прочитать</a>. То же вручную:</p>
+    <p>Команда скачивает архив последнего релиза, сверяет его с <code>SHA256SUMS</code> и запускает установку из архива. Определённая версия: <code>... | KEYWARDEN_VERSION=v0.1.0 sh</code>. Скрипт можно сначала <a href="../../install.sh" target="_blank" rel="noopener">прочитать</a>. То же вручную:</p>
 <pre><code>tar xzf keywarden-*-linux-x86_64.tar.gz
 cd keywarden-*-linux-x86_64
 ./install.sh</code></pre>
@@ -224,7 +224,7 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // блокировка</co
 <p>Расширение заполняет логины, предлагает выбрать аккаунт, если их несколько, подставляет коды 2FA, предлагает сохранить новые и изменённые пароли и подсказывает сгенерированный пароль в формах регистрации. Невидимые поля и фреймы оно никогда не заполняет.</p>
 <h3>Установка</h3>
 <ol>
-  <li>Установите расширение: для Firefox из <a href="https://addons.mozilla.org/firefox/addon/keywarden/">Firefox Add-ons</a>. Для браузеров на основе Chromium его пока нет в магазине: распакуйте zip из релиза, откройте <code>chrome://extensions</code>, включите режим разработчика и загрузите распакованную папку.</li>
+  <li>Установите расширение: для Firefox из <a href="https://addons.mozilla.org/firefox/addon/keywarden/" target="_blank" rel="noopener">Firefox Add-ons</a>. Для браузеров на основе Chromium его пока нет в магазине: распакуйте zip из релиза, откройте <code>chrome://extensions</code>, включите режим разработчика и загрузите распакованную папку.</li>
   <li>Зарегистрируйте хост, чтобы браузер мог достучаться до Keywarden. Установщик на Linux делает это сам; в остальных случаях выполните <code>kw browser-setup</code>. Для браузеров на основе Chromium передайте id расширения со страницы <code>chrome://extensions</code>: <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</li>
   <li>Нажмите значок Keywarden на панели браузера и кнопку <b>«Подключить»</b>. Подтвердите в окне Keywarden.</li>
 </ol>
@@ -422,7 +422,7 @@ kw browser-setup [--chrome-id ID]      kw new PATH</code></pre>
     <span>Keywarden · GPL-3.0-or-later</span>
     <a href="../">Главная</a>
     <a href="https://github.com/onokashino/keywarden">GitHub</a>
-    <a href="https://github.com/onokashino/keywarden/releases">Релизы</a>
+    <a href="https://github.com/onokashino/keywarden/releases" target="_blank" rel="noopener">Релизы</a>
     <a href="../privacy/">Приватность</a>
     <span class="spacer"></span>
     <a href="https://github.com/onokashino/keywarden/edit/main/site/ru/docs/index.html">Редактировать страницу</a>

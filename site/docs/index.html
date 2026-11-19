@@ -79,7 +79,7 @@
 <p>All clients talk to the daemon over a local socket (Linux, macOS) or a named pipe (Windows). The daemon accepts only processes of your own user. If the daemon is not running, the window starts it for you.</p>
 
 <h2 id="install">Install</h2>
-<p>Download the archive for your system from the <a href="https://github.com/onokashino/keywarden/releases/latest">latest release</a>. Check it against <code>SHA256SUMS</code> if you like. All options, including the browser extension and what is coming, are on the <a href="../install/">install page</a>.</p>
+<p>Download the archive for your system from the <a href="https://github.com/onokashino/keywarden/releases/latest" target="_blank" rel="noopener">latest release</a>. Check it against <code>SHA256SUMS</code> if you like. All options, including the browser extension and what is coming, are on the <a href="../install/">install page</a>.</p>
 <div class="os-tabs">
   <div class="tabs" role="tablist" aria-label="System">
     <button class="tab" role="tab" aria-selected="true" aria-controls="inst-linux" id="t-inst-linux">Linux</button>
@@ -88,7 +88,7 @@
   </div>
   <div class="panel" id="inst-linux" role="tabpanel" aria-labelledby="t-inst-linux">
 <pre><code>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</code></pre>
-    <p>The command downloads the latest release archive, checks it against <code>SHA256SUMS</code> and runs the installer from the archive. A specific version: <code>... | KEYWARDEN_VERSION=v0.1.0 sh</code>. You can <a href="../install.sh">read the script</a> first. The same by hand:</p>
+    <p>The command downloads the latest release archive, checks it against <code>SHA256SUMS</code> and runs the installer from the archive. A specific version: <code>... | KEYWARDEN_VERSION=v0.1.0 sh</code>. You can <a href="../install.sh" target="_blank" rel="noopener">read the script</a> first. The same by hand:</p>
 <pre><code>tar xzf keywarden-*-linux-x86_64.tar.gz
 cd keywarden-*-linux-x86_64
 ./install.sh</code></pre>
@@ -224,7 +224,7 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
 <p>The extension fills logins, picks an account when there are several, fills 2FA codes, offers to save new and changed passwords and suggests a generated password on sign-up forms. It never fills invisible fields or frames.</p>
 <h3>Install</h3>
 <ol>
-  <li>Install the extension: Firefox from <a href="https://addons.mozilla.org/firefox/addon/keywarden/">Firefox Add-ons</a>. For Chromium-based browsers it is not in the store yet: unpack the zip from the release, open <code>chrome://extensions</code>, turn on Developer mode and load the unpacked folder.</li>
+  <li>Install the extension: Firefox from <a href="https://addons.mozilla.org/firefox/addon/keywarden/" target="_blank" rel="noopener">Firefox Add-ons</a>. For Chromium-based browsers it is not in the store yet: unpack the zip from the release, open <code>chrome://extensions</code>, turn on Developer mode and load the unpacked folder.</li>
   <li>Register the host so the browser can reach Keywarden. The Linux installer does it; otherwise run <code>kw browser-setup</code>. For Chromium-based browsers pass the extension id shown on <code>chrome://extensions</code>: <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</li>
   <li>Click the Keywarden icon in the toolbar and press <b>Connect</b>. Confirm in the Keywarden window.</li>
 </ol>
@@ -422,7 +422,7 @@ kw browser-setup [--chrome-id ID]      kw new PATH</code></pre>
     <span>Keywarden · GPL-3.0-or-later</span>
     <a href="../">Home</a>
     <a href="https://github.com/onokashino/keywarden">GitHub</a>
-    <a href="https://github.com/onokashino/keywarden/releases">Releases</a>
+    <a href="https://github.com/onokashino/keywarden/releases" target="_blank" rel="noopener">Releases</a>
     <a href="../privacy/">Privacy</a>
     <span class="spacer"></span>
     <a href="https://github.com/onokashino/keywarden/edit/main/site/docs/index.html">Edit this page</a>
