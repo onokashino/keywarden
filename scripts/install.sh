@@ -28,10 +28,13 @@ mkdir -p "$BIN" "$CONF/systemd/user" "$HOME/.local/share/applications" "$CONF/ke
 install -m 0755 "$R/keywardend" "$R/kw" "$R/keywarden-ui" "$R/keywarden-host" "$BIN/"
 install -m 0644 dist/systemd/keywardend.service dist/systemd/keywardend@.service "$CONF/systemd/user/"
 install -m 0644 dist/keywarden.desktop "$HOME/.local/share/applications/"
+install -Dm644 dist/icons/keywarden.svg "$HOME/.local/share/icons/hicolor/scalable/apps/keywarden.svg"
 ok "programs in $(home "$BIN")"
 
 systemctl --user daemon-reload
-systemctl --user --quiet enable --now keywardend.service
+systemctl --user --quiet enable keywardend.service
+# restart, not --now: on a re-run the old daemon would keep running the old binary
+systemctl --user restart keywardend.service
 ok "background service ${B}keywardend${N} is running and starts with your session"
 ok "menu entry added"
 

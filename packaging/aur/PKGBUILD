@@ -24,6 +24,7 @@ package() {
     sed 's|%h/.local/bin/|/usr/bin/|' "$u" | install -Dm644 /dev/stdin "$pkgdir/usr/lib/systemd/user/$(basename "$u")"
   done
   install -Dm644 dist/keywarden.desktop "$pkgdir/usr/share/applications/keywarden.desktop"
+  install -Dm644 dist/icons/keywarden.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/keywarden.svg"
   install -Dm644 dist/native-messaging/firefox.json "$pkgdir/usr/lib/mozilla/native-messaging-hosts/dev.keywarden.host.json"
   install -Dm644 dist/niri/keywarden.kdl "$pkgdir/usr/share/keywarden/niri/keywarden.kdl"
   install -Dm644 README.md "$pkgdir/usr/share/doc/keywarden/README.md"
