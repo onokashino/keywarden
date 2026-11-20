@@ -442,6 +442,10 @@ pub struct MainWindow {
     welcome_focus: FocusHandle,
     /// База заблокирована событием демона: при следующей отрисовке вернуть фокус в поле ключа.
     refocus: bool,
+    /// «Коды 2FA»: что копировали последним (id записей, свежие первыми) и плотный вид списком
+    otp_view: OtpView,
+    /// в поле поиска сейчас подсказка про коды
+    search_hint_otp: bool,
     /// экран «Получить базу с другого компьютера»
     receiving: bool,
     recv_code: Entity<InputState>,
@@ -637,6 +641,8 @@ impl MainWindow {
             guide: Guide::Password,
             welcome_focus: cx.focus_handle(),
             refocus: false,
+            otp_view: OtpView::load(),
+            search_hint_otp: false,
             receiving: false,
             recv_code,
             received: false,
@@ -2923,6 +2929,7 @@ impl MainWindow {
         self.loading_list = true;
         let query = self.search.read(cx).value().to_string();
         let keep = if reset { None } else { self.selected_id() };
+        let plain = query.trim().is_empty();
         let req = Request::Search {
             query,
             limit: 500,
@@ -2940,6 +2947,10 @@ impl MainWindow {
                     }
                     if this.nav == Nav::Otp {
                         entries.retain(|e| e.has_otp);
+                        // без запроса и своей сортировки первыми идут коды, которые копировали недавно
+                        if plain && matches!(this.sort, Sort::Manual | Sort::Relevance) {
+                            entries.sort_by_key(|e| this.otp_view.rank(&e.id));
+                        }
                         for e in &entries {
                             if !this.otp_codes.contains_key(&e.id) {
                                 this.fetch_otp(e.id.clone(), cx);
@@ -3358,6 +3369,7 @@ impl MainWindow {
 
     fn copy(&mut self, field: &str, cx: &mut Context<Self>) {
         let Some(id) = self.selected_id() else { return };
+        let used = id.clone();
         let key = field.to_string();
         let label = match field {
             "password" => tr!("Пароль").to_string(),
@@ -3373,6 +3385,9 @@ impl MainWindow {
             },
             move |this, res, cx| match res {
                 Ok(_) => {
+                    if key == "totp" {
+                        this.otp_view.used(&used);
+                    }
                     this.mark_copied(key, cx);
                     this.flash(
                         tr!("{label} скопирован, буфер очистится сам", label = label),
@@ -7044,6 +7059,9 @@ impl MainWindow {
                 .child(self.otp_toolbar(cx))
                 .into_any_element();
         }
+        if self.otp_view.compact {
+            return self.render_otp_list(cx);
+        }
         let mut cards: Vec<AnyElement> = vec![];
         for (ix, e) in self.entries.iter().enumerate() {
             let active = Some(ix) == self.selected;
@@ -7193,6 +7211,141 @@ impl MainWindow {
             .into_any_element()
     }
 
+    /// Плотный вид «Кодов 2FA»: строка на код, щелчок копирует.
+    fn render_otp_list(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.theme().clone();
+        let mut rows: Vec<AnyElement> = vec![];
+        for (ix, e) in self.entries.iter().enumerate() {
+            let active = Some(ix) == self.selected;
+            let code = self.otp_codes.get(&e.id).cloned();
+            let copied = active && self.copied.as_deref() == Some("totp");
+            let sub = if e.username.is_empty() {
+                e.group.clone()
+            } else {
+                e.username.clone()
+            };
+            let id = e.id.clone();
+            rows.push(
+                h_flex()
+                    .id(("otp-row", ix))
+                    .h(px(52.))
+                    .px_3()
+                    .gap_3()
+                    .rounded_md()
+                    .when(ix > 0, |d| {
+                        d.border_t_1().border_color(theme.border.opacity(0.5))
+                    })
+                    .bg(if active {
+                        theme.list_active
+                    } else {
+                        theme.background
+                    })
+                    .cursor_pointer()
+                    .hover(|d| d.bg(theme.list_active))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.select(Some(ix), cx);
+                        this.copy("totp", cx);
+                    }))
+                    .child(crate::brands::tile(
+                        e,
+                        28.,
+                        kind_icon(e.kind),
+                        self.icon_for(e),
+                        &theme,
+                    ))
+                    .child(
+                        div()
+                            .w(px(220.))
+                            .flex_shrink_0()
+                            .text_sm()
+                            .font_weight(FontWeight::MEDIUM)
+                            .truncate()
+                            .child(e.title.clone()),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .truncate()
+                            .child(sub),
+                    )
+                    .child(match &code {
+                        Some(c) => {
+                            let (a, b) = c.code.split_at(c.code.len() / 2);
+                            div()
+                                .w(px(110.))
+                                .text_lg()
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .font_family(theme.mono_font_family.clone())
+                                .child(format!("{a} {b}"))
+                                .into_any_element()
+                        }
+                        None => Skeleton::new()
+                            .h_5()
+                            .w(px(110.))
+                            .rounded_md()
+                            .into_any_element(),
+                    })
+                    .child(match &code {
+                        Some(c) => h_flex()
+                            .w(px(96.))
+                            .gap_2()
+                            .child(div().flex_1().child(countdown_bar(c, &theme)))
+                            .child(
+                                div()
+                                    .w(px(30.))
+                                    .text_xs()
+                                    .text_right()
+                                    .text_color(if c.remaining <= 5 {
+                                        theme.danger_foreground
+                                    } else {
+                                        theme.muted_foreground
+                                    })
+                                    .child(tr!("{s} с", s = c.remaining)),
+                            )
+                            .into_any_element(),
+                        None => div().w(px(96.)).into_any_element(),
+                    })
+                    .child(
+                        Button::new(("otp-row-open", ix))
+                            .ghost()
+                            .xsmall()
+                            .icon(IconName::Pencil)
+                            .tooltip(tr!("Открыть карточку записи"))
+                            .on_click(cx.listener(move |this, _, w, cx| {
+                                cx.stop_propagation();
+                                this.open_entry(id.clone(), w, cx);
+                            })),
+                    )
+                    .child(copy_icon(copied, &theme).small().text_color(if copied {
+                        theme.success_foreground
+                    } else {
+                        theme.muted_foreground
+                    }))
+                    .into_any_element(),
+            );
+        }
+        div()
+            .id("otp-list")
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
+            .child(div().px_6().pt_5().child(self.otp_toolbar(cx)))
+            .child(
+                div().p_6().child(
+                    v_flex()
+                        .rounded_lg()
+                        .border_1()
+                        .border_color(theme.border)
+                        .overflow_hidden()
+                        .children(rows),
+                ),
+            )
+            .into_any_element()
+    }
+
     fn otp_toolbar(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         h_flex()
             .gap_2()
@@ -7217,6 +7370,27 @@ impl MainWindow {
                     .icon(IconName::FileDown)
                     .label(tr!("В 2FAS"))
                     .on_click(cx.listener(|this, _, w, cx| this.export_twofas(w, cx))),
+            )
+            .child(div().flex_1())
+            .child(
+                Button::new("otp-view")
+                    .ghost()
+                    .icon(if self.otp_view.compact {
+                        IconName::LayoutGrid
+                    } else {
+                        IconName::List
+                    })
+                    .label(if self.otp_view.compact {
+                        tr!("Плитки")
+                    } else {
+                        tr!("Список")
+                    })
+                    .tooltip(tr!("Плотный список: больше кодов на экране"))
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.otp_view.compact = !this.otp_view.compact;
+                        this.otp_view.save();
+                        cx.notify();
+                    })),
             )
     }
 
@@ -8151,6 +8325,46 @@ fn landed_flash(n: u64, color: Hsla) -> impl IntoElement {
     )
 }
 
+/// Вид страницы «Коды 2FA» на этом компьютере. В файле только id записей и флажок, без секретов.
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+struct OtpView {
+    recent: Vec<String>,
+    compact: bool,
+}
+
+impl OtpView {
+    fn path() -> std::path::PathBuf {
+        keywarden_core::ipc::config_dir().join("otp-view.json")
+    }
+    fn load() -> Self {
+        std::fs::read(Self::path())
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or_default()
+    }
+    fn save(&self) {
+        if let Ok(b) = serde_json::to_vec_pretty(self) {
+            let _ = std::fs::create_dir_all(keywarden_core::ipc::config_dir());
+            let _ = std::fs::write(Self::path(), b);
+        }
+    }
+    /// Код только что скопировали: запись становится первой среди недавних.
+    fn used(&mut self, id: &str) {
+        self.recent.retain(|x| x != id);
+        self.recent.insert(0, id.to_string());
+        self.recent.truncate(300);
+        self.save();
+    }
+    /// Место записи среди недавних; ни разу не копировали: в конце, в прежнем порядке.
+    fn rank(&self, id: &str) -> usize {
+        self.recent
+            .iter()
+            .position(|x| x == id)
+            .unwrap_or(usize::MAX)
+    }
+}
+
 impl Render for MainWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme().clone();
@@ -8158,6 +8372,18 @@ impl Render for MainWindow {
         // после блокировки событием демона фокус никуда не попадает: ставим его в поле ключа
         // фокус мог остаться и на поле поиска, которого на экране уже нет: клавиши уходили в никуда
         let lost = std::mem::take(&mut self.refocus) || window.focused(cx).is_none();
+        // на странице кодов поле поиска говорит, что ищет коды
+        let otp_page = self.nav == Nav::Otp;
+        if otp_page != self.search_hint_otp {
+            self.search_hint_otp = otp_page;
+            let hint = if otp_page {
+                tr!("Найти код: название или логин")
+            } else {
+                tr!("Поиск: слова, #тег, user:, url:, is:expired")
+            };
+            self.search
+                .update(cx, |s, cx| s.set_placeholder(hint, window, cx));
+        }
         if self.mode == Mode::Locked && lost {
             let h = if self.use_pin && !self.creating {
                 self.pin.read(cx).focus_handle(cx)

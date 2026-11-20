@@ -355,5 +355,9 @@
   "Ищу компьютер в этой сети": "Looking for the computer on this network",
   "Подождите несколько секунд": "Please wait a few seconds",
   "Не удалось настроить git: {e}": "Could not configure git: {e}",
-  "Открыть карточку записи": "Open the entry card"
+  "Открыть карточку записи": "Open the entry card",
+  "Найти код: название или логин": "Find a code: title or username",
+  "Плитки": "Tiles",
+  "Список": "List",
+  "Плотный список: больше кодов на экране": "Compact list: more codes on screen"
 }
