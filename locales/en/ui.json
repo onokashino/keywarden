@@ -56,7 +56,7 @@
   "Из фразы": "From seed phrase",
   "Из ключа": "From key",
   "Из xpub": "From xpub",
-  "Публичные адреса всех сетей считаются из фразы прямо здесь, без интернета": "Public addresses for all networks are derived from the seed phrase right here, offline",
+  "Публичные адреса всех сетей считаются из фразы на этом устройстве": "Public addresses for all networks are derived from the seed phrase on this device",
   "Показать адреса": "Show addresses",
   "Аккаунт": "Account",
   "Свой путь": "Custom path",
@@ -68,7 +68,7 @@
   "Путь без номера адреса, номер допишется сам. Например m/84'/0'/1'/0 для аккаунта 1": "Path without the address index, it is appended automatically. For example m/84'/0'/1'/0 for account 1",
   "Фраза Electrum: адреса Bitcoin по путям Electrum": "Electrum seed: Bitcoin addresses on Electrum paths",
   "Ещё 5 адресов": "5 more addresses",
-  "Считаются здесь, без интернета. Щелчок по адресу копирует": "Derived here, offline. Click an address to copy it",
+  "Считаются на этом устройстве. Щелчок по адресу копирует": "Derived on this device. Click an address to copy it",
   "Адрес сохранён": "Address saved",
   "Адрес удалён": "Address removed",
   "Название, например «Биржа» или «Холодный»": "Name, e.g. \"Exchange\" or \"Cold\"",
@@ -353,5 +353,6 @@
   "Создаю базу": "Creating the vault",
   "Открываю базу": "Opening the vault",
   "Ищу компьютер в этой сети": "Looking for the computer on this network",
-  "Подождите несколько секунд": "Please wait a few seconds"
+  "Подождите несколько секунд": "Please wait a few seconds",
+  "Не удалось настроить git: {e}": "Could not configure git: {e}"
 }

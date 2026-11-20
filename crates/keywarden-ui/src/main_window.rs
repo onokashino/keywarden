@@ -473,6 +473,8 @@ pub struct MainWindow {
     pending_select: Option<String>,
     /// ключ, которым git подписывает коммиты (None: ещё не спрашивали git)
     git_signing: Option<Option<String>>,
+    /// почему не удалось включить подпись git: держится под переключателем, а не гаснет с тостом
+    git_sign_error: Option<SharedString>,
     nav: Nav,
     entries: Vec<EntrySummary>,
     selected: Option<usize>,
@@ -656,6 +658,7 @@ impl MainWindow {
             health_busy: false,
             pending_select: None,
             git_signing: None,
+            git_sign_error: None,
             nav: Nav::All,
             entries: vec![],
             selected: None,
@@ -1659,7 +1662,9 @@ impl MainWindow {
                             .text_sm()
                             .text_color(theme.muted_foreground)
                             .text_center()
-                            .child(tr!("Публичные адреса всех сетей считаются из фразы прямо здесь, без интернета")),
+                            .child(tr!(
+                                "Публичные адреса всех сетей считаются из фразы на этом устройстве"
+                            )),
                     )
                     .child(
                         Button::new("dv-show")
@@ -2004,7 +2009,7 @@ impl MainWindow {
                             div()
                                 .text_xs()
                                 .text_color(theme.muted_foreground)
-                                .child(tr!("Считаются здесь, без интернета. Щелчок по адресу копирует")),
+                                .child(tr!("Считаются на этом устройстве. Щелчок по адресу копирует")),
                         ),
                 )
             })
@@ -2375,6 +2380,7 @@ impl MainWindow {
                                         } else {
                                             git_signing::disable()
                                         };
+                                        this.git_sign_error = None;
                                         match res {
                                             Ok(()) if *on => this.flash(
                                                 tr!("git подписывает коммиты и теги этим ключом"),
@@ -2382,7 +2388,13 @@ impl MainWindow {
                                                 cx,
                                             ),
                                             Ok(()) => {}
-                                            Err(e) => this.flash(e, true, cx),
+                                            Err(e) => {
+                                                tracing::warn!("подпись git не включена: {e}");
+                                                this.git_sign_error = Some(
+                                                    tr!("Не удалось настроить git: {e}", e = e)
+                                                        .into(),
+                                                );
+                                            }
                                         }
                                         this.git_signing = None;
                                         cx.notify();
@@ -2394,7 +2406,10 @@ impl MainWindow {
                                     theme.success_foreground,
                                 ))
                             }),
-                    ),
+                    )
+                    .when_some(self.git_sign_error.clone(), |d, e| {
+                        d.child(div().px_4().pb_3().child(unlock_error(e, &theme)))
+                    }),
             )
             .into_any_element()
     }

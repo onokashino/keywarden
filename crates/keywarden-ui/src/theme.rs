@@ -28,7 +28,7 @@ pub fn init(cx: &mut App) {
     // копия на случай, если перечитывание каталога сбросит реестр
     let builtin = ThemeRegistry::global(cx).themes().get(BUILTIN).cloned();
     if let Some(cfg) = &builtin {
-        Theme::update(cx, |t| t.apply_config(cfg));
+        Theme::update(cx, |t| apply(t, cfg));
     }
     let dir = themes_dir();
     let _ = std::fs::create_dir_all(&dir);
@@ -42,11 +42,22 @@ pub fn init(cx: &mut App) {
             .cloned()
             .or_else(|| builtin.clone());
         if let Some(cfg) = cfg {
-            Theme::update(cx, |t| t.apply_config(&cfg));
+            Theme::update(cx, |t| apply(t, &cfg));
             cx.refresh_windows();
         }
     });
     if let Err(e) = res {
         tracing::warn!("каталог тем не отслеживается: {e}");
+    }
+}
+
+/// Применить тему и сделать поле номеров строк непрозрачным. В тёмных темах фон редактора
+/// полупрозрачный, и текст, прокрученный вбок, просвечивал сквозь номера строк.
+fn apply(t: &mut Theme, cfg: &std::rc::Rc<gpui_kit::component::ThemeConfig>) {
+    t.apply_config(cfg);
+    let bg = t.background;
+    let style = &mut std::sync::Arc::make_mut(&mut t.highlight_theme).style;
+    if style.editor_gutter_background.is_none() {
+        style.editor_gutter_background = Some(bg);
     }
 }
