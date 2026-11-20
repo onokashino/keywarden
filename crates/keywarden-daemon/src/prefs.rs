@@ -216,6 +216,10 @@ impl Daemon {
                 c.notify_breaches = p.notify_breaches;
                 c.sync_watch = p.sync_watch;
                 c.sync_guard = p.sync_guard;
+                // включили обмен: сеть, в которой это сделали, сразу доверенная
+                if p.lan_sync && !c.lan_sync {
+                    crate::lan::trust_current(c);
+                }
                 c.lan_sync = p.lan_sync;
                 if p.check_updates && !c.check_updates {
                     // только что включили: проверить при ближайшем обходе

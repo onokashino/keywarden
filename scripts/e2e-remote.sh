@@ -54,7 +54,7 @@ if [ "$ROLE" = a ]; then
   $B/kw sync lan on
   $B/kw add --title lan-a -u la
   waitfor has lan-b lb
-  $B/kw sync status | grep -q "сосед"
+  $B/kw sync status | grep -q "компьютер"
   $B/kw sync status
   touch $S/a-done
   waitfor test -e $S/b-done

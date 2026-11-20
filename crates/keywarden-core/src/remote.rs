@@ -255,7 +255,7 @@ impl ClientHello {
         }
         let (server_part, tag) = reply.split_at(48);
         if !mac_ok(&lan.key, &[b"server", &self.hello, server_part], tag) {
-            return Err(crate::tr!("соседний компьютер не подтвердил ключ базы").into());
+            return Err(crate::tr!("другой компьютер не подтвердил ключ базы").into());
         }
         let server_pub: [u8; 32] = server_part[..32].try_into().expect("32 байта");
         let fin = mac(&lan.key, &[b"client", &self.hello, server_part]).to_vec();

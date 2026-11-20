@@ -309,6 +309,6 @@
   "нужен адрес или --off": "an address or --off is needed",
   "пароль от сервера одной строкой из stdin": "server password as one line from stdin",
   "сеть": "network",
-  "сосед": "peer",
+  "компьютер": "computer",
   "укажите on или off": "say on or off"
 }

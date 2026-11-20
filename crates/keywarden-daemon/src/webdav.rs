@@ -329,9 +329,22 @@ impl Daemon {
                 .sync
                 .peers
                 .iter()
-                .map(|(ip, when)| tr!("{ip}, на связи в {time}", ip = ip, time = when))
+                .map(|(ip, p)| tr!("{ip}, на связи в {time}", ip = ip, time = p.seen))
                 .collect(),
             lan_state: g.sync.lan_state.clone(),
+            lan_peers: g
+                .sync
+                .peers
+                .iter()
+                .map(|(ip, p)| keywarden_core::ipc::LanPeer {
+                    ip: ip.to_string(),
+                    seen: p.seen.clone(),
+                    new: p.new,
+                })
+                .collect(),
+            lan_networks_supported: crate::lan::NETWORKS_SUPPORTED,
+            lan_network: crate::lan::current_network(),
+            lan_networks: g.config.lan_networks.clone().unwrap_or_default(),
         }
     }
 

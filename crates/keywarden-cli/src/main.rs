@@ -864,7 +864,7 @@ fn run(cli: Cli) -> Result<()> {
                         println!("{}\t{s}", tr!("сеть"));
                     }
                     for p in &r.peers {
-                        println!("{}\t{p}", tr!("сосед"));
+                        println!("{}\t{p}", tr!("компьютер"));
                     }
                 }
                 if let Some(h) = held {

@@ -1239,6 +1239,18 @@ impl SettingsPage {
         self.load_prefs(Some(p), window, cx);
     }
 
+    /// Доверять сети в обмене или убрать её из списка (`None`: текущая сеть).
+    fn lan_trust(&mut self, network: Option<String>, on: bool, cx: &mut Context<Self>) {
+        self.tasks.push(client::call(
+            cx,
+            Request::LanTrust { network, on },
+            |this, res, cx| match res {
+                Ok(_) => this.load_sync(cx),
+                Err(e) => this.say(e.message(), true, cx),
+            },
+        ));
+    }
+
     /// Переключатели сохраняются сразу.
     fn toggle_pref(
         &mut self,
@@ -1813,7 +1825,57 @@ impl SettingsPage {
                 &theme,
             )))
             .when(p.lan_sync, |d| {
-                let status = if r.peers.is_empty() {
+                let tile = |icon: IconName, color: Hsla| {
+                    div()
+                        .size(px(32.))
+                        .flex_shrink_0()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded_lg()
+                        .bg(color.opacity(0.12))
+                        .child(Icon::new(icon).small().text_color(color))
+                };
+                let two_lines = |title: String, sub: String| {
+                    v_flex()
+                        .flex_1()
+                        .min_w_0()
+                        .child(div().text_sm().truncate().child(title))
+                        .child(
+                            div()
+                                .text_xs()
+                                .text_color(theme.muted_foreground)
+                                .child(sub),
+                        )
+                };
+                let here = r.lan_network.as_ref();
+                let trusted = !r.lan_networks_supported
+                    || here.is_some_and(|n| r.lan_networks.iter().any(|t| t.id == n.id));
+                let status = if !trusted {
+                    // чужая сеть: обмен молчит, пока её не назовут своей
+                    h_flex()
+                        .gap_3()
+                        .child(tile(IconName::ShieldAlert, theme.warning))
+                        .child(two_lines(
+                            match here {
+                                Some(n) => tr!("Сеть не в доверенных: {name}", name = n.name),
+                                None => tr!("Сеть не определилась").into(),
+                            },
+                            tr!("Обмен здесь выключен: маяки не уходят, порт закрыт").into(),
+                        ))
+                        .when(here.is_some(), |d| {
+                            d.child(
+                                Button::new("lan-trust")
+                                    .outline()
+                                    .icon(IconName::ShieldCheck)
+                                    .label(tr!("Доверять этой сети"))
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.lan_trust(None, true, cx)
+                                    })),
+                            )
+                        })
+                        .into_any_element()
+                } else if r.lan_peers.is_empty() {
                     h_flex()
                         .gap_3()
                         .child(
@@ -1835,62 +1897,68 @@ impl SettingsPage {
                                     |el, t| el.opacity(0.45 + 0.55 * (1. - (2. * t - 1.).abs())),
                                 ),
                         )
-                        .child(
-                            v_flex()
-                                .min_w_0()
-                                .child(div().text_sm().child(
-                                    r.lan_state.clone().map(capitalized).unwrap_or_else(|| tr!("Включаю…").into()),
-                                ))
-                                .child(div().text_xs().text_color(theme.muted_foreground).child(tr!(
-                                    "Откройте эту базу на другом компьютере в той же сети: он появится здесь сам"
-                                ))),
-                        )
+                        .child(two_lines(
+                            r.lan_state.clone().map(capitalized).unwrap_or_else(|| tr!("Включаю…").into()).to_string(),
+                            tr!("Откройте эту базу на другом компьютере в той же сети: он появится здесь сам").into(),
+                        ))
                         .into_any_element()
                 } else {
                     v_flex()
                         .gap_2()
-                        .children(r.peers.iter().map(|peer| {
-                            // «192.168.1.20, на связи в 14:03»: адрес отдельно от времени
-                            let (ip, seen) = peer.split_once(", ").unwrap_or((peer, ""));
+                        .children(r.lan_peers.iter().map(|peer| {
                             h_flex()
                                 .gap_3()
-                                .child(
-                                    div()
-                                        .size(px(32.))
-                                        .flex_shrink_0()
-                                        .flex()
-                                        .items_center()
-                                        .justify_center()
-                                        .rounded_lg()
-                                        .bg(theme.success.opacity(0.12))
-                                        .child(
-                                            Icon::new(IconName::Monitor)
-                                                .small()
-                                                .text_color(theme.success),
-                                        ),
-                                )
-                                .child(
-                                    v_flex()
-                                        .min_w_0()
-                                        .child(div().text_sm().child(ip.to_string()))
-                                        .child(
-                                            div()
-                                                .text_xs()
-                                                .text_color(theme.muted_foreground)
-                                                .child(seen.to_string()),
-                                        ),
-                                )
+                                .child(tile(IconName::Monitor, theme.success))
+                                .child(two_lines(
+                                    peer.ip.clone(),
+                                    tr!("На связи в {time}", time = peer.seen),
+                                ))
+                                .when(peer.new, |d| {
+                                    d.child(crate::ui::badge(tr!("новый"), theme.warning))
+                                })
                         }))
                         .into_any_element()
                 };
-                d.child(
+                let cell = |el: AnyElement| {
                     div()
                         .px_4()
                         .py_3()
                         .border_t_1()
                         .border_color(theme.table_row_border)
-                        .child(status),
-                )
+                        .child(el)
+                };
+                d.child(cell(status))
+                .when(r.lan_networks_supported && !r.lan_networks.is_empty(), |d| {
+                    d.child(cell(
+                        v_flex()
+                            .gap_2()
+                            .child(caption(tr!("Доверенные сети")))
+                            .children(r.lan_networks.iter().enumerate().map(|(i, n)| {
+                                let id = n.id.clone();
+                                let current = here.is_some_and(|h| h.id == n.id);
+                                h_flex()
+                                    .gap_3()
+                                    .child(tile(
+                                        IconName::Globe,
+                                        if current { theme.success } else { theme.muted_foreground },
+                                    ))
+                                    .child(two_lines(capitalized(n.name.clone()).to_string(), n.id.clone()))
+                                    .when(current, |d| {
+                                        d.child(crate::ui::badge(tr!("сейчас"), theme.success))
+                                    })
+                                    .child(
+                                        Button::new(("lan-forget", i))
+                                            .ghost()
+                                            .small()
+                                            .label(tr!("Убрать"))
+                                            .on_click(cx.listener(move |this, _, _, cx| {
+                                                this.lan_trust(Some(id.clone()), false, cx)
+                                            })),
+                                    )
+                            }))
+                            .into_any_element(),
+                    ))
+                })
                 .child(
                     v_flex()
                         .px_4()
@@ -1905,16 +1973,23 @@ impl SettingsPage {
                         .child(point(false, tr!(
                             "По сети база идёт зашифрованной дважды: сама по себе и отдельным ключом на каждую передачу"
                         )))
+                        .when(r.lan_networks_supported, |d| {
+                            d.child(point(false, tr!(
+                                "Обмен работает только в доверенных сетях. В остальных Keywarden молчит и держит порт закрытым"
+                            )))
+                        })
                         .child(point(false, tr!(
-                            "Всё, что пришло, видно в журнале ниже и отменяется оттуда"
+                            "О новом компьютере в обмене приходит уведомление. Всё, что пришло, видно в журнале ниже и отменяется оттуда"
                         )))
                         .child(div().pt_1().child(caption(tr!("Риски"))))
                         .child(point(true, tr!(
                             "Устройства не подтверждаются по одному: кто знает ключ и имеет копию базы, тот участвует в обмене"
                         )))
-                        .child(point(true, tr!(
-                            "В чужой сети (кафе, гостиница) видно, что здесь работает Keywarden. Там обмен лучше выключить"
-                        )))
+                        .when(!r.lan_networks_supported, |d| {
+                            d.child(point(true, tr!(
+                                "В чужой сети (кафе, гостиница) видно, что здесь работает Keywarden. Там обмен лучше выключить"
+                            )))
+                        })
                         .child(point(true, tr!(
                             "Нужен порт 47470 (UDP и TCP): разрешите его в брандмауэре только для своей сети"
                         ))),

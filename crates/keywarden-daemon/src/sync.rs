@@ -32,8 +32,8 @@ pub struct SyncState {
     pub incoming: Vec<Incoming>,
     /// WebDAV: удалось ли последнее обращение и что показать в настройках
     pub webdav_status: Option<(bool, String)>,
-    /// компьютеры в сети с этой базой: адрес -> когда видели (ЧЧ:ММ)
-    pub peers: std::collections::BTreeMap<std::net::IpAddr, String>,
+    /// компьютеры в сети с этой базой
+    pub peers: std::collections::BTreeMap<std::net::IpAddr, crate::lan::Peer>,
     pub lan_state: Option<String>,
     loaded_from: Option<PathBuf>,
 }
@@ -836,7 +836,7 @@ pub async fn notify_desktop(summary: &str, body: &str) {
             &(
                 "Keywarden",
                 0u32,
-                "dialog-password",
+                "keywarden",
                 summary,
                 body,
                 Vec::<&str>::new(),

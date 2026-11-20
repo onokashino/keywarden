@@ -167,5 +167,10 @@
   "синхронизировано в {time}": "synced at {time}",
   "файл на сервере не открылся этим паролем: {e}": "the file on the server did not open with this password: {e}",
   "файл на сервере слишком большой": "the file on the server is too large",
-  "файл соседа слишком большой": "the other computer's file is too large"
+  "база с другого компьютера слишком большая": "the vault from the other computer is too large",
+  "сеть не определилась, обмен ждёт": "network not detected, the exchange is waiting",
+  "эта сеть не в доверенных: обмен выключен, порт закрыт": "this network is not trusted: the exchange is off, the port is closed",
+  "В обмене по сети появился новый компьютер: {ip}": "A new computer joined the network exchange: {ip}",
+  "сеть не определилась": "network not detected",
+  "шлюз {ip} ({iface})": "gateway {ip} ({iface})"
 }

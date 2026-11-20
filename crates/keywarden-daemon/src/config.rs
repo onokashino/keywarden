@@ -44,6 +44,12 @@ pub struct Config {
     pub sync_guard: bool,
     /// обмениваться базой с компьютерами в той же сети (свой выбор у каждого компьютера)
     pub lan_sync: bool,
+    /// сети, в которых обмен разрешён; `None`: список ещё не заводили (версии до 0.2.3)
+    pub lan_networks: Option<Vec<keywarden_core::ipc::LanNetwork>>,
+    /// постоянный номер этого компьютера в маяках (16 hex): по нему соседи узнают новичка
+    pub lan_device: Option<String>,
+    /// номера компьютеров, которые уже участвовали в обмене
+    pub lan_known: Vec<String>,
     /// порядок типов в боковой панели окна
     pub kind_order: Vec<String>,
     /// SSH-агент отдаёт ключи из записей (выключен: ключей нет, окон нет)
@@ -91,6 +97,9 @@ impl Default for Config {
             sync_watch: true,
             sync_guard: true,
             lan_sync: false,
+            lan_networks: None,
+            lan_device: None,
+            lan_known: vec![],
             kind_order: vec![],
             ssh_agent: true,
             ssh_unlock_prompt: true,

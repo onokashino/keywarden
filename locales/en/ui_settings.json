@@ -445,8 +445,17 @@
   "Риски": "Risks",
   "Базу получит только компьютер, у которого уже есть эта база и её ключ. Остальным она не отдаётся": "Only a computer that already has this vault and its key receives it. Nobody else gets it",
   "По сети база идёт зашифрованной дважды: сама по себе и отдельным ключом на каждую передачу": "On the network the vault is encrypted twice: by itself and with a separate key for every transfer",
-  "Всё, что пришло, видно в журнале ниже и отменяется оттуда": "Everything received is listed in the journal below and can be reverted there",
   "Устройства не подтверждаются по одному: кто знает ключ и имеет копию базы, тот участвует в обмене": "Devices are not approved one by one: whoever knows the key and has a copy of the vault takes part",
   "В чужой сети (кафе, гостиница) видно, что здесь работает Keywarden. Там обмен лучше выключить": "On someone else's network (cafe, hotel) others can see Keywarden is running here. Turn the exchange off there",
-  "Нужен порт 47470 (UDP и TCP): разрешите его в брандмауэре только для своей сети": "Port 47470 (UDP and TCP) is required: allow it in the firewall for your own network only"
+  "Нужен порт 47470 (UDP и TCP): разрешите его в брандмауэре только для своей сети": "Port 47470 (UDP and TCP) is required: allow it in the firewall for your own network only",
+  "Сеть не в доверенных: {name}": "Network is not trusted: {name}",
+  "Сеть не определилась": "Network not detected",
+  "Обмен здесь выключен: маяки не уходят, порт закрыт": "The exchange is off here: no beacons are sent, the port is closed",
+  "Доверять этой сети": "Trust this network",
+  "На связи в {time}": "Seen at {time}",
+  "новый": "new",
+  "Доверенные сети": "Trusted networks",
+  "сейчас": "current",
+  "Обмен работает только в доверенных сетях. В остальных Keywarden молчит и держит порт закрытым": "The exchange runs only in trusted networks. Elsewhere Keywarden stays silent and keeps the port closed",
+  "О новом компьютере в обмене приходит уведомление. Всё, что пришло, видно в журнале ниже и отменяется оттуда": "A new computer in the exchange triggers a notification. Everything received is listed in the journal below and can be reverted there"
 }

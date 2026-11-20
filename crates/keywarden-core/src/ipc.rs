@@ -380,6 +380,13 @@ pub enum Request {
         #[serde(default)]
         password: Option<crate::secret::Secret>,
     },
+    /// Обмен в сети работает только в доверенных сетях. `network`: id сети из `RemoteInfo`,
+    /// `None` значит сеть, в которой компьютер сейчас. `on`: доверять или убрать из списка.
+    LanTrust {
+        #[serde(default)]
+        network: Option<String>,
+        on: bool,
+    },
 }
 
 /// Состояние синхронизации без папки.
@@ -394,6 +401,37 @@ pub struct RemoteInfo {
     /// компьютеры в сети с этой же базой: «192.168.1.20, видели 14:03»
     pub peers: Vec<String>,
     pub lan_state: Option<String>,
+    /// те же компьютеры по полям, для окна настроек
+    #[serde(default)]
+    pub lan_peers: Vec<LanPeer>,
+    /// умеет ли эта система различать сети (иначе обмен работает в любой)
+    #[serde(default)]
+    pub lan_networks_supported: bool,
+    /// сеть, в которой компьютер сейчас; `None`: сети нет или она не определилась
+    #[serde(default)]
+    pub lan_network: Option<LanNetwork>,
+    /// сети, в которых обмен разрешён
+    #[serde(default)]
+    pub lan_networks: Vec<LanNetwork>,
+}
+
+/// Сеть, как её узнаёт обмен: по аппаратному адресу шлюза.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct LanNetwork {
+    /// MAC шлюза
+    pub id: String,
+    /// «шлюз 192.168.1.1 (wlan0)»: что показать человеку
+    pub name: String,
+}
+
+/// Компьютер в сети с этой же базой.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct LanPeer {
+    pub ip: String,
+    /// когда последний раз слышали маяк, «14:03»
+    pub seen: String,
+    /// раньше этот компьютер в обмене не участвовал
+    pub new: bool,
 }
 
 /// Программа синхронизации, в чьей папке лежит база.
@@ -677,6 +715,7 @@ impl Request {
             Self::SyncRevert { .. } => "sync_revert",
             Self::MoveDatabase { .. } => "move_database",
             Self::WebdavSet { .. } => "webdav_set",
+            Self::LanTrust { .. } => "lan_trust",
         }
     }
 }

@@ -534,6 +534,7 @@ impl Daemon {
                 user,
                 password,
             } => return self.webdav_set(url, user, password).await,
+            Request::LanTrust { network, on } => self.lan_trust(network, on),
             Request::Duplicate { id } => Response::Created {
                 id: self.mutate(|db| model::duplicate_entry(db, &id)).await?,
             },
