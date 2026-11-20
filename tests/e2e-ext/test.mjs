@@ -340,6 +340,28 @@ if (SHOTS) {
   await popup.mouse.click(12, 580); // мимо меню: закрывается
   await popup.waitForTimeout(200);
   assert((await popup.locator('.pop').count()) === 0, 'меню «Действия» закрылось по щелчку мимо');
+  // единственная запись в списке стоит у верхнего края: меню должно открыться вниз и не обрезаться
+  const inside = async () => popup.evaluate(() => {
+    const p = document.querySelector('.pop').getBoundingClientRect();
+    const b = document.querySelector('.pop').closest('.scroll').getBoundingClientRect();
+    return p.top >= b.top && p.bottom <= b.bottom;
+  });
+  await popup.getByPlaceholder('Поиск в хранилище').fill('Cold');
+  await popup.waitForTimeout(700);
+  await popup.locator('.item').first().getByTitle('Действия').click();
+  await popup.waitForTimeout(300);
+  assert(await inside(), 'меню единственной записи целиком видно');
+  await popup.screenshot({ path: `${SHOTS}/ext-menu-single.png` });
+  await popup.mouse.click(12, 580);
+  await popup.getByPlaceholder('Поиск в хранилище').fill('');
+  await popup.waitForTimeout(700);
+  // последняя запись длинного списка: меню открывается вверх
+  await popup.locator('.item').last().scrollIntoViewIfNeeded();
+  await popup.locator('.item').last().getByTitle('Действия').click();
+  await popup.waitForTimeout(300);
+  assert(await inside(), 'меню последней записи целиком видно');
+  await popup.mouse.click(12, 300);
+  await popup.waitForTimeout(200);
   await popup.getByRole('button', { name: 'Новая' }).click();
   await popup.waitForTimeout(600);
   await popup.screenshot({ path: `${SHOTS}/ext-new.png` });

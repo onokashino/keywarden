@@ -37,6 +37,19 @@
   let offer = $state<{ site: string; username: string; state: string } | null>(null);
   let prefs = $state<Prefs>({ ...DEFAULT_PREFS });
   let menuFor = $state<string | null>(null);
+  // меню действий открывается туда, где есть место: вверх только когда снизу не помещается
+  let menuUp = $state(false);
+  function toggleMenu(e: MouseEvent, id: string) {
+    e.stopPropagation();
+    if (menuFor === id) return void (menuFor = null);
+    const btn = e.currentTarget as HTMLElement;
+    const r = btn.getBoundingClientRect();
+    const box = btn.closest('.scroll')?.getBoundingClientRect();
+    const below = (box?.bottom ?? window.innerHeight) - r.bottom;
+    const above = r.top - (box?.top ?? 0);
+    menuUp = below < 200 && above > below;
+    menuFor = id;
+  }
   let searchEl = $state<HTMLInputElement | null>(null);
   let brokenIcons = $state<Record<string, boolean>>({});
 
@@ -347,11 +360,11 @@
       <button class="outline small" disabled={busy} onclick={(e) => (e.stopPropagation(), run({ type: 'fill', id: l.id }))}>{t('fill')}</button>
     {/if}
     <span class="morewrap">
-      <button class="icon" title={t('actions')} aria-haspopup="menu" onclick={(e) => (e.stopPropagation(), (menuFor = menuFor === l.id ? null : l.id))}>
+      <button class="icon" title={t('actions')} aria-haspopup="menu" onclick={(e) => toggleMenu(e, l.id)}>
         {@render svg('more')}
       </button>
       {#if menuFor === l.id}
-        <div class="pop" in:scale={{ start: 0.94, duration: ms(130), easing: cubicOut }} role="menu" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && (menuFor = null)}>
+        <div class="pop" class:up={menuUp} in:scale={{ start: 0.94, duration: ms(130), easing: cubicOut }} role="menu" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && (menuFor = null)}>
           {#if onSite(l.id)}
             <button role="menuitem" onclick={() => run({ type: 'fill', id: l.id })}>{@render svg('fill')}{t('fill')}</button>
           {/if}
@@ -1060,7 +1073,7 @@
   .pop button:hover {
     background: #2a2a30;
   }
-  .item:last-child .pop {
+  .pop.up {
     top: auto;
     bottom: 30px;
   }
