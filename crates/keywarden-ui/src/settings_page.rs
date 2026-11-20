@@ -399,6 +399,7 @@ impl SettingsPage {
             .when(enabled && !active, |d| {
                 d.child(
                     h_flex()
+                        .items_start()
                         .gap_2()
                         .mx_4()
                         .mb_3()
@@ -410,7 +411,7 @@ impl SettingsPage {
                         .bg(theme.warning.opacity(0.08))
                         .text_sm()
                         .child(Icon::new(IconName::TriangleAlert).small().text_color(theme.warning_foreground))
-                        .child(div().flex_1().child(
+                        .child(div().flex_1().min_w_0().child(
                             tr!("Имя занято другой программой. Перенесите секреты кнопкой ниже, отключите у gnome-keyring компонент secrets и перезапустите keywardend"),
                         )),
                 )
@@ -3417,7 +3418,7 @@ impl Render for SettingsPage {
                                                             theme.success_foreground
                                                         }),
                                                     )
-                                                    .child(div().flex_1().child(m)),
+                                                    .child(div().flex_1().min_w_0().child(m)),
                                             )
                                         },
                                     )
