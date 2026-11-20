@@ -233,9 +233,14 @@ const facets = await send({ type: 'facets' });
 assert(facets.ok && facets.value.folders.some((f) => f.name === 'SSH'), `папки для фильтра: ${JSON.stringify(facets.value?.folders?.map((f) => f.name))}`);
 const cards = await send({ type: 'search', query: '', filter: { kind: 'card' } });
 assert(cards.ok && cards.value.length > 0 && cards.value.every((l) => l.kind === 'card'), `фильтр по типу: ${cards.value?.map((l) => l.title)}`);
-// ключи и серверы SSH и заметки в браузере не нужны: расширению они не отдаются вовсе
+// ключи и серверы SSH в браузере не нужны: расширению они не отдаются вовсе
 const everything = await send({ type: 'search', query: '' });
-assert(everything.ok && !everything.value.some((l) => ['ssh_key', 'ssh_host', 'note'].includes(l.kind)), `в списке расширения нет SSH и заметок: ${everything.value?.map((l) => l.kind)}`);
+assert(everything.ok && !everything.value.some((l) => ['ssh_key', 'ssh_host'].includes(l.kind)), `в списке расширения нет SSH: ${everything.value?.map((l) => l.kind)}`);
+// заметка открывается с текстом
+const noteHit = everything.value.find((l) => l.kind === 'note' && l.title === 'Recovery codes');
+assert(noteHit, `заметка в списке: ${everything.value.map((l) => l.title)}`);
+const noteItem = await send({ type: 'item', id: noteHit.id });
+assert(noteItem.ok && noteItem.value.notes === '1111-2222', `текст заметки в карточке: ${JSON.stringify(noteItem.value)}`);
 assert((await send({ type: 'search', query: 'github ssh' })).value.every((l) => l.kind !== 'ssh_key'), 'ключ SSH не находится и поиском');
 const it = await send({ type: 'item', id: found.value.find((l) => l.title === 'OTP site').id });
 assert(it.ok && it.value.has_password && /^\d{6}$/.test(it.value.totp[0]) && !JSON.stringify(it.value).includes('Otp-site-pass'), `карточка без пароля, с кодом: ${JSON.stringify(it.value)}`);
@@ -342,6 +347,10 @@ if (SHOTS) {
   await popup.locator('.item', { hasText: 'OTP site' }).first().click();
   await popup.waitForTimeout(800);
   await popup.screenshot({ path: `${SHOTS}/ext-item.png` });
+  await popup.getByTitle('Назад').click();
+  await popup.locator('.item', { hasText: 'Recovery codes' }).first().click();
+  await popup.waitForTimeout(800);
+  await popup.screenshot({ path: `${SHOTS}/ext-note.png` });
   await popup.getByTitle('Назад').click();
   await popup.getByRole('button', { name: 'Генератор' }).click();
   await popup.waitForTimeout(800);

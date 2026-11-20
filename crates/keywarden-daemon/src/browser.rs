@@ -246,12 +246,9 @@ impl Daemon {
                         Ok(
                             keywarden_core::search::search_filtered(db, &query, 200, &filter)
                                 .into_iter()
-                                // в браузере с ключами и серверами SSH и с заметками делать нечего
+                                // в браузере с ключами и серверами SSH делать нечего
                                 .filter(|s| {
-                                    !matches!(
-                                        s.kind,
-                                        EntryKind::SshKey | EntryKind::SshHost | EntryKind::Note
-                                    )
+                                    !matches!(s.kind, EntryKind::SshKey | EntryKind::SshHost)
                                 })
                                 .map(|s| Login {
                                     id: s.id,
@@ -282,6 +279,11 @@ impl Daemon {
                             },
                             has_password: !wallet
                                 && e.get(fields::PASSWORD).is_some_and(|p| !p.is_empty()),
+                            notes: if wallet {
+                                String::new()
+                            } else {
+                                e.get(fields::NOTES).unwrap_or_default().to_string()
+                            },
                             totp: Totp::from_entry(&e)
                                 .ok()
                                 .map(|t| t.now())
@@ -298,7 +300,9 @@ impl Daemon {
                     let wallet = self.read(|db| {
                         Ok(model::kind_of(&entry(db, &id)?) == EntryKind::CryptoWallet)
                     })?;
-                    if wallet || !matches!(field.as_str(), "username" | "password" | "totp") {
+                    if wallet
+                        || !matches!(field.as_str(), "username" | "password" | "totp" | "notes")
+                    {
                         return Err(Response::error(
                             ErrorCode::Invalid,
                             tr!("это поле не копируется"),

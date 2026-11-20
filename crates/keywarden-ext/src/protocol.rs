@@ -143,6 +143,9 @@ pub struct ItemView {
     /// публичные адреса кошелька: (подпись, адрес); секреты кошелька расширению не отдаются
     #[serde(default)]
     pub addresses: Vec<(String, String)>,
+    /// текст заметок записи (у кошелька пусто: там бывают секреты)
+    #[serde(default)]
+    pub notes: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -42,6 +42,7 @@ export type Item = {
   kind?: string;
   /// публичные адреса кошелька: [подпись, адрес]
   addresses?: [string, string][];
+  notes?: string;
 };
 
 export type Status = { connected: boolean; associated: boolean; locked: boolean; error?: string };
@@ -71,7 +72,7 @@ export type Msg =
   | { type: 'lock' }
   | { type: 'create'; title: string; username: string; password: string; url: string }
   | { type: 'item'; id: string }
-  | { type: 'copy'; id: string; field: 'username' | 'password' | 'totp' }
+  | { type: 'copy'; id: string; field: 'username' | 'password' | 'totp' | 'notes' }
   | { type: 'openUnlock' }
   | { type: 'passkeyCreate'; options: unknown }
   | { type: 'passkeyList'; options: unknown }

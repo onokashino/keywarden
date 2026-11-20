@@ -95,6 +95,7 @@
     ['login', t('kind_login')],
     ['card', t('kind_card')],
     ['identity', t('kind_identity')],
+    ['note', t('kind_note')],
     ['passkey', t('kind_passkey')],
     ['crypto_wallet', t('kind_crypto_wallet')],
   ];
@@ -164,7 +165,7 @@
 
   // какая кнопка только что скопировала: иконка на секунду становится галочкой
   let copied = $state('');
-  async function copy(id: string, field: 'username' | 'password' | 'totp') {
+  async function copy(id: string, field: 'username' | 'password' | 'totp' | 'notes') {
     menuFor = null;
     try {
       await ask({ type: 'copy', id, field });
@@ -397,6 +398,8 @@
           <small>{item.group || t('vault')}</small>
         </div>
       </div>
+      <!-- у заметки без логина раздел входа пустой: не показываем его вовсе -->
+      {#if !(item.kind === 'note' && !item.username && !item.has_password && !item.totp)}
       <h2>{t('login_details')}</h2>
       <section class="card">
         {#if item.username}
@@ -423,10 +426,20 @@
         {/if}
         {#if item.kind === 'card' || item.kind === 'identity'}
           <p class="hint pad">{t('fill_on_site_hint')}</p>
-        {:else if !item.username && !item.has_password && !item.totp}
+        {:else if !item.username && !item.has_password && !item.totp && !item.notes}
           <p class="hint pad">{t('no_login_password')}</p>
         {/if}
       </section>
+      {/if}
+      {#if item.notes}
+        <h2>{t('notes')}</h2>
+        <section class="card">
+          <div class="field notes">
+            <span class="val note">{item.notes}</span>
+            <button class="icon" title={t('copy')} onclick={() => copy(item!.id, 'notes')}>{@render copyIcon(`${item!.id}:notes`)}</button>
+          </div>
+        </section>
+      {/if}
       {#if item.addresses?.length}
         <h2>{t('receive_addresses')}</h2>
         <section class="card">
@@ -1589,4 +1602,7 @@
     background: #222227;
     color: #ececef;
   }
+  /* заметка: переносы строк как в записи, длинная прокручивается */
+  .field.notes { align-items: flex-start; }
+  .val.note { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; font-size: 13px; line-height: 1.5; }
 </style>
