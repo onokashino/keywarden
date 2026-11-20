@@ -615,5 +615,14 @@
   },
   "copied_notes": {
     "message": "Notes copied"
+  },
+  "delete_entry": {
+    "message": "Delete"
+  },
+  "delete_confirm": {
+    "message": "Yes, move to the bin"
+  },
+  "deleted_to_bin": {
+    "message": "Moved to the recycle bin. Restore it in the app"
   }
 }

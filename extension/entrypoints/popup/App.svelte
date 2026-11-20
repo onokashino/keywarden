@@ -47,7 +47,8 @@
     const box = btn.closest('.scroll')?.getBoundingClientRect();
     const below = (box?.bottom ?? window.innerHeight) - r.bottom;
     const above = r.top - (box?.top ?? 0);
-    menuUp = below < 200 && above > below;
+    menuUp = below < 240 && above > below;
+    confirmDelete = null;
     menuFor = id;
   }
   let searchEl = $state<HTMLInputElement | null>(null);
@@ -198,6 +199,15 @@
     say(t('address_copied'));
   }
 
+  // удаление из меню записи: первое нажатие только переспрашивает
+  let confirmDelete = $state<string | null>(null);
+  async function remove(id: string) {
+    if (confirmDelete !== id) return void (confirmDelete = id);
+    confirmDelete = null;
+    await run({ type: 'delete', id }, t('deleted_to_bin'));
+    await refresh();
+  }
+
   async function run(msg: Msg, done?: string) {
     busy = true;
     menuFor = null;
@@ -314,6 +324,7 @@
     {:else if name === 'filter'}<path d="M3 5h18M6 12h12M10 19h4" />
     {:else if name === 'plus'}<path d="M12 5v14M5 12h14" />
     {:else if name === 'lock'}<rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    {:else if name === 'trash'}<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
     {:else if name === 'more'}<circle cx="5" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="19" cy="12" r="1.2" />
     {:else if name === 'fill'}<path d="M4 12h12M12 6l6 6-6 6M20 4v16" />
     {:else if name === 'regen'}<path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" />
@@ -376,6 +387,10 @@
           {/if}
           {#if l.has_otp}<button role="menuitem" onclick={() => copy(l.id, 'totp')}>{@render svg('timer')}{t('copy_totp')}</button>{/if}
           {#if l.url && /^https?:/.test(l.url)}<button role="menuitem" onclick={() => openSite(l.url!)}>{@render svg('open')}{t('open_site')}</button>{/if}
+          {#if l.kind !== 'crypto_wallet'}
+            <!-- два нажатия: первое спрашивает, второе убирает запись в корзину -->
+            <button role="menuitem" class="danger" onclick={() => remove(l.id)}>{@render svg('trash')}{t(confirmDelete === l.id ? 'delete_confirm' : 'delete_entry')}</button>
+          {/if}
         </div>
       {/if}
     </span>
@@ -1069,6 +1084,10 @@
     color: #8e8e98;
     width: 15px;
     height: 15px;
+  }
+  .pop button.danger,
+  .pop button.danger svg {
+    color: #f0707a;
   }
   .pop button:hover {
     background: #2a2a30;

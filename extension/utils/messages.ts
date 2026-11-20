@@ -70,6 +70,7 @@ export type Msg =
   | { type: 'search'; query: string; filter?: Filter }
   | { type: 'facets' }
   | { type: 'lock' }
+  | { type: 'delete'; id: string }
   | { type: 'create'; title: string; username: string; password: string; url: string }
   | { type: 'item'; id: string }
   | { type: 'copy'; id: string; field: 'username' | 'password' | 'totp' | 'notes' }

@@ -228,6 +228,10 @@ export default defineBackground(() => {
       case 'search':
         if (!fromExtension(sender)) throw new DaemonError('denied', t('err_extension_only'));
         return (await call({ action: 'search', query: msg.query, filter: msg.filter ?? null })).logins as Login[];
+      case 'delete':
+        if (!fromExtension(sender)) throw new DaemonError('denied', t('err_extension_only'));
+        await call({ action: 'delete', id: msg.id });
+        return null;
       case 'lock':
         if (!fromExtension(sender)) throw new DaemonError('denied', t('err_extension_only'));
         await call({ action: 'lock' });

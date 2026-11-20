@@ -219,6 +219,20 @@ impl Daemon {
                         entropy: g.entropy_bits,
                     }
                 }
+                BrowserRequest::Delete { id } => {
+                    let wallet = self.read(|db| {
+                        Ok(model::kind_of(&entry(db, &id)?) == EntryKind::CryptoWallet)
+                    })?;
+                    if wallet {
+                        return Err(Response::error(
+                            ErrorCode::Invalid,
+                            tr!("кошелёк удаляется только в приложении"),
+                        ));
+                    }
+                    // в корзину, а не насовсем: вернуть можно в приложении
+                    self.mutate(|db| model::delete_entry(db, &id)).await?;
+                    BrowserReply::Done
+                }
                 BrowserRequest::Lock => {
                     self.lock("из расширения браузера").await;
                     BrowserReply::Done
@@ -1191,6 +1205,46 @@ mod tests {
             panic!()
         };
         assert_eq!(logins[0].group, BROWSER_GROUP);
+    }
+
+    #[tokio::test]
+    async fn delete_from_the_extension_goes_to_the_recycle_bin() {
+        let dir = tempfile::tempdir().unwrap();
+        let d = daemon(dir.path(), 11).await;
+        let mut ext = Ext::new();
+        associate(&d, &mut ext).await;
+        let find = || async {
+            match ext
+                .call(
+                    &d,
+                    BrowserRequest::Search {
+                        query: "GitHub".into(),
+                        filter: None,
+                    },
+                )
+                .await
+            {
+                BrowserReply::Logins { logins } => logins,
+                other => panic!("{other:?}"),
+            }
+        };
+        let id = find().await[0].id.clone();
+        assert!(matches!(
+            ext.call(&d, BrowserRequest::Delete { id: id.clone() })
+                .await,
+            BrowserReply::Done
+        ));
+        assert!(
+            find().await.is_empty(),
+            "в списке расширения записи больше нет"
+        );
+        let binned = d
+            .read(|db| {
+                let e = entry(db, &id)?;
+                Ok(model::in_recycle_bin(db, e.parent().id()))
+            })
+            .unwrap();
+        assert!(binned, "запись лежит в корзине, а не стёрта");
     }
 
     #[test]

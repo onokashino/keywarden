@@ -615,5 +615,14 @@
   },
   "copied_notes": {
     "message": "Заметка скопирована"
+  },
+  "delete_entry": {
+    "message": "Удалить"
+  },
+  "delete_confirm": {
+    "message": "Да, удалить в корзину"
+  },
+  "deleted_to_bin": {
+    "message": "Запись в корзине. Вернуть можно в приложении"
   }
 }

@@ -355,6 +355,20 @@ if (SHOTS) {
   await popup.mouse.click(12, 580);
   await popup.getByPlaceholder('Поиск в хранилище').fill('');
   await popup.waitForTimeout(700);
+  // удаление: первое нажатие переспрашивает, второе убирает запись в корзину
+  const before = (await send({ type: 'search', query: '' })).value.length;
+  await popup.getByPlaceholder('Поиск в хранилище').fill('Throwaway');
+  await popup.waitForTimeout(700);
+  await popup.locator('.item').first().getByTitle('Действия').click();
+  await popup.getByRole('menuitem', { name: 'Удалить' }).click();
+  await popup.waitForTimeout(200);
+  assert((await send({ type: 'search', query: '' })).value.length === before, 'после первого нажатия запись на месте');
+  await popup.screenshot({ path: `${SHOTS}/ext-delete.png` });
+  await popup.getByRole('menuitem', { name: /Да, удалить/ }).click();
+  await popup.waitForTimeout(1500);
+  assert((await send({ type: 'search', query: '' })).value.length === before - 1, 'после второго нажатия запись ушла из списка');
+  await popup.getByPlaceholder('Поиск в хранилище').fill('');
+  await popup.waitForTimeout(700);
   // последняя запись длинного списка: меню открывается вверх
   await popup.locator('.item').last().scrollIntoViewIfNeeded();
   await popup.locator('.item').last().getByTitle('Действия').click();

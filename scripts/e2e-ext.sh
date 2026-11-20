@@ -19,6 +19,7 @@ $B/kw add --title "OTP site" -u otpuser --url http://127.0.0.2:8765 --field "Pas
 $B/kw add --type wallet --title "Cold wallet" --field "Seed=abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --field "Addresses=основной: bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu" >/dev/null
 $B/kw add --type identity --title "Me" --field "First Name=Ivan" --field "Last Name=Petrov" --field "Email=ivan@example.com" --field "City=Kazan" --field "Country=Russia" >/dev/null
 $B/kw add --type note --title "Recovery codes" --notes "1111-2222" >/dev/null
+$B/kw add --title "Throwaway" -u nobody --url https://throwaway.example >/dev/null
 cd tests/e2e-ext && npm install --silent --no-audit --no-fund >/dev/null && node test.mjs ../../extension/.output/chrome-mv3 $B/keywarden-host
 cd ../..
 echo "--- KeePassXC видит ключ доступа в своём формате:"

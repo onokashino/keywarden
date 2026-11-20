@@ -194,5 +194,6 @@
   "Сайт {site} просит личные данные": "{site} asks for personal details",
   "карты и личные данные заполняются только на страницах https": "cards and personal details are filled on https pages only",
   "сайт ещё не разрешён для этой записи": "this site is not allowed for the entry yet",
-  "эта запись не карта и не личные данные": "this entry is neither a card nor personal details"
+  "эта запись не карта и не личные данные": "this entry is neither a card nor personal details",
+  "кошелёк удаляется только в приложении": "a wallet can be deleted only in the app"
 }
