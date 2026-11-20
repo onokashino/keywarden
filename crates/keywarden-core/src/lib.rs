@@ -3,6 +3,7 @@
 pub mod autostart;
 pub mod autotype;
 pub mod bitwarden;
+pub mod card;
 pub mod generator;
 pub mod git_signing;
 pub mod health;

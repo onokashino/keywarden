@@ -166,9 +166,6 @@
   "passkey": {
     "message": "Ключ доступа"
   },
-  "toast_passkey_locked": {
-    "message": "База Keywarden заблокирована: использую обычный вход браузера"
-  },
   "kind_login": {
     "message": "Логины"
   },
@@ -531,5 +528,83 @@
   },
   "shortcuts": {
     "message": "Клавиши"
+  },
+  "ctx_fill": {
+    "message": "Заполнить логин и пароль"
+  },
+  "ctx_copy_username": {
+    "message": "Скопировать логин"
+  },
+  "ctx_copy_password": {
+    "message": "Скопировать пароль"
+  },
+  "ctx_copy_totp": {
+    "message": "Скопировать код 2FA"
+  },
+  "ctx_card": {
+    "message": "Заполнить карту"
+  },
+  "ctx_identity": {
+    "message": "Заполнить личные данные"
+  },
+  "ctx_generate": {
+    "message": "Сгенерировать пароль в это поле"
+  },
+  "err_page_only": {
+    "message": "Только со страницы сайта"
+  },
+  "toast_copied": {
+    "message": "Скопировано. Буфер очистится сам"
+  },
+  "toast_otp_copied": {
+    "message": "Код 2FA в буфере обмена"
+  },
+  "toast_no_login_field": {
+    "message": "На странице нет поля для входа"
+  },
+  "toast_no_card_fields": {
+    "message": "На странице не нашлось полей карты"
+  },
+  "toast_no_identity_fields": {
+    "message": "На странице не нашлось полей для личных данных"
+  },
+  "menu_cards": {
+    "message": "Карты"
+  },
+  "menu_identities": {
+    "message": "Личные данные"
+  },
+  "menu_no_cards": {
+    "message": "В Keywarden нет карт. Добавьте запись типа «Карта»"
+  },
+  "menu_no_identities": {
+    "message": "В Keywarden нет личных данных. Добавьте запись типа «Личная информация»"
+  },
+  "pref_otp_clip": {
+    "message": "Код 2FA в буфер после входа"
+  },
+  "pref_otp_clip_hint": {
+    "message": "После заполнения логина и пароля код этой записи уже в буфере обмена"
+  },
+  "pref_fill_load": {
+    "message": "Заполнять при открытии страницы"
+  },
+  "pref_fill_load_hint": {
+    "message": "Без щелчка: только https, только сайты, которым вы уже разрешили запись, и только если запись одна. Взломанный сайт сможет прочитать пароль без вашего действия"
+  },
+  "passkey_locked_title": {
+    "message": "Сайт просит ключ доступа"
+  },
+  "passkey_unlock_sub": {
+    "message": "Заблокировано. После разблокировки вход продолжится"
+  },
+  "passkey_choose_title": {
+    "message": "Войти с ключом доступа"
+  },
+  "passkey_use_device": {
+    "message": "Устройство или аппаратный ключ"
+  },
+  "passkey_use_device_sub": {
+    "message": "Обычный вход браузера, без Keywarden"
   }
 }

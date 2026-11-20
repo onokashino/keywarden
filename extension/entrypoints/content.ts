@@ -1,6 +1,6 @@
 // Content script: только работа с DOM. Какие поля логин/пароль/2FA, решает Rust (WASM в
 // background), выдавать ли пароль этому сайту, решает демон. Поля описываются без значений.
-import type { ContentMsg, FieldInfo, Login, LoginForm, Msg, Reply } from '../utils/messages';
+import type { Classified, ContentMsg, DataField, FieldInfo, Login, LoginForm, Msg, Reply } from '../utils/messages';
 import { DEFAULT_PREFS, loadPrefs } from '../utils/prefs';
 import { t } from '../utils/i18n';
 
@@ -21,6 +21,9 @@ const CSS_BASE = `:host{all:initial}
   .anim{animation:kw-in .16s cubic-bezier(.22,1,.36,1)}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}`;
 
+// тот же знак, что public/icon/logo.svg: в теневом дереве страницы файл расширения не открыть без web_accessible_resources
+const LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a892ff"/><stop offset="1" stop-color="#6d4aff"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#g)"/><path d="M32 13l15 5.5v11c0 10-6.5 16.5-15 19.5-8.5-3-15-9.5-15-19.5v-11z" fill="none" stroke="#fff" stroke-width="3.6" stroke-linejoin="round"/><circle cx="32" cy="29" r="4.4" fill="#fff"/><path d="M30 31.5h4l1.2 8.5h-6.4z" fill="#fff"/></svg>';
+
 async function ask<T>(msg: Msg): Promise<T> {
   const r = (await browser.runtime.sendMessage(msg)) as Reply<T>;
   if (!r.ok) throw Object.assign(new Error(r.error), { code: r.code });
@@ -34,7 +37,10 @@ export default defineContentScript({
   runAt: 'document_idle',
   main(ctx) {
     let inputs: HTMLInputElement[] = [];
+    // поля ввода и за ними списки <select>: индексы полей ввода те же, что в inputs
+    let els: (HTMLInputElement | HTMLSelectElement)[] = [];
     let forms: LoginForm[] = [];
+    let data: DataField[] = [];
     const decorated = new WeakSet<HTMLInputElement>();
     let prefs = DEFAULT_PREFS;
     let otpDone = false;
@@ -48,7 +54,7 @@ export default defineContentScript({
       return (el as any).checkVisibility ? (el as any).checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) : true;
     }
 
-    function labelOf(el: HTMLInputElement): string {
+    function labelOf(el: HTMLElement): string {
       const byFor = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent : '';
       return [byFor, el.closest('label')?.textContent, el.getAttribute('aria-label')].filter(Boolean).join(' ').slice(0, 80);
     }
@@ -57,24 +63,36 @@ export default defineContentScript({
       inputs = [...document.querySelectorAll<HTMLInputElement>('input')].filter((i) =>
         ['text', 'email', 'tel', 'number', 'password', ''].includes(i.type),
       );
+      els = [...inputs, ...document.querySelectorAll<HTMLSelectElement>('select')];
       const formList = [...document.forms];
-      const fields: FieldInfo[] = inputs.map((el, index) => ({
+      const fields: FieldInfo[] = els.map((el, index) => ({
         index,
         form: el.form ? formList.indexOf(el.form) : -1,
-        type: el.type,
+        type: el instanceof HTMLSelectElement ? 'select' : el.type,
         name: el.name,
         id: el.id,
         autocomplete: el.autocomplete ?? '',
-        placeholder: el.placeholder ?? '',
+        placeholder: el instanceof HTMLInputElement ? (el.placeholder ?? '') : '',
         label: labelOf(el),
         visible: visible(el),
-        maxlength: el.maxLength > 0 ? el.maxLength : null,
+        maxlength: el instanceof HTMLInputElement && el.maxLength > 0 ? el.maxLength : null,
       }));
       if (!fields.some((f) => f.visible)) return;
-      forms = await ask<LoginForm[]>({ type: 'classify', fields }).catch(() => []);
+      const c = await ask<Classified>({ type: 'classify', fields }).catch(() => ({ forms: [], data: [] }) as Classified);
+      forms = c.forms;
+      data = c.data;
       for (const f of forms) {
-        for (const i of [f.username, f.password, ...f.new_passwords, f.otp]) if (i !== null) decorate(inputs[i], f);
+        for (const i of [f.username, f.password, ...f.new_passwords, f.otp]) {
+          const el = i !== null ? inputs[i] : null;
+          if (el) decorate(el, (auto) => openMenu(el, f, auto));
+        }
       }
+      // карты и личные данные: значок только в уверенно распознанных полях ввода (не в списках)
+      for (const d of data) {
+        const el = els[d.index];
+        if (d.auto && el instanceof HTMLInputElement) decorate(el, (auto) => openDataMenu(el, d, auto));
+      }
+      fillOnLoad();
       autoOtp();
     }
 
@@ -93,23 +111,22 @@ export default defineContentScript({
     }
 
     // --- значок в поле ---
-    function decorate(el: HTMLInputElement, form: LoginForm) {
+    function decorate(el: HTMLInputElement, open: (auto: boolean) => void) {
       if (decorated.has(el)) return;
       decorated.add(el);
       el.addEventListener('focus', () => {
-        if (!filling && prefs.menuOnFocus && menu?.anchor !== el) openMenu(el, form, true);
+        if (!filling && prefs.menuOnFocus && menu?.anchor !== el) open(true);
       });
       el.addEventListener('click', (e) => {
-        if (e.isTrusted && !filling && prefs.menuOnFocus && !menu) openMenu(el, form, true);
+        if (e.isTrusted && !filling && prefs.menuOnFocus && !menu) open(true);
       });
       if (!prefs.icons) return;
       const host = document.createElement('keywarden-icon');
       const root = host.attachShadow({ mode: 'closed' });
       root.innerHTML = `<style>
-        button{all:unset;cursor:pointer;width:20px;height:20px;border-radius:7px;display:flex;align-items:center;justify-content:center;
-          background:#222227;color:#a18bff;font:700 10px Inter,system-ui,sans-serif;box-shadow:0 0 0 1px #2c2d33,0 1px 2px #0003;
-          transition:background .12s,transform .12s}
-        button:hover{background:#2c2d33;color:#c2b4ff;transform:scale(1.06)}</style><button title="Keywarden" aria-label="Keywarden">K</button>`;
+        button{all:unset;cursor:pointer;width:20px;height:20px;border-radius:6px;display:block;opacity:.85;transition:opacity .12s,transform .12s}
+        button:hover{opacity:1;transform:scale(1.08)}
+        svg{display:block;width:20px;height:20px}</style><button title="Keywarden" aria-label="Keywarden">${LOGO}</button>`;
       Object.assign(host.style, { position: 'absolute', zIndex: '2147483646' });
       document.documentElement.appendChild(host);
       const place = () => {
@@ -126,11 +143,50 @@ export default defineContentScript({
         e.preventDefault();
         if (menu?.anchor === el) return closeMenu();
         el.focus();
-        openMenu(el, form, false);
+        open(false);
       });
     }
 
     let filling = false;
+    // список: вариант, у которого значение или подпись совпали с одним из написаний
+    function setSelect(el: HTMLSelectElement, wants: (string | undefined)[]) {
+      const norm = (x: string) => x.trim().toLowerCase();
+      const w = wants.filter((x): x is string => !!x).map(norm);
+      const opt = [...el.options].find((o) => w.includes(norm(o.value)) || w.includes(norm(o.text)));
+      if (!opt) return;
+      el.value = opt.value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /// Заполнить поля карты или личных данных той же формы. Срок карты пишется так, как ждёт поле.
+    function fillData(d0: DataField, v: Record<string, string>) {
+      const mm = v['cc-exp-month'];
+      const yyyy = v['cc-exp-year'];
+      const yy = yyyy?.slice(-2);
+      const alias: Record<string, string> = { 'address-line1': 'street-address', 'country-name': 'country' };
+      for (const d of data.filter((x) => x.group === d0.group && x.form === d0.form)) {
+        const el = els[d.index];
+        if (!el || !visible(el)) continue;
+        const role = alias[d.role] ?? d.role;
+        if (el instanceof HTMLSelectElement) {
+          if (role === 'cc-exp-month') setSelect(el, [mm, mm && String(Number(mm))]);
+          else if (role === 'cc-exp-year') setSelect(el, [yyyy, yy]);
+          else if (role === 'cc-exp') setSelect(el, mm ? [`${mm}/${yy}`, `${mm}/${yyyy}`] : []);
+          else setSelect(el, [v[role]]);
+          continue;
+        }
+        let val: string | undefined = v[role];
+        const ph = el.placeholder.toLowerCase();
+        if (role === 'cc-exp' && mm && yyyy) {
+          const year = /yyyy|гггг/.test(ph) ? yyyy : yy;
+          val = el.maxLength === 4 ? `${mm}${yy}` : `${mm}${ph.includes(' / ') ? ' / ' : '/'}${year}`;
+        }
+        if (role === 'cc-exp-year' && yyyy) val = el.maxLength === 2 || /^(yy|гг)$/.test(ph.trim()) ? yy : yyyy;
+        if (val) setValue(el, val);
+      }
+    }
+
     function setValue(el: HTMLInputElement, value: string) {
       // нативный setter: React и другие фреймворки иначе не заметят значение
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
@@ -165,10 +221,93 @@ export default defineContentScript({
       try {
         const c = await ask<{ username: string; password: string }>({ type: 'fill', id: l.id });
         fill(form, c.username, c.password);
+        // код 2FA этой записи сразу в буфер: на следующем шаге его остаётся вставить
+        if (l.has_otp && prefs.otpClipboard) {
+          ask<boolean>({ type: 'copyOtp', id: l.id })
+            .then((ok) => ok && toast(t('toast_otp_copied')))
+            .catch(() => {});
+        }
       } catch (e) {
         failed(e);
       }
     }
+
+    // заполнение при открытии страницы: только защищённая страница, пустая форма, ровно одна запись
+    // сайта и сайт уже разрешён для неё в Keywarden (иначе демон откажет без вопроса)
+    let loadFilled = false;
+    async function fillOnLoad() {
+      if (loadFilled || !prefs.fillOnLoad) return;
+      const f = forms.find((x) => x.password !== null);
+      const secure = location.protocol === 'https:' || /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/.test(location.hostname);
+      if (!f || !secure) return;
+      loadFilled = true;
+      const pw = inputs[f.password!];
+      if (pw.value || (f.username !== null && inputs[f.username].value)) return;
+      const logins = await siteLogins().catch(() => [] as Login[]);
+      if (logins.length !== 1) return;
+      const c = await ask<{ username: string; password: string }>({ type: 'fill', id: logins[0].id, quiet: true }).catch(() => null);
+      if (c && !pw.value) fill(f, c.username, c.password);
+    }
+
+    // поле, по которому щёлкнули правой кнопкой: меню браузера сообщает только вкладку
+    let ctxTarget: EventTarget | null = null;
+    document.addEventListener('contextmenu', (e) => (ctxTarget = e.target), true);
+
+    /// Поле не распознано как вход: берём его само и ближайшее парное (логин перед паролем или пароль после логина).
+    function adhocForm(el: HTMLInputElement): LoginForm | undefined {
+      const idx = inputs.indexOf(el);
+      if (idx < 0) return undefined;
+      const near = (from: number, step: number, password: boolean) => {
+        for (let i = from; i >= 0 && i < inputs.length; i += step) {
+          if ((inputs[i].type === 'password') === password && visible(inputs[i])) return i;
+        }
+        return null;
+      };
+      return el.type === 'password'
+        ? { form: -2, username: near(idx - 1, -1, false), password: idx, new_passwords: [], otp: null }
+        : { form: -2, username: idx, password: near(idx + 1, 1, true), new_passwords: [], otp: null };
+    }
+
+    async function onContext(msg: Extract<ContentMsg, { type: 'ctx' }>) {
+      await scan();
+      const el = ctxTarget instanceof HTMLInputElement && inputs.includes(ctxTarget) ? ctxTarget : null;
+      if (msg.action === 'fill') {
+        let f = el ? (formFor(el) ?? adhocForm(el)) : formFor();
+        // явная просьба «заполнить вход»: поле «новый пароль» тут считаем обычным
+        if (el && f?.new_passwords.includes(inputs.indexOf(el))) f = adhocForm(el);
+        const anchor = el ?? (f && inputs[f.password ?? f.username ?? f.otp ?? -1]);
+        if (!f || !anchor) return toast(t('toast_no_login_field'));
+        return quickFill(anchor, f);
+      }
+      if (msg.action === 'generate') {
+        const own = el && formFor(el);
+        const targets = el
+          ? own?.new_passwords.includes(inputs.indexOf(el))
+            ? own.new_passwords.map((i) => inputs[i])
+            : [el]
+          : (forms.find((x) => x.new_passwords.length)?.new_passwords.map((i) => inputs[i]) ?? []);
+        if (!targets.length) return toast(t('toast_no_new_password_field'));
+        targets.forEach((x) => setValue(x, msg.password));
+        generated = msg.password;
+        return toast(t('toast_password_inserted'));
+      }
+      const group = msg.action;
+      const d = data.find((x) => x.group === group && els[x.index] === ctxTarget) ?? data.find((x) => x.group === group && visible(els[x.index]));
+      if (!d) return toast(t(group === 'card' ? 'toast_no_card_fields' : 'toast_no_identity_fields'));
+      els[d.index].focus();
+      openDataMenu(els[d.index], d, false);
+    }
+
+    // сгенерированный пароль, вставленный в поле: если страница уйдёт без замеченной отправки формы,
+    // всё равно предложим его сохранить
+    let generated = '';
+    window.addEventListener('pagehide', () => {
+      const el = generated ? inputs.find((i) => i.value === generated) : undefined;
+      const f = el && (formFor(el) ?? adhocForm(el));
+      if (!el || !f) return;
+      const username = f.username !== null ? inputs[f.username].value : '';
+      ask({ type: 'submitted', username, password: generated }).catch(() => {});
+    });
 
     // --- меню под полем: аккаунты сайта, коды 2FA, новый пароль ---
     type MenuItem = { label: string; sub?: string; avatar?: string; mono?: boolean; pick: () => void };
@@ -188,7 +327,8 @@ export default defineContentScript({
       root.innerHTML = `<style>${CSS_BASE}
         .m{padding:6px;max-height:320px;overflow:auto;border-radius:14px}
         .t{display:flex;align-items:center;gap:7px;font:600 11px Inter,system-ui,sans-serif;color:#8e8e98;padding:4px 8px 7px}
-        .t i{font-style:normal;width:16px;height:16px;border-radius:5px;background:#222227;color:#a18bff;display:grid;place-items:center;font-size:9px;font-weight:700}
+        .t i{flex:none;width:16px;height:16px}
+        .t i svg{display:block;width:16px;height:16px}
         .it{display:flex;align-items:center;gap:10px;width:100%;padding:7px 8px;border:0;border-radius:9px;background:transparent;text-align:left}
         .it{transition:background .1s}
         .it.sel,.it:hover{background:#26272d}
@@ -201,7 +341,7 @@ export default defineContentScript({
         .tx small{color:#8e8e98;font-size:11px;font-weight:400}
         .mono b{font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:.5px}
         .e{padding:6px 8px 8px;color:#8e8e98;font-size:12px}</style>
-        <div class="m card anim"><div class="t"><i>K</i><span></span></div><div class="l"></div></div>`;
+        <div class="m card anim"><div class="t"><i>${LOGO}</i><span></span></div><div class="l"></div></div>`;
       root.querySelector('.t span')!.textContent = title;
       const list = root.querySelector('.l')!;
       const buttons: HTMLButtonElement[] = [];
@@ -341,6 +481,7 @@ export default defineContentScript({
               mono: true,
               pick: () => {
                 for (const i of form.new_passwords) setValue(inputs[i], pw);
+                generated = pw;
                 toast(t('toast_password_inserted'));
               },
             },
@@ -370,20 +511,42 @@ export default defineContentScript({
           t('menu_no_logins'),
         );
       } catch (e) {
-        const code = (e as any).code;
-        if (code === 'locked') {
-          showMenu(el, `Keywarden · ${host}`, [
-            {
-              label: t('unlock_keywarden'),
-              sub: t('vault_locked'),
-              avatar: '🔒',
-              pick: () => {
-                cache = null;
-                ask({ type: 'openUnlock' }).catch(() => {});
-              },
-            },
-          ]);
-        } else if (!auto) failed(e);
+        if ((e as any).code === 'locked') lockedMenu(el);
+        else if (!auto) failed(e);
+      }
+    }
+
+    function lockedMenu(el: HTMLElement) {
+      showMenu(el, `Keywarden · ${location.hostname}`, [
+        {
+          label: t('unlock_keywarden'),
+          sub: t('vault_locked'),
+          avatar: '🔒',
+          pick: () => {
+            cache = null;
+            ask({ type: 'openUnlock' }).catch(() => {});
+          },
+        },
+      ]);
+    }
+
+    /// Меню карт или личных данных под полем. По явной просьбе единственная запись заполняется сразу.
+    async function openDataMenu(el: HTMLElement, d: DataField, auto: boolean) {
+      const card = d.group === 'card';
+      const use = (l: Login) => ask<Record<string, string>>({ type: 'dataFill', id: l.id }).then((v) => fillData(d, v), failed);
+      try {
+        const list = await ask<Login[]>({ type: 'dataList', kind: d.group });
+        if (auto && (document.activeElement !== el || !list.length)) return;
+        if (!auto && list.length === 1) return void use(list[0]);
+        showMenu(
+          el,
+          t(card ? 'menu_cards' : 'menu_identities'),
+          list.map((l) => ({ label: l.title, sub: l.username, pick: () => use(l) })),
+          t(card ? 'menu_no_cards' : 'menu_no_identities'),
+        );
+      } catch (e) {
+        if ((e as any).code === 'locked') lockedMenu(el);
+        else if (!auto) failed(e);
       }
     }
 
@@ -401,26 +564,48 @@ export default defineContentScript({
       openMenu(el, form, false);
     }
 
-    // --- выбор ключа доступа (тот же вид меню) ---
-    function choose(anchor: HTMLElement, logins: Login[], title: string): Promise<Login | null> {
+    // --- выбор из списка по центру страницы (ключи доступа, аккаунт для копирования) ---
+    type Row<T> = { label: string; sub?: string; avatar?: string; value: T };
+    function chooseRow<T>(anchor: HTMLElement, title: string, rows: Row<T>[]): Promise<T | null> {
       return new Promise((resolve) => {
-        if (logins.length === 0) {
-          toast(t('toast_no_entries'));
-          return resolve(null);
-        }
         let done = false;
         showMenu(
           anchor,
           title,
-          logins.map((l) => ({ label: l.title, sub: l.username || l.group, pick: () => ((done = true), resolve(l)) })),
+          rows.map((r) => ({ label: r.label, sub: r.sub, avatar: r.avatar, pick: () => ((done = true), resolve(r.value)) })),
         );
         const m = menu!;
         const close = m.close;
+        // меню сначала закрывается и только потом сообщает выбор: отказ считаем после этого
         m.close = () => {
           close();
-          if (!done) resolve(null);
+          setTimeout(() => !done && resolve(null), 0);
         };
       });
+    }
+    function choose(anchor: HTMLElement, logins: Login[], title: string): Promise<Login | null> {
+      if (logins.length === 0) {
+        toast(t('toast_no_entries'));
+        return Promise.resolve(null);
+      }
+      return chooseRow(anchor, title, logins.map((l) => ({ label: l.title, sub: l.username || l.group, value: l })));
+    }
+
+    /// Сайт просит ключ доступа, а база закрыта: разблокировать и продолжить в Keywarden
+    /// или уйти в обычный вход браузера (устройство, аппаратный ключ). true: база открыта.
+    async function unlockForPasskey(): Promise<boolean> {
+      const pick = await chooseRow(document.body, t('passkey_locked_title'), [
+        { label: t('unlock_keywarden'), sub: t('passkey_unlock_sub'), avatar: '🔒', value: 'unlock' as const },
+        { label: t('passkey_use_device'), sub: t('passkey_use_device_sub'), avatar: '⌁', value: 'device' as const },
+      ]);
+      if (pick !== 'unlock') return false;
+      ask({ type: 'openUnlock' }).catch(() => {});
+      for (let i = 0; i < 120; i++) {
+        await new Promise<void>((r) => ctx.setTimeout(() => r(), 1000));
+        const st = await ask<{ locked: boolean; connected: boolean }>({ type: 'status' }).catch(() => null);
+        if (st?.connected && !st.locked) return true;
+      }
+      return false;
     }
 
     function toast(text: string) {
@@ -428,9 +613,9 @@ export default defineContentScript({
       const root = host.attachShadow({ mode: 'closed' });
       root.innerHTML = `<style>${CSS_BASE}
         .card{position:fixed;top:16px;right:16px;z-index:2147483647;padding:10px 14px;max-width:360px;display:flex;gap:8px;align-items:center}
-        .card::before{content:"K";flex:none;width:20px;height:20px;border-radius:7px;background:#222227;color:#a18bff;
-          font:700 10px Inter,system-ui,sans-serif;display:grid;place-items:center}</style><div class="card anim"></div>`;
-      root.querySelector('div')!.textContent = text;
+        i{flex:none;width:20px;height:20px}
+        i svg{display:block;width:20px;height:20px}</style><div class="card anim"><i>${LOGO}</i><span></span></div>`;
+      root.querySelector('span')!.textContent = text;
       document.documentElement.appendChild(host);
       ctx.setTimeout(() => host.remove(), 4000);
     }
@@ -446,8 +631,6 @@ export default defineContentScript({
       if (password) ask({ type: 'submitted', username, password }).then((r) => r && showSave()).catch(() => {});
     }
 
-    // тот же знак, что public/icon/logo.svg: в теневом дереве страницы файл расширения не открыть без web_accessible_resources
-    const LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a892ff"/><stop offset="1" stop-color="#6d4aff"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#g)"/><path d="M32 13l15 5.5v11c0 10-6.5 16.5-15 19.5-8.5-3-15-9.5-15-19.5v-11z" fill="none" stroke="#fff" stroke-width="3.6" stroke-linejoin="round"/><circle cx="32" cy="29" r="4.4" fill="#fff"/><path d="M30 31.5h4l1.2 8.5h-6.4z" fill="#fff"/></svg>';
     async function showSave() {
       const p = await ask<{ site: string; username: string; password: string; state: string } | null>({ type: 'pendingSave' }).catch(() => null);
       if (!p || document.querySelector('keywarden-save')) return;
@@ -469,6 +652,10 @@ export default defineContentScript({
         .eye{padding:4px;display:grid;place-items:center;border-radius:6px}
         .eye svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
         .r{display:flex;gap:6px;align-items:center;padding:10px 14px;border-top:1px solid #26262b;background:#141417}
+        .uin{all:unset;box-sizing:border-box;min-width:0;flex:1;text-align:right;font:500 13px Inter,system-ui,sans-serif;color:#ececef;
+          height:20px;line-height:18px;padding:0 8px;border-radius:6px;border:1px solid transparent}
+        .uin:hover{border-color:#2c2d33}
+        .uin:focus{border-color:#7c5cff;background:#141417}
         .sp{flex:1}</style>
         <div class="b card anim">
           <div class="h"><div class="logo">${LOGO}</div><div><div class="title"></div><div class="site muted"></div></div></div>
@@ -514,7 +701,20 @@ export default defineContentScript({
       const changed = p.state === 'changed';
       root.querySelector('.title')!.textContent = t(changed ? 'prompt_update_keywarden' : 'prompt_save_keywarden');
       root.querySelector('.site')!.textContent = p.site;
-      root.querySelector('.who b.user')!.textContent = p.username || t('no_username');
+      const userEl = root.querySelector('.who b.user') as HTMLElement;
+      userEl.textContent = p.username || t('no_username');
+      // у новой записи логин можно поправить до сохранения (сайт мог назвать поле по-своему)
+      let userIn: HTMLInputElement | null = null;
+      if (!changed) {
+        userIn = document.createElement('input');
+        userIn.className = 'uin';
+        userIn.value = p.username;
+        userIn.placeholder = t('no_username');
+        userIn.setAttribute('aria-label', t('username'));
+        // горячие клавиши страницы не должны срабатывать, пока печатают логин
+        for (const ev of ['keydown', 'keyup', 'keypress']) userIn.addEventListener(ev, (e) => e.stopPropagation());
+        userEl.replaceWith(userIn);
+      }
       // пароль скрыт точками, глаз показывает и прячет (как в приложении)
       const pwEl = root.querySelector('.pw b') as HTMLElement;
       const eye = root.querySelector('.eye') as HTMLButtonElement;
@@ -537,7 +737,7 @@ export default defineContentScript({
       const done = (accept: boolean) => (e: Event) => {
         if (!e.isTrusted) return;
         host.remove();
-        ask({ type: 'save', accept }).then(() => accept && toast(t('toast_saved_keywarden'))).catch((err) => toast((err as Error).message));
+        ask({ type: 'save', accept, username: userIn?.value }).then(() => accept && toast(t('toast_saved_keywarden'))).catch((err) => toast((err as Error).message));
       };
       root.querySelector('.p')!.addEventListener('click', done(true));
       root.querySelector('.n')!.addEventListener('click', done(false));
@@ -606,6 +806,10 @@ export default defineContentScript({
 
     // --- сообщения от background (горячая клавиша, popup) ---
     browser.runtime.onMessage.addListener((msg: ContentMsg) => {
+      if (msg.type === 'ctx') return void onContext(msg);
+      if (msg.type === 'notify') return void toast(msg.text);
+      // ответ уходит в background: какой аккаунт скопировать
+      if (msg.type === 'choose') return choose(document.body, msg.logins, msg.title).then((l) => l?.id ?? null);
       const f = formFor(document.activeElement instanceof HTMLInputElement ? document.activeElement : undefined);
       if (msg.type === 'triggerFill' && f) {
         const el = inputs[f.otp ?? f.password ?? f.username ?? f.new_passwords[0]];
@@ -639,18 +843,34 @@ export default defineContentScript({
     window.addEventListener('message', async (e) => {
       if (e.source !== window || e.data?.kw !== 'passkey-request') return;
       const { id, kind, options } = e.data;
-      try {
+      const DEVICE = Symbol('device');
+      const run = async () => {
         if (kind === 'create') {
           return reply(id, { ok: true, credential: await ask({ type: 'passkeyCreate', options }) });
         }
         const candidates = await ask<Login[]>({ type: 'passkeyList', options });
         if (candidates.length === 0) return reply(id, { fallback: true });
-        const pick = candidates.length === 1 ? candidates[0] : await choose(document.body, candidates, t('passkey'));
-        if (!pick) return reply(id, { fallback: true });
+        // один ключ: Keywarden сразу спросит в своём окне; несколько: выбор и выход в обычный вход браузера
+        const pick =
+          candidates.length === 1
+            ? candidates[0]
+            : await chooseRow<Login | typeof DEVICE>(document.body, t('passkey_choose_title'), [
+                ...candidates.map((l) => ({ label: l.title, sub: l.username || l.group, value: l })),
+                { label: t('passkey_use_device'), sub: t('passkey_use_device_sub'), avatar: '⌁', value: DEVICE },
+              ]);
+        if (!pick || pick === DEVICE) return reply(id, { fallback: true });
         reply(id, { ok: true, credential: await ask({ type: 'passkeyGet', options, id: pick.id }) });
+      };
+      try {
+        try {
+          await run();
+        } catch (err) {
+          // база закрыта: предлагаем открыть и продолжаем тот же запрос сайта
+          if ((err as { code?: string }).code !== 'locked' || !(await unlockForPasskey())) throw err;
+          await run();
+        }
       } catch (err) {
         const er = err as Error & { code?: string };
-        if (er.code === 'locked') toast(t('toast_passkey_locked'));
         if (isFallback(er)) return reply(id, { fallback: true });
         reply(id, { ok: false, error: er.message, name: er.message.startsWith('InvalidStateError') ? 'InvalidStateError' : 'NotAllowedError' });
       }

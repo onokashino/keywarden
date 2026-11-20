@@ -1,8 +1,8 @@
 // Тонкая обёртка: вся логика (шифрование канала, классификация полей) в Rust/WASM
 // (crates/keywarden-ext), решения о выдаче паролей принимает демон.
 // WASM загружается только здесь, не в content script, и не выставляется сайтам.
-import initWasm, { classifyFields, generateKeypair, open, seal } from '../wasm/keywarden_ext';
-import type { FieldInfo, Login, Msg, PendingSave, Reply, Status } from '../utils/messages';
+import initWasm, { classifyData, classifyFields, generateKeypair, open, seal } from '../wasm/keywarden_ext';
+import type { ContentMsg, FieldInfo, Login, Msg, PendingSave, Reply, Status } from '../utils/messages';
 import { loadPrefs, savePrefs } from '../utils/prefs';
 import { t } from '../utils/i18n';
 
@@ -164,9 +164,11 @@ export default defineBackground(() => {
         return status();
       case 'associate':
         return associate();
-      case 'classify':
+      case 'classify': {
         await ready;
-        return JSON.parse(classifyFields(JSON.stringify(msg.fields as FieldInfo[])));
+        const json = JSON.stringify(msg.fields as FieldInfo[]);
+        return { forms: JSON.parse(classifyFields(json)), data: JSON.parse(classifyData(json)) };
+      }
       case 'logins': {
         const url = await pageUrl(sender, msg.tabId);
         const r = await call({ action: 'get_logins', url });
@@ -174,7 +176,7 @@ export default defineBackground(() => {
       }
       case 'fill': {
         const url = await pageUrl(sender, msg.tabId);
-        const r = await call({ action: 'fill', id: msg.id, url });
+        const r = await call({ action: 'fill', id: msg.id, url, quiet: !!msg.quiet && !fromExtension(sender) });
         lastFill.set(await tabOf(sender, msg.tabId), { site: hostOf(url), id: msg.id, at: Date.now() });
         rememberUsed(url, msg.id);
         if (fromExtension(sender)) {
@@ -183,6 +185,21 @@ export default defineBackground(() => {
           return null;
         }
         return { username: r.username, password: r.password };
+      }
+      // карты и личные данные: список без значений, сами значения только вкладке после согласия в Keywarden
+      case 'dataList':
+        return (await call({ action: 'data_list', kind: msg.kind })).logins as Login[];
+      case 'dataFill': {
+        if (fromExtension(sender)) throw new DaemonError('denied', t('err_page_only'));
+        return (await call({ action: 'data_fill', id: msg.id, url: await pageUrl(sender) })).fields as Record<string, string>;
+      }
+      case 'copyOtp': {
+        // только вкладка, которая минуту назад заполнила именно эту запись
+        if (fromExtension(sender) || !(await loadPrefs()).otpClipboard) return false;
+        const f = lastFill.get(await tabOf(sender));
+        if (!f || f.id !== msg.id || Date.now() - f.at > 60_000 || hostOf(await pageUrl(sender)) !== f.site) return false;
+        await call({ action: 'copy', id: msg.id, field: 'totp' });
+        return true;
       }
       case 'totp': {
         const r = await call({ action: 'totp', id: msg.id, url: await pageUrl(sender, msg.tabId) });
@@ -293,7 +310,9 @@ export default defineBackground(() => {
         const p = pending.get(tab);
         pending.delete(tab);
         if (!p || !msg.accept || p.state === 'locked') return null;
-        await call({ action: 'save', url: p.url, username: p.username, password: p.password, update_id: p.state === 'changed' ? p.id : null });
+        // логин можно поправить в окне, но только у новой записи: обновление идёт по id найденной
+        const username = p.state === 'new' && typeof msg.username === 'string' ? msg.username.trim() : p.username;
+        await call({ action: 'save', url: p.url, username, password: p.password, update_id: p.state === 'changed' ? p.id : null });
         return true;
       }
       case 'passkeyCreate':
@@ -339,6 +358,66 @@ export default defineBackground(() => {
       }
     });
   }
+
+  // --- меню по правой кнопке мыши ---
+  const MENU: [string, Parameters<typeof t>[0] | null][] = [
+    ['kw-fill', 'ctx_fill'],
+    ['kw-copy-username', 'ctx_copy_username'],
+    ['kw-copy-password', 'ctx_copy_password'],
+    ['kw-copy-totp', 'ctx_copy_totp'],
+    ['kw-sep-1', null],
+    ['kw-card', 'ctx_card'],
+    ['kw-identity', 'ctx_identity'],
+    ['kw-sep-2', null],
+    ['kw-generate', 'ctx_generate'],
+  ];
+  // service worker просыпается много раз: без removeAll пункты создавались бы повторно с ошибкой
+  browser.contextMenus.removeAll().then(() => {
+    const documentUrlPatterns = ['http://*/*', 'https://*/*'];
+    browser.contextMenus.create({ id: 'kw', title: 'Keywarden', contexts: ['page', 'editable'], documentUrlPatterns });
+    for (const [id, key] of MENU) {
+      browser.contextMenus.create(
+        key
+          ? { id, parentId: 'kw', title: t(key), contexts: ['page', 'editable'], documentUrlPatterns }
+          : { id, parentId: 'kw', type: 'separator', contexts: ['page', 'editable'], documentUrlPatterns },
+      );
+    }
+  });
+  browser.contextMenus.onClicked.addListener(async (info, tab) => {
+    const tabId = tab?.id;
+    const url = tab?.url;
+    if (tabId === undefined || !url) return;
+    const tell = (m: ContentMsg) => browser.tabs.sendMessage(tabId, m, { frameId: 0 }).catch(() => null);
+    // во фреймах не работаем, как и остальное заполнение
+    if (info.frameId) return void tell({ type: 'notify', text: t('err_frames') });
+    try {
+      const id = String(info.menuItemId);
+      if (id === 'kw-fill') return void tell({ type: 'ctx', action: 'fill' });
+      if (id === 'kw-card') return void tell({ type: 'ctx', action: 'card' });
+      if (id === 'kw-identity') return void tell({ type: 'ctx', action: 'identity' });
+      if (id === 'kw-generate') {
+        const { genOptions } = await browser.storage.local.get('genOptions');
+        const password = (await call({ action: 'generate', options: genOptions ?? null })).password as string;
+        return void tell({ type: 'ctx', action: 'generate', password });
+      }
+      const field = id.replace('kw-copy-', '') as 'username' | 'password' | 'totp';
+      if (!['username', 'password', 'totp'].includes(field)) return;
+      let logins = await withLastFirst(url, (await call({ action: 'get_logins', url })).logins as Login[]);
+      if (field === 'totp') logins = logins.filter((l) => l.has_otp);
+      if (!logins.length) return void tell({ type: 'notify', text: t(field === 'totp' ? 'menu_no_otp' : 'menu_no_logins') });
+      let pick: string | null = logins[0].id;
+      if (logins.length > 1) pick = (await tell({ type: 'choose', logins, title: t(MENU.find((m) => m[0] === id)![1]!) })) as string | null;
+      // ответ вкладки проверяем: скопировать можно только учётку этого сайта
+      if (!pick || !logins.some((l) => l.id === pick)) return;
+      await call({ action: 'copy', id: pick, field });
+      tell({ type: 'notify', text: t('toast_copied') });
+    } catch (e) {
+      if ((e as DaemonError).code === 'locked') {
+        tell({ type: 'notify', text: t('toast_vault_locked_open') });
+        send({ type: 'open_unlock' }).catch(() => {});
+      } else tell({ type: 'notify', text: (e as Error).message });
+    }
+  });
 
   browser.commands.onCommand.addListener(async (command) => {
     if (command !== 'fill-login') return;

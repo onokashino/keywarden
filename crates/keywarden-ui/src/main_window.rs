@@ -3415,7 +3415,9 @@ impl MainWindow {
         // создаём на странице тега: тег сразу в записи
         if let (Nav::Tag(t), Some(e)) = (&self.nav, &self.editor) {
             let t = t.clone();
-            e.update(cx, |e, cx| e.set_draft("", &t, window, cx));
+            e.update(cx, |e, cx| {
+                e.set_draft("", std::slice::from_ref(&t), window, cx)
+            });
         }
     }
 
@@ -3459,7 +3461,8 @@ impl MainWindow {
         cx: &mut Context<Self>,
     ) {
         let groups = self.groups.clone();
-        let editor = cx.new(|cx| EntryEditor::new(kind, detail, group, groups, window, cx));
+        let tags: Vec<String> = self.tags.iter().map(|(t, _)| t.clone()).collect();
+        let editor = cx.new(|cx| EntryEditor::new(kind, detail, group, groups, tags, window, cx));
         self._subs.push(cx.subscribe_in(
             &editor,
             window,
@@ -7313,6 +7316,8 @@ impl MainWindow {
             .fields
             .iter()
             .filter(|f| !(f.name == "otp" || f.name == "TOTP Seed" || f.name == "TOTP Settings"))
+            // правило совпадения адреса это настройка записи: правится в редакторе списком
+            .filter(|f| f.name != keywarden_core::model::URL_MATCH)
             .filter(|f| {
                 !(d.summary.kind == EntryKind::CryptoWallet
                     && (f.name == keywarden_core::wallet::SEED

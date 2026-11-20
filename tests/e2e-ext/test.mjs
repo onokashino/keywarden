@@ -37,6 +37,33 @@ const pages = {
       <input id="code" name="code" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
       <button type="submit">Подтвердить</button>
     </form>`,
+  '/pay': `<!doctype html><meta charset=utf-8><title>Оплата</title>
+    <form action="/welcome" style="margin:40px;display:grid;gap:8px;width:300px">
+      <input id="fname" name="first_name" placeholder="Имя">
+      <input id="lname" name="last_name" placeholder="Фамилия">
+      <input id="mail" name="email" type="email" placeholder="Почта">
+      <input id="city" name="city" placeholder="Город">
+      <select id="country" name="country"><option value="">-</option><option value="DE">Germany</option><option value="RU">Russia</option></select>
+      <input id="ccname" name="cardholder" placeholder="Имя на карте">
+      <input id="ccnum" name="cardnumber" inputmode="numeric" placeholder="Номер карты">
+      <select id="mm" name="exp_month"><option value="">MM</option>${[...Array(12)].map((_, i) => `<option value="${i + 1}">${String(i + 1).padStart(2, '0')}</option>`).join('')}</select>
+      <select id="yy" name="exp_year"><option value="">YY</option><option value="2026">26</option><option value="2029">29</option></select>
+      <input id="exp" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5">
+      <input id="cvc" name="cvc" type="password" maxlength="4" placeholder="CVC">
+      <button type="submit">Оплатить</button>
+    </form>`,
+  '/signup': `<!doctype html><meta charset=utf-8><title>Регистрация</title>
+    <form action="/welcome" method="get" style="margin:40px;display:grid;gap:8px;width:300px">
+      <input id="user" name="login" autocomplete="username" placeholder="Логин">
+      <input id="p1" name="password" type="password" autocomplete="new-password" placeholder="Пароль">
+      <input id="p2" name="password2" type="password" autocomplete="new-password" placeholder="Ещё раз">
+      <button type="submit">Создать</button>
+    </form>`,
+  '/odd': `<!doctype html><meta charset=utf-8><title>Странная форма</title>
+    <div style="margin:40px;display:grid;gap:8px;width:300px">
+      <input id="a" name="field_a" placeholder="Кто вы">
+      <input id="b" name="field_b" type="password" placeholder="Секрет">
+    </div>`,
   '/welcome': `<!doctype html><meta charset=utf-8><title>Добро пожаловать</title><p>ok</p>`,
   '/passkey': `<!doctype html><meta charset=utf-8><title>Passkey</title><script>
     const enc = (s) => new TextEncoder().encode(s);
@@ -322,6 +349,91 @@ if (SHOTS) {
   await popup.waitForTimeout(400);
   await popup.screenshot({ path: `${SHOTS}/ext-settings.png` });
 }
+// 10a. карта (из kpxc-full.xml) и личные данные: меню под полем, стрелка и Enter заполняют всю группу полей
+const pay = await ctx.newPage();
+await pay.setViewportSize({ width: 1280, height: 900 });
+await pay.goto('http://localhost:8765/pay');
+await pay.waitForTimeout(1500);
+await pay.click('#ccnum');
+await pay.waitForTimeout(700);
+assert((await pay.locator('keywarden-menu').count()) === 1, 'меню карт под полем номера');
+if (SHOTS) await pay.screenshot({ path: `${SHOTS}/ext-card-menu.png`, clip: { x: 0, y: 0, width: 520, height: 560 } });
+await pay.keyboard.press('ArrowDown');
+await pay.keyboard.press('Enter');
+await pay.waitForTimeout(1200);
+const cardVals = await pay.evaluate(() => Object.fromEntries(['ccname', 'ccnum', 'mm', 'yy', 'exp', 'cvc', 'fname'].map((i) => [i, document.getElementById(i).value])));
+assert(
+  cardVals.ccname === 'IVAN IVANOV' && cardVals.ccnum === '4111111111111111' && cardVals.mm === '12' && cardVals.yy === '2029' && cardVals.exp === '12/29' && cardVals.cvc === '123',
+  `карта заполнена, срок в виде каждого поля: ${JSON.stringify(cardVals)}`,
+);
+assert(cardVals.fname === '', 'личные данные вместе с картой не заполняются');
+await pay.click('#fname');
+await pay.waitForTimeout(700);
+assert((await pay.locator('keywarden-menu').count()) === 1, 'меню личных данных под полем имени');
+await pay.keyboard.press('ArrowDown');
+await pay.keyboard.press('Enter');
+await pay.waitForTimeout(1200);
+const idVals = await pay.evaluate(() => Object.fromEntries(['fname', 'lname', 'mail', 'city', 'country'].map((i) => [i, document.getElementById(i).value])));
+assert(
+  idVals.fname === 'Ivan' && idVals.lname === 'Petrov' && idVals.mail === 'ivan@example.com' && idVals.city === 'Kazan' && idVals.country === 'RU',
+  `личные данные заполнены, страна выбрана в списке: ${JSON.stringify(idVals)}`,
+);
+
+// 10b. меню по правой кнопке мыши: вход в форме, которую Keywarden сам не распознал
+await send({ type: 'create', title: 'Odd', username: 'odd-user', password: 'Odd-pass-1', url: 'http://127.0.0.3:8765' });
+const server3 = http.createServer(server.listeners('request')[0]);
+await new Promise((r) => server3.listen(8765, '127.0.0.3', r));
+const odd = await ctx.newPage();
+await odd.goto('http://127.0.0.3:8765/odd');
+await odd.waitForTimeout(1500);
+await odd.click('#b', { button: 'right' });
+const oddTab = await popup.evaluate(async () => (await chrome.tabs.query({ url: 'http://127.0.0.3:8765/*' }))[0]);
+// сам щелчок по меню браузера из теста не сделать: вызываем обработчик пункта в фоне расширения
+await sw.evaluate((tab) => chrome.contextMenus.onClicked.dispatch({ menuItemId: 'kw-fill', frameId: 0, editable: true }, tab), oddTab);
+await odd.waitForTimeout(1500);
+assert((await odd.inputValue('#a')) === 'odd-user' && (await odd.inputValue('#b')) === 'Odd-pass-1', `«Заполнить логин и пароль» по правой кнопке: ${await odd.inputValue('#a')}`);
+await odd.click('#a', { button: 'right' });
+await sw.evaluate((tab) => chrome.contextMenus.onClicked.dispatch({ menuItemId: 'kw-generate', frameId: 0, editable: true }, tab), oddTab);
+await odd.waitForTimeout(1000);
+assert((await odd.inputValue('#a')).length >= 12 && (await odd.inputValue('#a')) !== 'odd-user', `«Сгенерировать пароль» вставил в поле под курсором: ${await odd.inputValue('#a')}`);
+
+// 10c. заполнение при открытии страницы: выключено по умолчанию, включённое заполняет разрешённый сайт
+await odd.goto('http://127.0.0.2:8765/login-otp');
+await odd.waitForTimeout(1500);
+assert((await odd.inputValue('#pass')) === '', 'по умолчанию при открытии ничего не заполняется');
+await popup.evaluate(() => chrome.storage.local.set({ prefs: { fillOnLoad: true } }));
+await odd.goto('http://127.0.0.2:8765/login-otp');
+await odd.waitForTimeout(2000);
+assert((await odd.inputValue('#user')) === 'otpuser' && (await odd.inputValue('#pass')) === 'Otp-site-NEW-1', `заполнено при открытии: ${await odd.inputValue('#user')}`);
+await popup.evaluate(() => chrome.storage.local.remove('prefs'));
+
+// 10d. регистрация: сгенерированный пароль в оба поля, после отправки предложение сохранить, логин правится в окне
+const reg = await ctx.newPage();
+await reg.setViewportSize({ width: 1280, height: 720 });
+await reg.goto('http://localhost:8765/signup');
+await reg.waitForTimeout(1500);
+await reg.fill('#user', 'newbie');
+await reg.click('#p1');
+await reg.waitForTimeout(900);
+await reg.keyboard.press('ArrowDown');
+await reg.keyboard.press('Enter');
+await reg.waitForTimeout(500);
+const genPw = await reg.inputValue('#p1');
+assert(genPw.length >= 12 && (await reg.inputValue('#p2')) === genPw, `новый пароль в обоих полях: ${genPw}`);
+await Promise.all([reg.waitForURL('**/welcome**'), reg.press('#p2', 'Enter')]);
+await reg.waitForTimeout(1500);
+const regTab = await popup.evaluate(async () => (await chrome.tabs.query({})).find((t) => t.url.includes('login=newbie')).id);
+const regOffer = await send({ type: 'pendingSave', tabId: regTab });
+assert(regOffer.ok && regOffer.value?.state === 'new' && regOffer.value.password === genPw, `после регистрации предложено сохранить: ${JSON.stringify(regOffer)}`);
+await reg.mouse.click(1200, 93); // поле логина в окне: дописываем
+await reg.keyboard.press('End');
+await reg.keyboard.type('@mail');
+if (SHOTS) await reg.screenshot({ path: `${SHOTS}/ext-save-edit.png`, clip: { x: 880, y: 0, width: 400, height: 240 } });
+await reg.mouse.click(1220, 182); // «Сохранить»
+await reg.waitForTimeout(1200);
+const regLogins = await send({ type: 'logins', tabId: regTab });
+assert(regLogins.ok && regLogins.value.some((l) => l.username === 'newbie@mail'), `сохранено с исправленным логином: ${JSON.stringify(regLogins)}`);
+
 // 11. блокировка из popup: дальше ни учёток, ни заполнения
 assert((await send({ type: 'lock' })).ok, 'заблокировано из popup');
 const st2 = await send({ type: 'status' });
@@ -332,6 +444,19 @@ const lockedFill = await send({ type: 'fill', id: logins.value[0].id, tabId });
 assert(!lockedFill.ok, `после блокировки заполнение отказано: ${lockedFill.error}`);
 
 // 12. вход при заблокированной базе: предложение не теряется, после разблокировки обычное «Сохранить»
+// сайт просит ключ доступа при заблокированной базе: окно «разблокировать», после разблокировки вход продолжается сам
+await pk.bringToFront();
+await pk.evaluate(() => {
+  window.lockedGet = navigator.credentials
+    .get({ publicKey: { rpId: 'localhost', challenge: new TextEncoder().encode('locked-challenge') } })
+    .then((a) => new TextDecoder().decode(a.response.userHandle), (e) => `error: ${e.message}`);
+});
+await pk.waitForTimeout(1000);
+assert((await pk.locator('keywarden-menu').count()) === 1, 'ключ доступа при блокировке: окно с «Разблокировать»');
+if (SHOTS) await pk.screenshot({ path: `${SHOTS}/ext-passkey-locked.png` });
+await pk.mouse.click(646, 128); // «Разблокировать Keywarden»
+await pk.waitForTimeout(300);
+assert((await pk.locator('keywarden-menu').count()) === 0, 'окно закрылось, ждём разблокировки');
 const lk = await ctx.newPage();
 await lk.setViewportSize({ width: 1280, height: 720 });
 await lk.goto('http://localhost:8765/login'); // 127.0.0.1 выше попал в «никогда для сайта»
@@ -352,9 +477,12 @@ await lk.waitForTimeout(2500);
 const openOffer = await send({ type: 'pendingSave', tabId: lkTab });
 assert(openOffer.ok && openOffer.value.state === 'new' && openOffer.value.password === 'Locked-new-1', `после разблокировки обычное предложение: ${JSON.stringify(openOffer)}`);
 assert((await lk.locator('keywarden-save').count()) === 1, 'окно «Сохранить пароль» после разблокировки');
+const lockedUser = await pk.evaluate(() => Promise.race([window.lockedGet, new Promise((r) => setTimeout(() => r('timeout'), 8000))]));
+assert(lockedUser === 'user-1', `после разблокировки вход ключом доступа продолжился: ${lockedUser}`);
 if (SHOTS) await lk.screenshot({ path: `${SHOTS}/ext-locked-save-after.png`, clip: { x: 880, y: 0, width: 400, height: 240 } });
 
 await ctx.close();
 server.close();
 server2.close();
+server3.close();
 console.log('E2E EXT OK');

@@ -22,6 +22,13 @@ pub fn classify_fields_js(fields_json: &str) -> String {
     serde_json::to_string(&forms::classify(&fields)).expect("сериализуется")
 }
 
+/// Поля карты и личных данных: JSON `[FieldInfo]` → JSON `[DataField]`.
+#[wasm_bindgen(js_name = classifyData)]
+pub fn classify_data_js(fields_json: &str) -> String {
+    let fields: Vec<forms::FieldInfo> = serde_json::from_str(fields_json).unwrap_or_default();
+    serde_json::to_string(&forms::classify_data(&fields)).expect("сериализуется")
+}
+
 /// Ключи клиента: `{"public": base64, "secret": base64}`.
 #[wasm_bindgen(js_name = generateKeypair)]
 pub fn generate_keypair_js() -> String {

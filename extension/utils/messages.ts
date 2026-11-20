@@ -21,6 +21,10 @@ export type LoginForm = {
   otp: number | null;
 };
 
+/// поле карты или личных данных: role как токен autocomplete (cc-number, given-name…)
+export type DataField = { index: number; form: number; group: 'card' | 'identity'; role: string; auto: boolean };
+export type Classified = { forms: LoginForm[]; data: DataField[] };
+
 export type Login = { id: string; title: string; username: string; group: string; has_otp: boolean; url?: string; kind?: string };
 
 export type Folder = { id: string; name: string; depth: number; count: number };
@@ -49,14 +53,17 @@ export type Msg =
   | { type: 'associate' }
   | { type: 'classify'; fields: FieldInfo[] }
   | { type: 'logins'; tabId?: number }
-  | { type: 'fill'; id: string; tabId?: number }
+  | { type: 'fill'; id: string; tabId?: number; quiet?: boolean }
+  | { type: 'dataList'; kind: 'card' | 'identity' }
+  | { type: 'dataFill'; id: string }
+  | { type: 'copyOtp'; id: string }
   | { type: 'totp'; id: string; tabId?: number }
   | { type: 'generate' }
   | { type: 'generateWith'; options: GenOptions }
   | { type: 'fillNew'; password: string; tabId?: number }
   | { type: 'submitted'; username: string; password: string }
   | { type: 'pendingSave'; tabId?: number }
-  | { type: 'save'; accept: boolean; tabId?: number }
+  | { type: 'save'; accept: boolean; tabId?: number; username?: string }
   | { type: 'neverSave'; tabId?: number }
   | { type: 'autoOtp' }
   | { type: 'search'; query: string; filter?: Filter }
@@ -77,6 +84,12 @@ export type ContentMsg =
   | { type: 'fillOtp'; code: string }
   | { type: 'fillNew'; password: string }
   | { type: 'togglePanel' }
+  /// пункт меню по правой кнопке мыши: поле берётся то, по которому щёлкнули
+  | { type: 'ctx'; action: 'fill' | 'card' | 'identity' }
+  | { type: 'ctx'; action: 'generate'; password: string }
+  /// выбрать аккаунт для копирования; ответ: id или null
+  | { type: 'choose'; logins: Login[]; title: string }
+  | { type: 'notify'; text: string }
   | { type: 'showSave' };
 
 /// Параметры генератора как в keywarden-core::generator (mode: password | passphrase)

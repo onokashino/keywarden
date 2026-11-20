@@ -6,6 +6,77 @@
 
 use url::Url;
 
+/// Имя поля записи с правилом совпадения адреса (обычное поле: видно и в других клиентах KeePass).
+pub const MATCH_FIELD: &str = "URL Match";
+
+/// Как адрес записи сравнивается с адресом страницы.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Match {
+    /// весь зарегистрированный домен с поддоменами записи
+    #[default]
+    Domain,
+    /// только тот же хост (и порт, если задан)
+    Host,
+    /// адрес страницы начинается с адреса записи
+    Starts,
+    /// адрес страницы равен адресу записи (без #якоря)
+    Exact,
+    /// запись не предлагается и не заполняется в браузере
+    Never,
+}
+
+impl Match {
+    /// Значение поля [`MATCH_FIELD`]; пустое и незнакомое: по домену.
+    pub fn parse(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "host" => Self::Host,
+            "starts" => Self::Starts,
+            "exact" => Self::Exact,
+            "never" => Self::Never,
+            _ => Self::Domain,
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Domain => "domain",
+            Self::Host => "host",
+            Self::Starts => "starts",
+            Self::Exact => "exact",
+            Self::Never => "never",
+        }
+    }
+}
+
+/// То же, что [`url_matches`], с правилом записи.
+pub fn url_matches_with(page_url: &str, entry_url: &str, rule: Match) -> bool {
+    match rule {
+        Match::Domain => url_matches(page_url, entry_url),
+        Match::Never => false,
+        Match::Host => {
+            let (Some(page), Some(entry)) = (parse(page_url), parse(entry_url)) else {
+                return false;
+            };
+            page.host_str() == entry.host_str() && url_matches(page_url, entry_url)
+        }
+        Match::Starts | Match::Exact => {
+            let (Some(mut page), Some(mut entry)) = (parse(page_url), parse(entry_url)) else {
+                return false;
+            };
+            // схема, хост и порт должны совпасть точно: сравниваем origin, а не строки
+            if page.origin() != entry.origin() || !matches!(page.scheme(), "http" | "https") {
+                return false;
+            }
+            page.set_fragment(None);
+            entry.set_fragment(None);
+            if rule == Match::Exact {
+                page.as_str() == entry.as_str()
+            } else {
+                page.as_str().starts_with(entry.as_str())
+            }
+        }
+    }
+}
+
 pub fn url_matches(page_url: &str, entry_url: &str) -> bool {
     let (Some(page), Some(entry)) = (parse(page_url), parse(entry_url)) else {
         return false;
@@ -95,6 +166,57 @@ mod tests {
         assert!(!m("file:///etc/passwd", "github.com"));
         assert!(!m("not a url", "github.com"));
         assert!(!m("https://github.com/", ""));
+    }
+
+    #[test]
+    fn rules() {
+        use super::{Match, url_matches_with as w};
+        assert_eq!(Match::parse(" Host "), Match::Host);
+        assert_eq!(Match::parse("что-то"), Match::Domain);
+        for r in [
+            Match::Domain,
+            Match::Host,
+            Match::Starts,
+            Match::Exact,
+            Match::Never,
+        ] {
+            assert_eq!(Match::parse(r.name()), r);
+        }
+        assert!(w("https://gist.github.com/", "github.com", Match::Domain));
+        assert!(!w("https://gist.github.com/", "github.com", Match::Host));
+        assert!(w("https://github.com/login", "github.com", Match::Host));
+        assert!(!w("http://github.com/", "https://github.com", Match::Host));
+        assert!(w(
+            "https://host.io/team/a?x=1",
+            "https://host.io/team/",
+            Match::Starts
+        ));
+        assert!(!w(
+            "https://host.io/other",
+            "https://host.io/team/",
+            Match::Starts
+        ));
+        assert!(!w(
+            "https://host.io.evil.com/team/",
+            "https://host.io/team/",
+            Match::Starts
+        ));
+        assert!(!w(
+            "http://host.io/team/",
+            "https://host.io/team/",
+            Match::Starts
+        ));
+        assert!(w(
+            "https://host.io/login#top",
+            "https://host.io/login",
+            Match::Exact
+        ));
+        assert!(!w(
+            "https://host.io/login?next=1",
+            "https://host.io/login",
+            Match::Exact
+        ));
+        assert!(!w("https://github.com/", "github.com", Match::Never));
     }
 
     #[test]

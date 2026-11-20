@@ -18,8 +18,8 @@ use keywarden_core::totp::Totp;
 use keywarden_ext::protocol::{
     self, BrowserReply, BrowserRequest, Folder, ItemView, Keypair, Login, Outer, OuterReply,
 };
-use keywarden_ext::urls::{site_of, url_matches};
-use std::collections::{BTreeSet, VecDeque};
+use keywarden_ext::urls::{MATCH_FIELD, Match, site_of, url_matches_with};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Mutex;
 
 const SERVER_KEY: &str = "keywarden.browser.server_key";
@@ -305,15 +305,21 @@ impl Daemon {
                 BrowserRequest::GetLogins { url } => BrowserReply::Logins {
                     logins: self.read(|db| Ok(logins_for(db, &url)))?,
                 },
-                BrowserRequest::Fill { id, url } => {
-                    let e = self.allowed_entry(&id, &url).await?;
+                BrowserRequest::DataList { kind } => BrowserReply::Logins {
+                    logins: self.read(|db| Ok(data_list(db, &kind)))?,
+                },
+                BrowserRequest::DataFill { id, url } => BrowserReply::Data {
+                    fields: self.allowed_data(&id, &url).await?,
+                },
+                BrowserRequest::Fill { id, url, quiet } => {
+                    let e = self.allowed_entry(&id, &url, quiet).await?;
                     BrowserReply::Credentials {
                         username: e.0,
                         password: e.1,
                     }
                 }
                 BrowserRequest::Totp { id, url } => {
-                    self.allowed_entry(&id, &url).await?;
+                    self.allowed_entry(&id, &url, false).await?;
                     let code = self.read(|db| {
                         let e = entry(db, &id)?;
                         Totp::from_entry(&e)
@@ -477,7 +483,7 @@ impl Daemon {
     }
 
     /// Проверка адреса и разрешения сайта; возвращает логин и пароль.
-    async fn allowed_entry(&self, id: &str, url: &str) -> Reply<(String, String)> {
+    async fn allowed_entry(&self, id: &str, url: &str, quiet: bool) -> Reply<(String, String)> {
         let site = site_of(url)
             .ok_or_else(|| Response::error(ErrorCode::Invalid, tr!("неверный адрес страницы")))?;
         let (title, username, password, allowed) = self.read(|db| {
@@ -497,6 +503,12 @@ impl Daemon {
                 allow.lines().any(|h| h == site),
             ))
         })?;
+        if !allowed && quiet {
+            return Err(Response::error(
+                ErrorCode::Invalid,
+                tr!("сайт ещё не разрешён для этой записи"),
+            ));
+        }
         if !allowed {
             let prompt = Prompt {
                 title: tr!("Сайт {site} просит пароль", site = site),
@@ -532,6 +544,73 @@ impl Daemon {
             }
         }
         Ok((username, password))
+    }
+
+    /// Карта или личные данные для страницы: только https (или этот же компьютер) и только
+    /// после согласия пользователя для этого сайта.
+    async fn allowed_data(&self, id: &str, url: &str) -> Reply<BTreeMap<String, String>> {
+        let page = url::Url::parse(url)
+            .ok()
+            .filter(|u| u.scheme() == "https" || is_loopback(u))
+            .ok_or_else(|| {
+                Response::error(
+                    ErrorCode::Invalid,
+                    tr!("карты и личные данные заполняются только на страницах https"),
+                )
+            })?;
+        let site = page.host_str().unwrap_or_default().to_string();
+        let (kind, title, data, allowed) = self.read(|db| {
+            let e = entry(db, id)?;
+            let kind = model::kind_of(&e);
+            let data = match kind {
+                EntryKind::Card => card_data(db, &e),
+                EntryKind::Identity => identity_data(db, &e),
+                _ => {
+                    return Err(Response::error(
+                        ErrorCode::Invalid,
+                        tr!("эта запись не карта и не личные данные"),
+                    ));
+                }
+            };
+            let allow = custom_str(e.custom_data.get(ALLOW_KEY)).unwrap_or_default();
+            Ok((
+                kind,
+                e.get(fields::TITLE).unwrap_or_default().to_string(),
+                data,
+                allow.lines().any(|h| h == site),
+            ))
+        })?;
+        if !allowed {
+            let prompt = Prompt {
+                title: if kind == EntryKind::Card {
+                    tr!("Сайт {site} просит данные карты", site = site)
+                } else {
+                    tr!("Сайт {site} просит личные данные", site = site)
+                },
+                text: tr!("Заполнить «{title}» на {site}?", title = title, site = site),
+                allow_always: true,
+                always_minutes: None,
+            };
+            match self.ask(prompt).await {
+                Decision::Deny => {
+                    return Err(Response::error(
+                        ErrorCode::Invalid,
+                        tr!("пользователь отказал"),
+                    ));
+                }
+                Decision::Once => {}
+                Decision::Always => {
+                    let (id, site) = (id.to_string(), site.clone());
+                    self.mutate(move |db| {
+                        allow_site(db, &id, &site);
+                        Ok(())
+                    })
+                    .await?;
+                }
+            }
+        }
+        self.touch_entry(id);
+        Ok(data)
     }
 
     async fn passkey_create(&self, url: &str, options: &serde_json::Value) -> Reply<BrowserReply> {
@@ -713,9 +792,10 @@ fn entry<'a>(db: &'a Database, id: &str) -> Reply<EntryRef<'a>> {
 
 /// Адрес записи и дополнительные адреса (KP2A_URL*, как у KeePassDX и KeePassXC).
 fn entry_matches(e: &EntryRef<'_>, page: &str) -> bool {
-    e.fields
-        .iter()
-        .any(|(k, v)| (k == fields::URL || k.starts_with("KP2A_URL")) && url_matches(page, v.get()))
+    let rule = Match::parse(e.get(MATCH_FIELD).unwrap_or_default());
+    e.fields.iter().any(|(k, v)| {
+        (k == fields::URL || k.starts_with("KP2A_URL")) && url_matches_with(page, v.get(), rule)
+    })
 }
 
 fn matching<'a>(db: &'a Database, page: &str) -> Vec<EntryRef<'a>> {
@@ -743,6 +823,117 @@ fn logins_for(db: &Database, page: &str) -> Vec<Login> {
         .collect();
     v.sort_by_key(|a| a.title.to_lowercase());
     v
+}
+
+fn is_loopback(u: &url::Url) -> bool {
+    match u.host() {
+        Some(url::Host::Domain(d)) => d == "localhost",
+        Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
+        Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
+        None => false,
+    }
+}
+
+/// Карты или личные данные для меню под полем: название и подпись без секретов
+/// (у карты последние четыре цифры и срок).
+fn data_list(db: &Database, kind: &str) -> Vec<Login> {
+    let want = match kind {
+        "card" => EntryKind::Card,
+        "identity" => EntryKind::Identity,
+        _ => return vec![],
+    };
+    let mut v: Vec<Login> = db
+        .iter_all_entries()
+        .filter(|e| !model::in_recycle_bin(db, e.parent().id()) && model::kind_of(e) == want)
+        .map(|e| {
+            let s = model::summary(&e);
+            let sub = if want == EntryKind::Card {
+                let d = card_data(db, &e);
+                let num = d.get("cc-number").map(String::as_str).unwrap_or_default();
+                let last: String = num
+                    .chars()
+                    .skip(num.chars().count().saturating_sub(4))
+                    .collect();
+                [
+                    (!last.is_empty()).then(|| format!("•• {last}")),
+                    e.get("Expiry")
+                        .filter(|x| !x.is_empty())
+                        .map(str::to_string),
+                ]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" · ")
+            } else {
+                let d = identity_data(db, &e);
+                d.get("name")
+                    .or(d.get("email"))
+                    .cloned()
+                    .unwrap_or_default()
+            };
+            Login {
+                id: s.id,
+                title: s.title,
+                username: sub,
+                group: s.group,
+                has_otp: false,
+                url: String::new(),
+                kind: kind_name(s.kind),
+            }
+        })
+        .collect();
+    v.sort_by_key(|a| a.title.to_lowercase());
+    v
+}
+
+fn put(out: &mut BTreeMap<String, String>, key: &str, value: String) {
+    let value = value.trim().to_string();
+    if !value.is_empty() {
+        out.insert(key.into(), value);
+    }
+}
+
+fn card_data(db: &Database, e: &EntryRef<'_>) -> BTreeMap<String, String> {
+    let get = |n: &str| model::resolve(db, e, e.get(n).unwrap_or_default());
+    let mut out = BTreeMap::new();
+    put(&mut out, "cc-name", get("Cardholder"));
+    put(
+        &mut out,
+        "cc-number",
+        get("Card Number")
+            .chars()
+            .filter(char::is_ascii_digit)
+            .collect(),
+    );
+    put(&mut out, "cc-csc", get("CVV"));
+    if let Some((m, y)) = keywarden_core::card::parse_expiry(&get("Expiry")) {
+        put(&mut out, "cc-exp-month", format!("{m:02}"));
+        put(&mut out, "cc-exp-year", y.to_string());
+    }
+    out
+}
+
+fn identity_data(db: &Database, e: &EntryRef<'_>) -> BTreeMap<String, String> {
+    let get = |n: &str| model::resolve(db, e, e.get(n).unwrap_or_default());
+    let mut out = BTreeMap::new();
+    let (first, middle, last) = (get("First Name"), get("Middle Name"), get("Last Name"));
+    let full = [first.trim(), middle.trim(), last.trim()]
+        .into_iter()
+        .filter(|p| !p.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+    put(&mut out, "name", full);
+    put(&mut out, "given-name", first);
+    put(&mut out, "additional-name", middle);
+    put(&mut out, "family-name", last);
+    put(&mut out, "email", get("Email"));
+    put(&mut out, "tel", get("Phone"));
+    put(&mut out, "organization", get("Company"));
+    put(&mut out, "street-address", get("Address"));
+    put(&mut out, "address-level2", get("City"));
+    put(&mut out, "postal-code", get("Postal Code"));
+    put(&mut out, "country", get("Country"));
+    out
 }
 
 fn allow_site(db: &mut Database, id: &str, site: &str) {
@@ -920,6 +1111,7 @@ mod tests {
                 BrowserRequest::Fill {
                     id: id.clone(),
                     url: "https://github.com/login".into(),
+                    quiet: false,
                 },
             )
             .await;
@@ -934,6 +1126,7 @@ mod tests {
                 BrowserRequest::Fill {
                     id: id.clone(),
                     url: "https://evil.com".into(),
+                    quiet: false,
                 },
             )
             .await;
@@ -987,6 +1180,185 @@ mod tests {
             panic!()
         };
         assert_eq!(logins[0].group, BROWSER_GROUP);
+    }
+
+    #[test]
+    fn match_field_name_is_shared() {
+        assert_eq!(MATCH_FIELD, model::URL_MATCH);
+    }
+
+    #[tokio::test]
+    async fn cards_identities_rules_and_quiet_fill() {
+        let dir = tempfile::tempdir().unwrap();
+        // 10: «только в этот раз», сайт в разрешённые не попадает
+        let d = daemon(dir.path(), 10).await;
+        let mut ext = Ext::new();
+        associate(&d, &mut ext).await;
+        let add = |kind, set: Vec<FieldSet>| {
+            let d = d.clone();
+            async move {
+                d.mutate(move |db| {
+                    model::create_entry(
+                        db,
+                        &EntryPatch {
+                            kind: Some(kind),
+                            set,
+                            ..Default::default()
+                        },
+                    )
+                })
+                .await
+                .unwrap()
+            }
+        };
+        let card = add(
+            EntryKind::Card,
+            vec![
+                FieldSet::new("Title", "Visa"),
+                FieldSet::new("Cardholder", "IVAN PETROV"),
+                FieldSet::new("Card Number", "4111 1111 1111 1234"),
+                FieldSet::new("Expiry", "7/27"),
+                FieldSet::new("CVV", "123"),
+            ],
+        )
+        .await;
+        add(
+            EntryKind::Identity,
+            vec![
+                FieldSet::new("Title", "Я"),
+                FieldSet::new("First Name", "Иван"),
+                FieldSet::new("Last Name", "Петров"),
+                FieldSet::new("City", "Казань"),
+            ],
+        )
+        .await;
+
+        let BrowserReply::Logins { logins } = ext
+            .call(
+                &d,
+                BrowserRequest::DataList {
+                    kind: "card".into(),
+                },
+            )
+            .await
+        else {
+            panic!()
+        };
+        assert_eq!(logins.len(), 1);
+        assert_eq!(
+            logins[0].username, "•• 1234 · 7/27",
+            "в списке только хвост номера"
+        );
+        let BrowserReply::Logins { logins: ids } = ext
+            .call(
+                &d,
+                BrowserRequest::DataList {
+                    kind: "identity".into(),
+                },
+            )
+            .await
+        else {
+            panic!()
+        };
+        assert_eq!(ids[0].username, "Иван Петров");
+
+        let fill = |id: String, url: &str| {
+            ext.call(
+                &d,
+                BrowserRequest::DataFill {
+                    id,
+                    url: url.into(),
+                },
+            )
+        };
+        let BrowserReply::Data { fields } = fill(card.clone(), "https://shop.example/pay").await
+        else {
+            panic!()
+        };
+        assert_eq!(fields["cc-number"], "4111111111111234");
+        assert_eq!(fields["cc-exp-month"], "07");
+        assert_eq!(fields["cc-exp-year"], "2027");
+        assert_eq!(fields["cc-csc"], "123");
+        assert!(
+            matches!(
+                fill(card, "http://shop.example/pay").await,
+                BrowserReply::Error { .. }
+            ),
+            "карта не уходит на страницу без https"
+        );
+        let BrowserReply::Data { fields } = fill(ids[0].id.clone(), "https://shop.example/").await
+        else {
+            panic!()
+        };
+        assert_eq!(fields["name"], "Иван Петров");
+        assert_eq!(fields["address-level2"], "Казань");
+        // логин не выдаётся как «данные»
+        let BrowserReply::Logins { logins } = ext
+            .call(
+                &d,
+                BrowserRequest::GetLogins {
+                    url: "https://github.com".into(),
+                },
+            )
+            .await
+        else {
+            panic!()
+        };
+        let gh = logins[0].id.clone();
+        assert!(matches!(
+            fill(gh.clone(), "https://github.com").await,
+            BrowserReply::Error { .. }
+        ));
+
+        // тихое заполнение (при загрузке страницы) не спрашивает и не выдаёт, пока сайт не разрешён
+        let quiet = |quiet| {
+            ext.call(
+                &d,
+                BrowserRequest::Fill {
+                    id: gh.clone(),
+                    url: "https://github.com/login".into(),
+                    quiet,
+                },
+            )
+        };
+        assert!(matches!(quiet(true).await, BrowserReply::Error { .. }));
+        assert!(matches!(
+            quiet(false).await,
+            BrowserReply::Credentials { .. }
+        ));
+        assert!(matches!(quiet(true).await, BrowserReply::Error { .. }));
+
+        // правило совпадения: только этот хост, потом никогда
+        let rule = |v: &'static str| {
+            let (d, gh) = (d.clone(), gh.clone());
+            async move {
+                let patch = EntryPatch {
+                    set: vec![FieldSet::new(MATCH_FIELD, v)],
+                    ..Default::default()
+                };
+                d.mutate(move |db| model::update_entry(db, &gh, &patch))
+                    .await
+                    .unwrap();
+            }
+        };
+        let count = |url: &'static str| {
+            let (d, ext) = (&d, &ext);
+            async move {
+                match ext
+                    .call(d, BrowserRequest::GetLogins { url: url.into() })
+                    .await
+                {
+                    BrowserReply::Logins { logins } => logins.len(),
+                    other => panic!("{other:?}"),
+                }
+            }
+        };
+        assert_eq!(count("https://gist.github.com/").await, 1);
+        rule("host").await;
+        assert_eq!(count("https://gist.github.com/").await, 0);
+        assert_eq!(count("https://github.com/login").await, 1);
+        rule("never").await;
+        assert_eq!(count("https://github.com/login").await, 0);
     }
 
     #[tokio::test]

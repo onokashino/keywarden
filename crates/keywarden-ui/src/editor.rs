@@ -3,14 +3,18 @@
 
 use crate::client;
 use gpui_kit::component::button::{Button, ButtonVariants as _, DropdownButton};
+use gpui_kit::component::calendar::Date;
+use gpui_kit::component::date_picker::{DatePicker, DatePickerEvent, DatePickerState};
 use gpui_kit::component::input::{Input, InputEvent, InputState, Textarea, TextareaState};
+use gpui_kit::component::tag::Tag;
 use gpui_kit::component::{ActiveTheme as _, Sizable as _, WindowExt as _, h_flex, v_flex};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 use gpui_kit_assets::IconName;
+use keywarden_core::card;
 use keywarden_core::ipc::{Request, Response};
 use keywarden_core::model::{
-    AutotypeView, EntryDetail, EntryKind, EntryPatch, FieldSet, GroupView, PASSKEY_PREFIX,
+    self, AutotypeView, EntryDetail, EntryKind, EntryPatch, FieldSet, GroupView, PASSKEY_PREFIX,
 };
 use keywarden_core::secret::Secret;
 use keywarden_core::tr;
@@ -52,10 +56,18 @@ pub struct EntryEditor {
     group: Option<String>,
     groups: Vec<GroupView>,
     title: Entity<InputState>,
+    /// поле для нового тега: Enter или запятая превращают набранное в плашку
     tags: Entity<InputState>,
-    expires: Entity<InputState>,
-    original_tags: String,
+    tag_list: Vec<String>,
+    /// теги, которые уже есть в базе: подсказки под полем
+    known_tags: Vec<String>,
+    original_tags: Vec<String>,
+    expires: Entity<DatePickerState>,
     original_expires: String,
+    /// правило совпадения адреса для браузера (`model::URL_MATCH`); пусто: весь домен
+    url_match: String,
+    /// карта: тип следует за номером, пока его не выбрали вручную
+    auto_brand: bool,
     // автоввод
     at_enabled: bool,
     at_sequence: Entity<InputState>,
@@ -86,6 +98,7 @@ impl EntryEditor {
         detail: Option<&EntryDetail>,
         group: Option<String>,
         groups: Vec<GroupView>,
+        known_tags: Vec<String>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -109,20 +122,22 @@ impl EntryEditor {
                 .placeholder(tr!("Название"))
                 .default_value(detail.map(|d| d.summary.title.clone()).unwrap_or_default())
         });
-        let original_tags = detail
-            .map(|d| d.summary.tags.join(", "))
-            .unwrap_or_default();
+        let original_tags: Vec<String> = detail.map(|d| d.summary.tags.clone()).unwrap_or_default();
         let original_expires = detail.and_then(|d| d.expires.clone()).unwrap_or_default();
-        let tags = cx.new(|cx| {
-            InputState::new(window, cx)
-                .placeholder(tr!("через запятую: работа, банк"))
-                .default_value(original_tags.clone())
-        });
+        let tags = cx.new(|cx| InputState::new(window, cx).placeholder(tr!("Новый тег и Enter")));
         let expires = cx.new(|cx| {
-            InputState::new(window, cx)
-                .placeholder(tr!("ГГГГ-ММ-ДД, пусто: бессрочно"))
-                .default_value(original_expires.clone())
+            let ru = keywarden_core::i18n::current() == "ru";
+            DatePickerState::new(window, cx)
+                .date_format(if ru { "%d.%m.%Y" } else { "%Y-%m-%d" })
+                .first_day_of_week(if ru {
+                    chrono::Weekday::Mon
+                } else {
+                    chrono::Weekday::Sun
+                })
         });
+        if let Ok(d) = chrono::NaiveDate::parse_from_str(&original_expires, "%Y-%m-%d") {
+            expires.update(cx, |s, cx| s.set_date(d, window, cx));
+        }
         let original_autotype = detail.map(|d| d.autotype.clone()).unwrap_or_default();
         let at_sequence = cx.new(|cx| {
             InputState::new(window, cx)
@@ -150,7 +165,18 @@ impl EntryEditor {
                 .map(|(_, v, _)| v.clone())
                 .unwrap_or_default()
         };
-        let mut subs = vec![];
+        let mut subs = vec![
+            cx.subscribe_in(
+                &tags,
+                window,
+                |this, _, ev: &InputEvent, window, cx| match ev {
+                    InputEvent::Change => this.commit_tags(false, window, cx),
+                    InputEvent::PressEnter { .. } => this.commit_tags(true, window, cx),
+                    _ => {}
+                },
+            ),
+            cx.subscribe(&expires, |_, _, _: &DatePickerEvent, cx| cx.notify()),
+        ];
         let mut area =
             |name: &str, placeholder: &'static str, window: &mut Window, cx: &mut Context<Self>| {
                 let v = value_of(name);
@@ -217,6 +243,10 @@ impl EntryEditor {
             if kind.template().iter().any(|s| s.name == name) {
                 continue;
             }
+            // правило совпадения адреса правится своим списком, а не строкой
+            if name == model::URL_MATCH {
+                continue;
+            }
             // KPEX_PASSKEY_*: правка сломала бы ключ доступа, показываем только в карточке
             if name.starts_with(PASSKEY_PREFIX) {
                 continue;
@@ -237,6 +267,29 @@ impl EntryEditor {
             ));
         }
 
+        let url_match = value_of(model::URL_MATCH).trim().to_lowercase();
+        let auto_brand = {
+            let b = value_of("Brand");
+            b.trim().is_empty() || card::brand(&value_of("Card Number")) == Some(b.trim())
+        };
+        if kind == EntryKind::Card {
+            // тип карты и подсказки под номером и сроком следуют за вводом
+            for r in rows
+                .iter()
+                .filter(|r: &&Row| matches!(r.name.as_str(), "Card Number" | "Expiry"))
+            {
+                subs.push(cx.subscribe_in(
+                    &r.value,
+                    window,
+                    |this, _, ev: &InputEvent, window, cx| {
+                        if matches!(ev, InputEvent::Change) {
+                            this.follow_card_number(window, cx);
+                        }
+                    },
+                ));
+            }
+        }
+
         Self {
             id: detail.map(|d| d.summary.id.clone()),
             kind,
@@ -244,9 +297,13 @@ impl EntryEditor {
             groups,
             title,
             tags,
+            tag_list: original_tags.clone(),
+            known_tags,
             expires,
             original_tags,
             original_expires,
+            url_match,
+            auto_brand,
             at_enabled: original_autotype.enabled,
             at_sequence,
             at_windows,
@@ -303,10 +360,10 @@ impl EntryEditor {
     }
 
     /// Что уже введено в новую запись (при смене типа переносится в новую форму).
-    pub fn draft(&self, cx: &App) -> (String, String, Option<String>) {
+    pub fn draft(&self, cx: &App) -> (String, Vec<String>, Option<String>) {
         (
             self.title.read(cx).value().to_string(),
-            self.tags.read(cx).value().to_string(),
+            self.final_tags(cx),
             self.group.clone(),
         )
     }
@@ -314,14 +371,111 @@ impl EntryEditor {
     pub fn set_draft(
         &mut self,
         title: &str,
-        tags: &str,
+        tags: &[String],
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         self.title
             .update(cx, |s, cx| s.set_value(title.to_string(), window, cx));
-        self.tags
-            .update(cx, |s, cx| s.set_value(tags.to_string(), window, cx));
+        self.tag_list = tags.to_vec();
+    }
+
+    fn add_tag(&mut self, tag: &str) {
+        let tag = tag.trim().trim_start_matches('#').trim();
+        if !tag.is_empty()
+            && !self
+                .tag_list
+                .iter()
+                .any(|t| t.to_lowercase() == tag.to_lowercase())
+        {
+            self.tag_list.push(tag.to_string());
+        }
+    }
+
+    /// Набранное в поле тегов становится плашками. `all`: Enter, уходит всё; иначе только то,
+    /// что уже отделено запятой, а недописанный хвост остаётся в поле.
+    fn commit_tags(&mut self, all: bool, window: &mut Window, cx: &mut Context<Self>) {
+        let text = self.tags.read(cx).value().to_string();
+        if all || text.contains([',', ';']) {
+            let mut parts: Vec<&str> = text.split([',', ';']).collect();
+            let rest = if all {
+                ""
+            } else {
+                parts.pop().unwrap_or_default()
+            };
+            for p in parts {
+                self.add_tag(p);
+            }
+            let rest = rest.trim_start().to_string();
+            self.tags.update(cx, |s, cx| s.set_value(rest, window, cx));
+        }
+        // подсказки под полем фильтруются по набранному
+        cx.notify();
+    }
+
+    /// Плашки и то, что осталось недописанным в поле.
+    fn final_tags(&self, cx: &App) -> Vec<String> {
+        let mut out = self.tag_list.clone();
+        for p in self.tags.read(cx).value().split([',', ';']) {
+            let p = p.trim().trim_start_matches('#').trim();
+            if !p.is_empty() && !out.iter().any(|t| t.to_lowercase() == p.to_lowercase()) {
+                out.push(p.to_string());
+            }
+        }
+        out
+    }
+
+    fn row_value(&self, name: &str, cx: &App) -> String {
+        self.rows
+            .iter()
+            .find(|r| r.name == name && r.custom.is_none())
+            .map(|r| r.value.read(cx).value().to_string())
+            .unwrap_or_default()
+    }
+
+    fn set_brand(&mut self, brand: &str, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(r) = self.rows.iter().find(|r| r.name == "Brand") {
+            let brand = brand.to_string();
+            r.value.update(cx, |s, cx| s.set_value(brand, window, cx));
+        }
+        cx.notify();
+    }
+
+    fn follow_card_number(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.auto_brand {
+            let b = card::brand(&self.row_value("Card Number", cx)).unwrap_or_default();
+            if self.row_value("Brand", cx) != b {
+                return self.set_brand(b, window, cx);
+            }
+        }
+        cx.notify();
+    }
+
+    /// Замечание под полем карты: (текст, это предупреждение).
+    fn card_note(&self, name: &str, cx: &App) -> Option<(SharedString, bool)> {
+        if self.kind != EntryKind::Card {
+            return None;
+        }
+        let v = self.row_value(name, cx);
+        if v.trim().is_empty() {
+            return None;
+        }
+        match name {
+            "Card Number" if !card::luhn(&v) => Some((
+                tr!("Проверьте номер: контрольная цифра не сходится").into(),
+                true,
+            )),
+            "Expiry" => match card::parse_expiry(&v) {
+                None => Some((tr!("Нужен вид ММ/ГГ, например 04/29").into(), true)),
+                Some((m, y)) => {
+                    use chrono::Datelike as _;
+                    let now = chrono::Local::now().date_naive();
+                    ((y, m) < (now.year() as u32, now.month()))
+                        .then(|| (tr!("Срок карты истёк").into(), true))
+                }
+            },
+            _ => None,
+        }
     }
 
     pub fn focus_handle(&self, cx: &App) -> FocusHandle {
@@ -428,19 +582,42 @@ impl EntryEditor {
             if r.custom.is_some() && !r.name.is_empty() && r.name != name {
                 removed.push(r.name.clone());
             }
+            // срок карты сохраняется в одном виде, как бы его ни набрали
+            let value = match card::parse_expiry(&value) {
+                Some((m, y))
+                    if self.kind == EntryKind::Card && name == "Expiry" && r.custom.is_none() =>
+                {
+                    card::format_expiry(m, y)
+                }
+                _ => value,
+            };
+            // тип карты, который не выбирали вручную, берётся по номеру на момент сохранения
+            let value = match card::brand(&self.row_value("Card Number", cx)) {
+                Some(b)
+                    if self.kind == EntryKind::Card
+                        && self.auto_brand
+                        && name == "Brand"
+                        && r.custom.is_none() =>
+                {
+                    b.to_string()
+                }
+                _ => value,
+            };
             push(name, value, r.protected);
         }
-        let tags_text = self.tags.read(cx).value().to_string();
-        let tags = (tags_text.trim() != self.original_tags.trim()).then(|| {
-            let mut v: Vec<String> = tags_text
-                .split([',', ';'])
-                .map(|t| t.trim().trim_start_matches('#').to_string())
-                .filter(|t| !t.is_empty())
-                .collect();
-            v.dedup();
-            v
-        });
-        let exp = self.expires.read(cx).value().trim().to_string();
+        if self.url_match.is_empty() || self.url_match == "domain" {
+            if self.original.contains_key(model::URL_MATCH) {
+                removed.push(model::URL_MATCH.into());
+            }
+        } else {
+            push(model::URL_MATCH.into(), self.url_match.clone(), false);
+        }
+        let tag_list = self.final_tags(cx);
+        let tags = (tag_list != self.original_tags).then_some(tag_list);
+        let exp = match self.expires.read(cx).date() {
+            Date::Single(Some(d)) => d.format("%Y-%m-%d").to_string(),
+            _ => String::new(),
+        };
         let expires = (exp != self.original_expires).then(|| (!exp.is_empty()).then_some(exp));
         let seq = self.at_sequence.read(cx).value().trim().to_string();
         let at = AutotypeView {
@@ -804,6 +981,238 @@ impl EntryEditor {
         ))
     }
 
+    /// Тип карты: список платёжных систем; «по номеру» возвращает автоматическое определение.
+    fn render_brand(&self, r: &Row, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.theme().clone();
+        let current = r.value.read(cx).value().trim().to_string();
+        let auto = self.auto_brand;
+        let entity = cx.entity();
+        // пока тип следует за номером, показываем то, что по номеру видно уже сейчас
+        let detected = card::brand(&self.row_value("Card Number", cx));
+        let label: SharedString = match (auto, detected) {
+            (true, Some(b)) => b.into(),
+            _ if current.is_empty() => tr!("Определится по номеру").into(),
+            _ => current.clone().into(),
+        };
+        h_flex()
+            .gap_3()
+            .items_center()
+            .child(
+                div()
+                    .w(px(150.))
+                    .flex_shrink_0()
+                    .text_sm()
+                    .text_color(theme.muted_foreground)
+                    .child(r.label.clone()),
+            )
+            .child(
+                DropdownButton::new("brand")
+                    .button(
+                        Button::new("brand-btn")
+                            .outline()
+                            .icon(IconName::CreditCard)
+                            .label(label),
+                    )
+                    .dropdown_menu_with_anchor(Anchor::TopLeft, move |menu, _, _| {
+                        use gpui_kit::component::menu::PopupMenuItem;
+                        let e = entity.clone();
+                        let mut menu = menu.min_w(px(220.)).item(
+                            PopupMenuItem::new(tr!("По номеру карты"))
+                                .checked(auto)
+                                .on_click(move |_, w, cx| {
+                                    e.update(cx, |this, cx| {
+                                        this.auto_brand = true;
+                                        let b = card::brand(&this.row_value("Card Number", cx))
+                                            .unwrap_or_default();
+                                        this.set_brand(b, w, cx);
+                                    });
+                                }),
+                        );
+                        menu = menu.separator();
+                        // тип из чужого менеджера, которого нет в списке, остаётся выбранным пунктом
+                        let other = (!current.is_empty()
+                            && !card::BRANDS.contains(&current.as_str()))
+                        .then(|| current.clone());
+                        for b in card::BRANDS.iter().map(|b| b.to_string()).chain(other) {
+                            let e = entity.clone();
+                            let checked = !auto && b == current;
+                            let name = b.clone();
+                            menu = menu.item(PopupMenuItem::new(b).checked(checked).on_click(
+                                move |_, w, cx| {
+                                    e.update(cx, |this, cx| {
+                                        this.auto_brand = false;
+                                        this.set_brand(&name, w, cx);
+                                    });
+                                },
+                            ));
+                        }
+                        menu
+                    }),
+            )
+            .into_any_element()
+    }
+
+    /// Теги: плашки с крестиком, поле для нового и теги базы, которых у записи ещё нет.
+    fn render_tags(&self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.theme().clone();
+        let typed = self.tags.read(cx).value().trim().to_lowercase();
+        let has = |t: &str| {
+            self.tag_list
+                .iter()
+                .any(|x| x.to_lowercase() == t.to_lowercase())
+        };
+        let suggestions: Vec<String> = self
+            .known_tags
+            .iter()
+            .filter(|t| !has(t) && (typed.is_empty() || t.to_lowercase().contains(&typed)))
+            .take(8)
+            .cloned()
+            .collect();
+        v_flex()
+            .flex_1()
+            .min_w_0()
+            .gap_2()
+            .when(!self.tag_list.is_empty(), |d| {
+                d.child(h_flex().flex_wrap().gap_1p5().children(
+                    self.tag_list.iter().enumerate().map(|(ix, t)| {
+                        Tag::secondary().child(
+                            h_flex().gap_1().items_center().child(t.clone()).child(
+                                Button::new(("tag-rm", ix))
+                                    .ghost()
+                                    .xsmall()
+                                    .icon(IconName::Close)
+                                    .tooltip(tr!("Убрать тег"))
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        if ix < this.tag_list.len() {
+                                            this.tag_list.remove(ix);
+                                        }
+                                        cx.notify();
+                                    })),
+                            ),
+                        )
+                    }),
+                ))
+            })
+            .child(Input::new(&self.tags))
+            .when(!suggestions.is_empty(), |d| {
+                d.child(
+                    h_flex()
+                        .flex_wrap()
+                        .gap_1()
+                        .items_center()
+                        .child(
+                            div()
+                                .text_xs()
+                                .text_color(theme.muted_foreground)
+                                .child(tr!("Уже есть в базе:")),
+                        )
+                        .children(suggestions.into_iter().enumerate().map(|(ix, t)| {
+                            let tag = t.clone();
+                            Button::new(("tag-add", ix))
+                                .ghost()
+                                .xsmall()
+                                .icon(IconName::Plus)
+                                .label(t)
+                                .on_click(cx.listener(move |this, _, w, cx| {
+                                    this.add_tag(&tag);
+                                    this.tags.update(cx, |s, cx| s.set_value("", w, cx));
+                                    cx.notify();
+                                }))
+                        })),
+                )
+            })
+            .into_any_element()
+    }
+
+    /// На каких страницах браузер предлагает эту запись.
+    fn render_url_match(&self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.theme().clone();
+        let options: [(&str, &str, &str); 5] = [
+            (
+                "domain",
+                tr!("Весь сайт с поддоменами"),
+                tr!("example.com и login.example.com"),
+            ),
+            (
+                "host",
+                tr!("Только этот адрес сайта"),
+                tr!("Поддомены и соседние сайты хостинга не подходят"),
+            ),
+            (
+                "starts",
+                tr!("Адрес начинается так же"),
+                tr!("Для сайтов, где у каждого свой путь: host.io/team/"),
+            ),
+            (
+                "exact",
+                tr!("Точно эта страница"),
+                tr!("Адрес страницы должен совпасть целиком"),
+            ),
+            (
+                "never",
+                tr!("Не предлагать в браузере"),
+                tr!("Запись остаётся только в приложении"),
+            ),
+        ];
+        let current = if self.url_match.is_empty() {
+            "domain".to_string()
+        } else {
+            self.url_match.clone()
+        };
+        let (label, hint) = options
+            .iter()
+            .find(|o| o.0 == current)
+            .map(|o| (o.1, o.2))
+            .unwrap_or((options[0].1, options[0].2));
+        let entity = cx.entity();
+        h_flex()
+            .gap_3()
+            .items_center()
+            .child(
+                div()
+                    .w(px(150.))
+                    .flex_shrink_0()
+                    .text_sm()
+                    .text_color(theme.muted_foreground)
+                    .child(tr!("В браузере")),
+            )
+            .child(
+                DropdownButton::new("url-match")
+                    .button(
+                        Button::new("url-match-btn")
+                            .outline()
+                            .icon(IconName::Globe)
+                            .label(label),
+                    )
+                    .dropdown_menu_with_anchor(Anchor::TopLeft, move |menu, _, _| {
+                        let mut menu = menu.min_w(px(260.));
+                        for (value, label, _) in options {
+                            let e = entity.clone();
+                            menu = menu.item(
+                                gpui_kit::component::menu::PopupMenuItem::new(label)
+                                    .checked(value == current)
+                                    .on_click(move |_, _, cx| {
+                                        e.update(cx, |this, cx| {
+                                            this.url_match = value.to_string();
+                                            cx.notify();
+                                        });
+                                    }),
+                            );
+                        }
+                        menu
+                    }),
+            )
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .text_xs()
+                    .text_color(theme.muted_foreground)
+                    .child(hint),
+            )
+            .into_any_element()
+    }
+
     fn save(&mut self, cx: &mut Context<Self>) {
         if self.saving {
             return;
@@ -871,6 +1280,14 @@ impl Render for EntryEditor {
             .enumerate()
             .map(|(ix, r)| {
                 let is_password = r.name == "Password";
+                let note = r
+                    .custom
+                    .is_none()
+                    .then(|| self.card_note(&r.name, cx))
+                    .flatten();
+                if self.kind == EntryKind::Card && r.name == "Brand" && r.custom.is_none() {
+                    return self.render_brand(r, cx);
+                }
                 let label = match &r.custom {
                     // своё имя правится на месте, но выглядит как подпись
                     Some(n) => div()
@@ -922,6 +1339,18 @@ impl Render for EntryEditor {
                                         )
                                     }),
                             )
+                            .when_some(note, |d, (text, warn)| {
+                                d.child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(if warn {
+                                            theme.warning_foreground
+                                        } else {
+                                            theme.muted_foreground
+                                        })
+                                        .child(text),
+                                )
+                            })
                             // подсказка под полем, а не сбоку: поле не сжимается
                             .when_some(
                                 (r.name == wallet::PRIVATE_KEY || r.name == wallet::XPUB)
@@ -943,8 +1372,8 @@ impl Render for EntryEditor {
                                 },
                             ),
                     )
+                    .into_any_element()
             })
-            .map(|e| e.into_any_element())
             .collect();
         // кошелёк: строки по группам; у остальных типов всё как было
         let custom: Vec<bool> = self.rows.iter().map(|r| r.custom.is_some()).collect();
@@ -966,6 +1395,9 @@ impl Render for EntryEditor {
                 more_rows.push(el);
             }
         }
+        let url_match_row = (self.kind == EntryKind::Login
+            || self.original.contains_key(model::URL_MATCH))
+        .then(|| self.render_url_match(cx));
         let show_extras = !wallet_kind || self.wallet_more;
         let wallet_head = wallet_kind.then(|| self.render_wallet_head(cx));
 
@@ -1110,6 +1542,7 @@ impl Render for EntryEditor {
                 },
             )
             .children(main_rows)
+            .children(url_match_row)
             .children(wallet_addr)
             .when(wallet_kind, |d| {
                 d.child(
@@ -1147,7 +1580,7 @@ impl Render for EntryEditor {
                                 .text_color(theme.muted_foreground)
                                 .child(tr!("Теги")),
                         )
-                        .child(div().flex_1().child(Input::new(&self.tags))),
+                        .child(self.render_tags(cx)),
                 )
             })
             .when(show_extras, |d| {
@@ -1162,7 +1595,13 @@ impl Render for EntryEditor {
                                 .text_color(theme.muted_foreground)
                                 .child(tr!("Срок действия")),
                         )
-                        .child(div().flex_1().child(Input::new(&self.expires)))
+                        .child(
+                            div().flex_1().child(
+                                DatePicker::new(&self.expires)
+                                    .cleanable(true)
+                                    .placeholder(tr!("Бессрочно")),
+                            ),
+                        )
                         .child(
                             Button::new("exp-year")
                                 .outline()
@@ -1171,9 +1610,8 @@ impl Render for EntryEditor {
                                 .on_click(cx.listener(|this, _, w, cx| {
                                     let d =
                                         chrono::Local::now().date_naive() + chrono::Days::new(365);
-                                    this.expires.update(cx, |i, cx| {
-                                        i.set_value(d.format("%Y-%m-%d").to_string(), w, cx)
-                                    });
+                                    this.expires.update(cx, |s, cx| s.set_date(d, w, cx));
+                                    cx.notify();
                                 })),
                         ),
                 )

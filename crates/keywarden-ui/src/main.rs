@@ -52,6 +52,8 @@ fn main() {
     let is_confirm = confirm.is_some();
     application().with_assets(assets::AppAssets).run(move |cx| {
         gpui_kit::init(cx);
+        // календарь и другие готовые элементы говорят на языке приложения
+        gpui_kit::component::set_locale(keywarden_core::i18n::current());
         theme::init(cx);
         launcher::bind_keys(cx);
         confirm::bind_keys(cx);

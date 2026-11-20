@@ -52,6 +52,18 @@ pub enum BrowserRequest {
     Fill {
         id: String,
         url: String,
+        /// заполнение при загрузке страницы: если сайт ещё не разрешён, отказ без вопроса
+        #[serde(default)]
+        quiet: bool,
+    },
+    /// карты (`card`) или личные данные (`identity`) для меню под полем: название и подпись, без значений
+    DataList {
+        kind: String,
+    },
+    /// значения карты или личных данных для страницы; первый раз для сайта спрашивает пользователя
+    DataFill {
+        id: String,
+        url: String,
     },
     Totp {
         id: String,
@@ -171,6 +183,10 @@ pub enum BrowserReply {
     Totp {
         code: String,
         remaining: u64,
+    },
+    /// поля карты или личных данных: ключи как токены autocomplete (`cc-number`, `given-name`…)
+    Data {
+        fields: std::collections::BTreeMap<String, String>,
     },
     /// `new`: учётки нет, `changed`: есть с другим паролем (id), `same`: ничего не делать
     SaveCheck {

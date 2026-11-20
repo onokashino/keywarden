@@ -188,5 +188,11 @@
   "в коде должно быть 8 цифр": "the code must have 8 digits",
   "Компьютер с таким кодом не найден. Проверьте код (он одноразовый: после ошибки нужен новый), что оба компьютера в одной сети и что на том открыт порт {port} (TCP)": "No computer with this code was found. Check the code (it is one-time: after a mistake you need a new one), that both computers are on the same network and that port {port} (TCP) is open on the other one",
   "получен не файл базы": "what was received is not a vault file",
-  "база получена, но не записана: {e}": "the vault was received but not saved: {e}"
+  "база получена, но не записана: {e}": "the vault was received but not saved: {e}",
+  "Заполнить «{title}» на {site}?": "Fill \"{title}\" on {site}?",
+  "Сайт {site} просит данные карты": "{site} asks for card details",
+  "Сайт {site} просит личные данные": "{site} asks for personal details",
+  "карты и личные данные заполняются только на страницах https": "cards and personal details are filled on https pages only",
+  "сайт ещё не разрешён для этой записи": "this site is not allowed for the entry yet",
+  "эта запись не карта и не личные данные": "this entry is neither a card nor personal details"
 }

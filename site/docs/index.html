@@ -233,6 +233,16 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
 <p>The first time a site asks for a login, Keywarden shows a confirmation over all windows: <kbd>Enter</kbd> allows once, <kbd>Ctrl+Enter</kbd> always for this site, <kbd>Esc</kbd> denies. Sites are matched by registrable domain using the Public Suffix List, so <code>login.example.com</code> and <code>example.com</code> share logins but <code>example.co.uk</code> and <code>other.co.uk</code> do not.</p>
 <p>The browser and Keywarden use an encrypted channel (the same crypto_box scheme as KeePassXC-Browser); the host in between only forwards opaque messages. Every automatic behavior can be turned off in the extension settings.</p>
 <p>Shortcut in the browser: <kbd>Ctrl+Shift+L</kbd> fills the login on the current page.</p>
+<h3>Cards and personal details</h3>
+<p>On payment and address forms a menu under the field lists your Card or Identity entries. The chosen entry fills the whole group of fields: number, cardholder, expiry in the format the form expects, CVC, name, address. It works on https pages only and only after you confirm it for the site in the Keywarden window. Payment forms embedded as a third-party frame are left alone.</p>
+<h3>Right-click menu</h3>
+<p>The <b>Keywarden</b> item in the page menu: fill login and password (even where the form was not recognised), copy the username, password or 2FA code, fill a card or personal details, generate a password into the field under the cursor.</p>
+<h3>When the vault is locked</h3>
+<p>A sign-in is not lost: instead of "Save password?" you get "Unlock Keywarden to save this password", and the usual offer after unlocking. Passkeys work the same way: the site asks for a passkey, the extension offers to unlock and then continues the sign-in.</p>
+<h3>Which pages an entry is offered on</h3>
+<p>The login editor has an "In the browser" list: whole site with subdomains (default), this site address only, address starts the same, exactly this page, do not offer in the browser. The rule is stored in the entry as a plain <code>URL Match</code> field and travels with the vault.</p>
+<h3>Fill when the page opens</h3>
+<p>Off by default, turned on in the extension settings. It fills without a click on https only, only for sites you already allowed for the entry, and only when the site has a single entry. The risk: a compromised site could read the password without any action from you.</p>
 
 <h2 id="passkeys">Passkeys</h2>
 <p>When a site offers to create a passkey, the extension handles it and stores the key in your vault in the KeePassXC format (<code>KPEX_PASSKEY_*</code> fields), so KeePassXC can use the same passkeys. Signing in with a passkey asks for your confirmation like any other login. Keys use ES256, which nearly every site requires; for anything else the browser's own WebAuthn takes over.</p>

@@ -105,6 +105,10 @@ impl EntryKind {
     }
 }
 
+/// Поле записи с правилом совпадения адреса для браузера: `domain` (по умолчанию, поля нет),
+/// `host`, `starts`, `exact`, `never`. То же имя в `keywarden_ext::urls::MATCH_FIELD`.
+pub const URL_MATCH: &str = "URL Match";
+
 // Поля шаблонов. Имена английские: так их видят KeePassXC и мобильные клиенты.
 fn t_login() -> Vec<FieldSpec> {
     vec![
@@ -121,7 +125,7 @@ fn t_card() -> Vec<FieldSpec> {
         FieldSpec::new("Expiry", crate::tr!("Срок"), false).hint(crate::tr!("ММ/ГГ")),
         FieldSpec::new("CVV", "CVV", true),
         FieldSpec::new("PIN", "PIN", true),
-        FieldSpec::new("Brand", crate::tr!("Платёжная система"), false),
+        FieldSpec::new("Brand", crate::tr!("Тип карты"), false),
     ]
 }
 fn t_identity() -> Vec<FieldSpec> {

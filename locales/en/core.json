@@ -37,7 +37,6 @@
   "Адрес": "Address",
   "Владелец": "Cardholder",
   "Номер карты": "Card number",
-  "Платёжная система": "Brand",
   "Имя": "First name",
   "Отчество": "Middle name",
   "Фамилия": "Last name",
@@ -218,5 +217,6 @@
   "данные из сети повреждены": "data from the network is damaged",
   "неверный адрес: {e}": "invalid address: {e}",
   "нужен https: по http пароль от сервера уйдёт открытым текстом (http можно только в своей сети)": "https is required: over http the server password travels in plain text (http is allowed only on your own network)",
-  "другой компьютер не подтвердил ключ базы": "the other computer did not prove the vault key"
+  "другой компьютер не подтвердил ключ базы": "the other computer did not prove the vault key",
+  "Тип карты": "Card type"
 }

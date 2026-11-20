@@ -166,9 +166,6 @@
   "passkey": {
     "message": "Passkey"
   },
-  "toast_passkey_locked": {
-    "message": "Keywarden vault is locked: using the browser's regular sign-in"
-  },
   "kind_login": {
     "message": "Logins"
   },
@@ -531,5 +528,83 @@
   },
   "shortcuts": {
     "message": "Shortcuts"
+  },
+  "ctx_fill": {
+    "message": "Fill login and password"
+  },
+  "ctx_copy_username": {
+    "message": "Copy username"
+  },
+  "ctx_copy_password": {
+    "message": "Copy password"
+  },
+  "ctx_copy_totp": {
+    "message": "Copy 2FA code"
+  },
+  "ctx_card": {
+    "message": "Fill card"
+  },
+  "ctx_identity": {
+    "message": "Fill personal details"
+  },
+  "ctx_generate": {
+    "message": "Generate a password into this field"
+  },
+  "err_page_only": {
+    "message": "Only from a site page"
+  },
+  "toast_copied": {
+    "message": "Copied. The clipboard clears itself"
+  },
+  "toast_otp_copied": {
+    "message": "2FA code is in the clipboard"
+  },
+  "toast_no_login_field": {
+    "message": "No sign-in field on this page"
+  },
+  "toast_no_card_fields": {
+    "message": "No card fields found on this page"
+  },
+  "toast_no_identity_fields": {
+    "message": "No fields for personal details found on this page"
+  },
+  "menu_cards": {
+    "message": "Cards"
+  },
+  "menu_identities": {
+    "message": "Personal details"
+  },
+  "menu_no_cards": {
+    "message": "No cards in Keywarden. Add an entry of type Card"
+  },
+  "menu_no_identities": {
+    "message": "No personal details in Keywarden. Add an entry of type Identity"
+  },
+  "pref_otp_clip": {
+    "message": "2FA code to clipboard after sign-in"
+  },
+  "pref_otp_clip_hint": {
+    "message": "After login and password are filled, the code of that entry is already in the clipboard"
+  },
+  "pref_fill_load": {
+    "message": "Fill when the page opens"
+  },
+  "pref_fill_load_hint": {
+    "message": "No click needed: https only, only sites you already allowed for the entry, and only when there is a single entry. A compromised site could read the password without any action from you"
+  },
+  "passkey_locked_title": {
+    "message": "This site asks for a passkey"
+  },
+  "passkey_unlock_sub": {
+    "message": "Locked. Sign-in continues after you unlock"
+  },
+  "passkey_choose_title": {
+    "message": "Sign in with a passkey"
+  },
+  "passkey_use_device": {
+    "message": "Device or hardware key"
+  },
+  "passkey_use_device_sub": {
+    "message": "The browser's own sign-in, without Keywarden"
   }
 }
