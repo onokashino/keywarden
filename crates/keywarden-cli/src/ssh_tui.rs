@@ -824,6 +824,12 @@ struct Palette {
     sel_dim: Color,
 }
 
+/// Акцент, успех, ошибка и приглушённый текст темы для обычных сообщений kw.
+pub(crate) fn tones() -> [Color; 4] {
+    let p = pal();
+    [p.accent, p.ok, p.err, p.muted]
+}
+
 fn pal() -> &'static Palette {
     static P: std::sync::OnceLock<Palette> = std::sync::OnceLock::new();
     P.get_or_init(|| {

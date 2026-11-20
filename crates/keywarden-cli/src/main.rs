@@ -2,6 +2,7 @@
 
 mod browser;
 mod ssh_tui;
+mod term;
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -577,7 +578,7 @@ enum CipherArg {
 
 fn main() {
     if let Err(e) = run(Cli::parse()) {
-        eprintln!("kw: {e:#}");
+        term::fail(&format!("{e:#}"));
         std::process::exit(1);
     }
 }
@@ -592,7 +593,17 @@ fn connect() -> Result<Client> {
 
 /// Запрос с разбором ошибки демона.
 fn call(c: &mut Client, req: Request) -> Result<Response> {
-    match c.call(&req)? {
+    // открытие и создание базы идут секунды: пока ждём ответ, на строке индикатор
+    let label = match &req {
+        Request::Unlock { .. } | Request::QuickUnlock { .. } => tr!("Открываю базу"),
+        Request::Create { .. } => tr!("Создаю базу"),
+        Request::LanReceive { .. } => tr!("Получаю базу"),
+        _ => tr!("Жду Keywarden"),
+    };
+    let spinner = term::spinner(label);
+    let reply = c.call(&req);
+    drop(spinner);
+    match reply? {
         Response::Error {
             code: ErrorCode::Locked,
             ..
@@ -762,7 +773,7 @@ fn run(cli: Cli) -> Result<()> {
                     prompt("PIN: ")?
                 };
                 call(&mut c, Request::QuickUnlock { pin })?;
-                eprintln!("{}", tr!("база открыта"));
+                term::ok(tr!("база открыта"));
                 return Ok(());
             }
             let password = if no_password {
@@ -779,7 +790,7 @@ fn run(cli: Cli) -> Result<()> {
                 yubikey,
             };
             call(&mut c, req)?;
-            eprintln!("{}", tr!("база открыта"));
+            term::ok(tr!("база открыта"));
         }
         Cmd::Pin { remove, stdin } => {
             if remove {
@@ -790,7 +801,7 @@ fn run(cli: Cli) -> Result<()> {
                         key: None,
                     },
                 )?;
-                eprintln!("{}", tr!("PIN убран"));
+                term::ok(tr!("PIN убран"));
                 return Ok(());
             }
             let (pw, pin) = if stdin {
@@ -812,11 +823,11 @@ fn run(cli: Cli) -> Result<()> {
                     }),
                 },
             )?;
-            eprintln!("{}", tr!("PIN задан"));
+            term::ok(tr!("PIN задан"));
         }
         Cmd::Lock => {
             call(&mut c, Request::Lock)?;
-            eprintln!("{}", tr!("база заблокирована"));
+            term::ok(tr!("база заблокирована"));
         }
         Cmd::New {
             path,
@@ -838,7 +849,7 @@ fn run(cli: Cli) -> Result<()> {
                 CipherArg::Aes256 => Cipher::Aes256,
                 CipherArg::Chacha20 => Cipher::ChaCha20,
             };
-            eprintln!("{}", tr!("подбираю параметры Argon2id (~1 с)…"));
+
             call(
                 &mut c,
                 Request::Create {
@@ -849,7 +860,7 @@ fn run(cli: Cli) -> Result<()> {
                     cipher,
                 },
             )?;
-            eprintln!("{}", tr!("база создана и открыта"));
+            term::ok(tr!("база создана и открыта"));
         }
         Cmd::Sync { cmd } => match cmd {
             SyncCmd::Status => {
@@ -910,18 +921,15 @@ fn run(cli: Cli) -> Result<()> {
             SyncCmd::Accept | SyncCmd::Reject => {
                 let accept = matches!(cmd, SyncCmd::Accept);
                 call(&mut c, Request::SyncDecide { accept })?;
-                eprintln!(
-                    "{}",
-                    if accept {
-                        tr!("Удаления приняты")
-                    } else {
-                        tr!("Удаления отклонены")
-                    }
-                );
+                term::ok(if accept {
+                    tr!("Удаления приняты")
+                } else {
+                    tr!("Удаления отклонены")
+                });
             }
             SyncCmd::Revert { id } => {
                 call(&mut c, Request::SyncRevert { id })?;
-                eprintln!("{}", tr!("Слияние {id} отменено", id = id));
+                term::ok(tr!("Слияние {id} отменено", id = id));
             }
             SyncCmd::Webdav {
                 url,
@@ -949,14 +957,11 @@ fn run(cli: Cli) -> Result<()> {
                         password,
                     },
                 )?;
-                eprintln!(
-                    "{}",
-                    if off {
-                        tr!("WebDAV выключен")
-                    } else {
-                        tr!("WebDAV подключён: база синхронизируется с сервером")
-                    }
-                );
+                term::ok(if off {
+                    tr!("WebDAV выключен")
+                } else {
+                    tr!("WebDAV подключён: база синхронизируется с сервером")
+                });
             }
             SyncCmd::Offer => {
                 call(&mut c, Request::LanOffer { on: true })?;
@@ -969,13 +974,10 @@ fn run(cli: Cli) -> Result<()> {
                 };
                 // сам код в stdout: его удобно передать дальше, пояснение в stderr
                 println!("{}", offer.code);
-                eprintln!(
-                    "{}",
-                    tr!(
-                        "Введите этот код на новом компьютере: kw sync receive КОД. Он одноразовый и действует {min} мин",
-                        min = offer.seconds.div_ceil(60)
-                    )
-                );
+                term::info(tr!(
+                    "Введите этот код на новом компьютере: kw sync receive КОД. Он одноразовый и действует {min} мин",
+                    min = offer.seconds.div_ceil(60)
+                ));
             }
             SyncCmd::Receive { code, dir } => {
                 let dir = dir.unwrap_or_else(|| PathBuf::from("~"));
@@ -989,10 +991,10 @@ fn run(cli: Cli) -> Result<()> {
                 else {
                     bail!(tr!("нет ответа"))
                 };
-                eprintln!(
-                    "{}",
-                    tr!("База получена: {path}. Откройте её: kw unlock", path = path)
-                );
+                term::ok(tr!(
+                    "База получена: {path}. Откройте её: kw unlock",
+                    path = path
+                ));
             }
             SyncCmd::Lan { state } => {
                 let on = match state.as_str() {
@@ -1006,14 +1008,11 @@ fn run(cli: Cli) -> Result<()> {
                 };
                 prefs.lan_sync = on;
                 call(&mut c, Request::Prefs { set: Some(*prefs) })?;
-                eprintln!(
-                    "{}",
-                    if on {
-                        tr!("Обмен в сети включён (порт 47470, UDP и TCP)")
-                    } else {
-                        tr!("Обмен в сети выключен")
-                    }
-                );
+                term::ok(if on {
+                    tr!("Обмен в сети включён (порт 47470, UDP и TCP)")
+                } else {
+                    tr!("Обмен в сети выключен")
+                });
             }
         },
         Cmd::Wallet {
@@ -1091,14 +1090,11 @@ fn run(cli: Cli) -> Result<()> {
                     field: field.clone(),
                 },
             )?;
-            eprintln!(
-                "{}",
-                tr!(
-                    "{field} из «{title}» скопирован, буфер очистится сам",
-                    field = field,
-                    title = e.title
-                )
-            );
+            term::ok(tr!(
+                "{field} из «{title}» скопирован, буфер очистится сам",
+                field = field,
+                title = e.title
+            ));
         }
         Cmd::Totp { query, copy, pick } => {
             let e = resolve(&mut c, &query, &pick)?;
@@ -1126,10 +1122,7 @@ fn run(cli: Cli) -> Result<()> {
             let Response::Created { id } = call(&mut c, Request::Add { patch })? else {
                 bail!(tr!("нет ответа"))
             };
-            eprintln!(
-                "{}",
-                tr!("добавлено «{title}» ({id})", title = title, id = id)
-            );
+            term::ok(tr!("добавлено «{title}» ({id})", title = title, id = id));
         }
         Cmd::Edit {
             query,
@@ -1147,7 +1140,7 @@ fn run(cli: Cli) -> Result<()> {
                 patch.set.push(FieldSet::new("Title", t));
             }
             call(&mut c, Request::Update { id: e.id, patch })?;
-            eprintln!("{}", tr!("«{title}» изменено", title = e.title));
+            term::ok(tr!("«{title}» изменено", title = e.title));
         }
         Cmd::Health { breaches } => {
             use keywarden_core::health::Issue;
@@ -1211,7 +1204,7 @@ fn run(cli: Cli) -> Result<()> {
                     value: Secret::new(value),
                 },
             )?;
-            eprintln!("{}", tr!("2FA для «{title}» задана", title = e.title));
+            term::ok(tr!("2FA для «{title}» задана", title = e.title));
         }
         Cmd::Otp(OtpCmd::Scan { file }) => {
             let Response::OtpScanned { text } = call(
@@ -1254,12 +1247,9 @@ fn run(cli: Cli) -> Result<()> {
                 println!("{line}");
                 y += 2;
             }
-            eprintln!(
-                "{}",
-                tr!(
-                    "Отсканируйте в 2FAS или другом приложении. В QR секрет: не показывайте экран другим."
-                )
-            );
+            term::info(tr!(
+                "Отсканируйте в 2FAS или другом приложении. В QR секрет: не показывайте экран другим."
+            ));
         }
         Cmd::Autotype {
             query,
@@ -1279,14 +1269,11 @@ fn run(cli: Cli) -> Result<()> {
                 },
             )? {
                 {
-                    eprintln!(
-                        "{}",
-                        tr!(
-                            "к окну «{window}» подходит записей: {n}; выберите в лаунчере",
-                            window = window,
-                            n = entries.len()
-                        )
-                    );
+                    term::info(tr!(
+                        "к окну «{window}» подходит записей: {n}; выберите в лаунчере",
+                        window = window,
+                        n = entries.len()
+                    ));
                     let ui = std::env::current_exe()
                         .ok()
                         .and_then(|p| p.parent().map(|d| d.join("keywarden-ui")))
@@ -1318,13 +1305,10 @@ fn run(cli: Cli) -> Result<()> {
             let e = resolve(&mut c, &query, &pick)?;
             if clear {
                 call(&mut c, Request::ClearIcon { id: e.id })?;
-                eprintln!("{}", tr!("иконка «{title}» убрана", title = e.title));
+                term::ok(tr!("иконка «{title}» убрана", title = e.title));
             } else {
                 call(&mut c, Request::FetchFavicon { id: e.id })?;
-                eprintln!(
-                    "{}",
-                    tr!("иконка «{title}» сохранена в базе", title = e.title)
-                );
+                term::ok(tr!("иконка «{title}» сохранена в базе", title = e.title));
             }
         }
         Cmd::Dup { query, pick } => {
@@ -1356,14 +1340,11 @@ fn run(cli: Cli) -> Result<()> {
                     group: g.id,
                 },
             )?;
-            eprintln!(
-                "{}",
-                tr!(
-                    "«{title}» перемещено в «{group}»",
-                    title = e.title,
-                    group = if path.is_empty() { "/" } else { path }
-                )
-            );
+            term::ok(tr!(
+                "«{title}» перемещено в «{group}»",
+                title = e.title,
+                group = if path.is_empty() { "/" } else { path }
+            ));
         }
         Cmd::Tags => {
             let Response::Tags { tags } = call(&mut c, Request::Tags)? else {
@@ -1376,7 +1357,7 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Rm { query, pick } => {
             let e = resolve(&mut c, &query, &pick)?;
             call(&mut c, Request::Delete { id: e.id })?;
-            eprintln!("{}", tr!("«{title}» удалено", title = e.title));
+            term::ok(tr!("«{title}» удалено", title = e.title));
         }
         Cmd::Groups => {
             for g in groups(&mut c)?.iter().skip(1) {
@@ -1419,7 +1400,7 @@ fn run(cli: Cli) -> Result<()> {
                     },
                 });
             }
-            eprintln!("{}", tr!("группа {path} есть", path = path));
+            term::ok(tr!("группа {path} есть", path = path));
         }
         Cmd::Generate {
             length,
@@ -1453,23 +1434,17 @@ fn run(cli: Cli) -> Result<()> {
                         value: generated.value.clone(),
                     },
                 )?;
-                eprintln!(
-                    "{}",
-                    tr!(
-                        "скопировано ({bits} бит)",
-                        bits = format!("{:.0}", generated.entropy_bits)
-                    )
-                );
+                term::ok(tr!(
+                    "скопировано ({bits} бит)",
+                    bits = format!("{:.0}", generated.entropy_bits)
+                ));
             } else {
                 println!("{}", generated.value.expose());
                 if std::io::stderr().is_terminal() {
-                    eprintln!(
-                        "{}",
-                        tr!(
-                            "{bits} бит энтропии",
-                            bits = format!("{:.0}", generated.entropy_bits)
-                        )
-                    );
+                    term::info(tr!(
+                        "{bits} бит энтропии",
+                        bits = format!("{:.0}", generated.entropy_bits)
+                    ));
                 }
             }
         }
@@ -1495,14 +1470,11 @@ fn run(cli: Cli) -> Result<()> {
                     data: BASE64.encode(&data),
                 },
             )?;
-            eprintln!(
-                "{}",
-                tr!(
-                    "«{name}» приложен к «{title}»",
-                    name = name,
-                    title = e.title
-                )
-            );
+            term::ok(tr!(
+                "«{name}» приложен к «{title}»",
+                name = name,
+                title = e.title
+            ));
         }
         Cmd::Attachment {
             query,
@@ -1525,7 +1497,7 @@ fn run(cli: Cli) -> Result<()> {
             match output {
                 Some(p) => {
                     keywarden_core::vault::write_atomic(&p, &bytes)?;
-                    eprintln!("{}", tr!("сохранено в {path}", path = p.display()));
+                    term::ok(tr!("сохранено в {path}", path = p.display()));
                 }
                 None => std::io::stdout().write_all(&bytes)?,
             }
@@ -1572,13 +1544,10 @@ fn run(cli: Cli) -> Result<()> {
                 host,
             };
             call(&mut c, req)?;
-            eprintln!(
-                "{}",
-                tr!(
-                    "ключ импортирован в «{title}»; он доступен через kw ssh-env, пока база открыта",
-                    title = title
-                )
-            );
+            term::ok(tr!(
+                "ключ импортирован в «{title}»; он доступен через kw ssh-env, пока база открыта",
+                title = title
+            ));
         }
         Cmd::SshMigrate { import, delete } => {
             let Response::SshLocalKeys { keys } = call(&mut c, Request::SshLocalKeys)? else {
@@ -1727,10 +1696,9 @@ fn run(cli: Cli) -> Result<()> {
             };
             // stdout: только открытый ключ, чтобы его можно было передать дальше (| wl-copy)
             println!("{}", entry.notes.trim());
-            eprintln!(
-                "{}",
-                tr!("Открытый ключ выше: добавьте его на сервер или в GitHub")
-            );
+            term::info(tr!(
+                "Открытый ключ выше: добавьте его на сервер или в GitHub"
+            ));
         }
         Cmd::SshGitSign { query, off, pick } => {
             use keywarden_core::git_signing;
@@ -2392,7 +2360,8 @@ fn edit_patch(c: &mut Client, a: &EditArgs) -> Result<EntryPatch> {
 
 fn prompt(text: &str) -> Result<Secret> {
     Ok(Secret::new(
-        rpassword::prompt_password(text).context(tr!("нужен терминал (или --password-stdin)"))?,
+        rpassword::prompt_password(term::prompt_label(text))
+            .context(tr!("нужен терминал (или --password-stdin)"))?,
     ))
 }
 

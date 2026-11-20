@@ -116,7 +116,6 @@
   "Новый мастер-пароль: ": "New master password: ",
   "Ещё раз: ": "Repeat: ",
   "пароли не совпали": "passwords don't match",
-  "подбираю параметры Argon2id (~1 с)…": "tuning Argon2id parameters (~1 s)…",
   "база создана и открыта": "vault created and unlocked",
   "нет ответа": "no response",
   "НА ПАУЗЕ: {source} убирает {removed} из {live} записей ({summary}). kw sync reject или kw sync accept": "PAUSED: {source} removes {removed} of {live} entries ({summary}). kw sync reject or kw sync accept",
@@ -316,5 +315,9 @@
   "куда положить файл базы (по умолчанию: домашняя папка)": "where to put the vault file (default: the home folder)",
   "Введите этот код на новом компьютере: kw sync receive КОД. Он одноразовый и действует {min} мин": "Enter this code on the new computer: kw sync receive CODE. It is one-time and valid for {min} min",
   "База получена: {path}. Откройте её: kw unlock": "Vault received: {path}. Open it: kw unlock",
-  "код передачи": "transfer code"
+  "код передачи": "transfer code",
+  "Открываю базу": "Opening the vault",
+  "Создаю базу": "Creating the vault",
+  "Получаю базу": "Receiving the vault",
+  "Жду Keywarden": "Waiting for Keywarden"
 }
