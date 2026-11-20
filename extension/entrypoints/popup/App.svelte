@@ -114,11 +114,9 @@
     ['crypto_wallet', t('kind_crypto_wallet')],
   ];
   let filter = $state<Filter>({});
-  let showFilters = $state(false);
   let folders = $state<Folder[]>([]);
   let tags = $state<[string, number][]>([]);
   const filtered = $derived(!!(filter.kind || filter.group || filter.tag));
-  const filterCount = $derived([filter.kind, filter.group, filter.tag].filter(Boolean).length);
 
   async function search() {
     try {
@@ -550,12 +548,8 @@
           {@render svg('search')}
           <input bind:this={searchEl} bind:value={query} oninput={onQuery} placeholder={t('search_placeholder')} />
         </label>
-        <button class="icon fbtn" class:on={showFilters || filtered} title={t('filters')} onclick={() => (showFilters = !showFilters)}>
-          {@render svg('filter')}
-          {#if filterCount}<span class="badge">{filterCount}</span>{/if}
-        </button>
       </div>
-      {#if showFilters}
+      <!-- фильтры всегда на виду: тип, папка и тег в один щелчок -->
         <div class="filters">
           <Select
             value={filter.kind ?? ''}
@@ -580,7 +574,6 @@
           </Select>
           {#if filtered}<button class="ghost small" onclick={() => (filter = {}, search())}>{t('reset')}</button>{/if}
         </div>
-      {/if}
     {/if}
 
     {#key tab}
@@ -803,7 +796,7 @@
     box-shadow: none;
   }
   .app {
-    width: 380px;
+    width: 448px;
     height: 588px;
     display: flex;
     flex-direction: column;
@@ -886,40 +879,6 @@
   }
   .search input::placeholder {
     color: #8e8e98;
-  }
-  .fbtn {
-    position: relative;
-    width: 36px;
-    height: 36px;
-    border: 1px solid #2c2d33 !important;
-    background: #1b1b1f !important;
-    border-radius: 10px !important;
-  }
-  .fbtn:focus-visible {
-    outline: none;
-    border-color: #5d5f6a !important;
-  }
-  .fbtn svg {
-    width: 16px;
-    height: 16px;
-  }
-  .fbtn.on {
-    border-color: #5d5f6a !important;
-    color: #ececef !important;
-  }
-  .badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    min-width: 16px;
-    height: 16px;
-    border-radius: 8px;
-    background: #7c5cff;
-    color: #fff;
-    font-size: 10px;
-    display: grid;
-    place-items: center;
-    padding: 0 4px;
   }
   .filters {
     display: grid;

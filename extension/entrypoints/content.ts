@@ -771,7 +771,7 @@ export default defineContentScript({
       const host = document.createElement('keywarden-panel');
       const root = host.attachShadow({ mode: 'closed' });
       root.innerHTML = `<style>
-        .p{position:fixed;top:10px;right:12px;z-index:2147483647;width:440px;max-width:calc(100vw - 24px);height:640px;max-height:calc(100vh - 20px);
+        .p{position:fixed;top:10px;right:12px;z-index:2147483647;width:460px;max-width:calc(100vw - 24px);height:640px;max-height:calc(100vh - 20px);
           border-radius:16px;overflow:hidden;background:#141417;border:1px solid #2a2a2f;
           box-shadow:0 24px 64px #000a,0 0 0 1px #0006;animation:kw-p .18s cubic-bezier(.22,1,.36,1);transform-origin:top right}
         .p.out{animation:kw-out .12s ease-in forwards}

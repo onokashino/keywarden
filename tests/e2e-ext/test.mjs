@@ -320,12 +320,10 @@ await up.close();
 
 if (SHOTS) {
   await popup.bringToFront();
-  await popup.setViewportSize({ width: 392, height: 600 });
+  await popup.setViewportSize({ width: 460, height: 600 });
   await popup.reload();
   await popup.waitForTimeout(1200);
   await popup.screenshot({ path: `${SHOTS}/ext-popup.png` });
-  await popup.getByTitle('Фильтры').click();
-  await popup.waitForTimeout(300);
   await popup.locator('.trigger').nth(1).click();
   await popup.waitForTimeout(300);
   await popup.screenshot({ path: `${SHOTS}/ext-dropdown.png` });
