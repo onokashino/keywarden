@@ -134,6 +134,9 @@
   "prompt_update_keywarden": {
     "message": "Обновить пароль в Keywarden?"
   },
+  "prompt_unlock_to_save": {
+    "message": "Разблокируйте Keywarden, чтобы сохранить пароль"
+  },
   "prompt_save_keywarden": {
     "message": "Сохранить пароль в Keywarden?"
   },

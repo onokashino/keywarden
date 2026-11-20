@@ -260,7 +260,11 @@ export default defineBackground(() => {
         const url = await pageUrl(sender);
         const prefs = await loadPrefs();
         if (!prefs.offerSave || prefs.neverSites.includes(hostOf(url))) return null;
-        const r = await call({ action: 'check_save', url, username: msg.username, password: msg.password });
+        // база заблокирована: предложение не теряем, страница покажет «Разблокировать»
+        const r = await call({ action: 'check_save', url, username: msg.username, password: msg.password }).catch((e) => {
+          if ((e as DaemonError).code !== 'locked') throw e;
+          return { state: 'locked' as const, id: undefined };
+        });
         if (r.state === 'same') return null;
         const site = new URL(url).hostname;
         pending.set(await tabOf(sender), { site, url, username: msg.username, password: msg.password, state: r.state, id: r.id, at: Date.now() });
@@ -271,6 +275,16 @@ export default defineBackground(() => {
         const p = pending.get(tab);
         // предложение живёт 5 минут и только на том же сайте
         if (!p || Date.now() - p.at > 5 * 60_000 || new URL(await pageUrl(sender, msg.tabId)).hostname !== p.site) return null;
+        if (p.state === 'locked') {
+          // после разблокировки узнаём, новая это учётка или уже сохранённая
+          const r = await call({ action: 'check_save', url: p.url, username: p.username, password: p.password }).catch(() => null);
+          if (r?.state === 'same') {
+            pending.delete(tab);
+            return null;
+          }
+          if (r) Object.assign(p, { state: r.state, id: r.id });
+          else return { site: p.site, username: p.username, password: '', state: 'locked' };
+        }
         // пароль отдаём только той же вкладке того же сайта, где его только что ввели: показать по глазу
         return { site: p.site, username: p.username, password: p.password, state: p.state };
       }
@@ -278,7 +292,7 @@ export default defineBackground(() => {
         const tab = await tabOf(sender, msg.tabId);
         const p = pending.get(tab);
         pending.delete(tab);
-        if (!p || !msg.accept) return null;
+        if (!p || !msg.accept || p.state === 'locked') return null;
         await call({ action: 'save', url: p.url, username: p.username, password: p.password, update_id: p.state === 'changed' ? p.id : null });
         return true;
       }

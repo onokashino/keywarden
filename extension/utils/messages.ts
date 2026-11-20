@@ -42,7 +42,7 @@ export type Item = {
 
 export type Status = { connected: boolean; associated: boolean; locked: boolean; error?: string };
 
-export type PendingSave = { site: string; username: string; password: string; state: 'new' | 'changed'; id?: string };
+export type PendingSave = { site: string; username: string; password: string; state: 'new' | 'changed' | 'locked'; id?: string };
 
 export type Msg =
   | { type: 'status' }

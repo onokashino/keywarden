@@ -134,6 +134,9 @@
   "prompt_update_keywarden": {
     "message": "Update password in Keywarden?"
   },
+  "prompt_unlock_to_save": {
+    "message": "Unlock Keywarden to save this password"
+  },
   "prompt_save_keywarden": {
     "message": "Save password to Keywarden?"
   },

@@ -6,6 +6,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { execFileSync } from 'node:child_process';
 
 const EXT = path.resolve(process.argv[2]);
 const HOST_BIN = path.resolve(process.argv[3]);
@@ -329,6 +330,29 @@ const lockedL = await send({ type: 'logins', tabId });
 assert(!lockedL.ok || lockedL.value.length === 0, `после блокировки учёток нет: ${JSON.stringify(lockedL)}`);
 const lockedFill = await send({ type: 'fill', id: logins.value[0].id, tabId });
 assert(!lockedFill.ok, `после блокировки заполнение отказано: ${lockedFill.error}`);
+
+// 12. вход при заблокированной базе: предложение не теряется, после разблокировки обычное «Сохранить»
+const lk = await ctx.newPage();
+await lk.setViewportSize({ width: 1280, height: 720 });
+await lk.goto('http://localhost:8765/login'); // 127.0.0.1 выше попал в «никогда для сайта»
+await lk.waitForTimeout(1500);
+await lk.fill('#user', 'while-locked');
+await lk.fill('#pass', 'Locked-new-1');
+// под полем висит меню «Разблокировать» и закрывает кнопку: отправляем по Enter
+await Promise.all([lk.waitForURL('**/welcome**'), lk.press('#pass', 'Enter')]);
+await lk.waitForTimeout(1500);
+const lkTab = await popup.evaluate(async () => (await chrome.tabs.query({})).find((t) => t.url.includes('while-locked')).id);
+const lockedOffer = await send({ type: 'pendingSave', tabId: lkTab });
+assert(lockedOffer.ok && lockedOffer.value.state === 'locked' && !lockedOffer.value.password, `предложение ждёт разблокировки: ${JSON.stringify(lockedOffer)}`);
+assert((await lk.locator('keywarden-save').count()) === 1, 'окно «Разблокируйте, чтобы сохранить» на странице');
+if (SHOTS) await lk.screenshot({ path: `${SHOTS}/ext-locked-save.png`, clip: { x: 880, y: 0, width: 400, height: 240 } });
+await lk.mouse.click(1187, 123); // «Разблокировать»: окна нет (headless), базу открывает kw
+execFileSync(path.join(path.dirname(HOST_BIN), 'kw'), ['unlock', '--password-stdin'], { input: 't\n' });
+await lk.waitForTimeout(2500);
+const openOffer = await send({ type: 'pendingSave', tabId: lkTab });
+assert(openOffer.ok && openOffer.value.state === 'new' && openOffer.value.password === 'Locked-new-1', `после разблокировки обычное предложение: ${JSON.stringify(openOffer)}`);
+assert((await lk.locator('keywarden-save').count()) === 1, 'окно «Сохранить пароль» после разблокировки');
+if (SHOTS) await lk.screenshot({ path: `${SHOTS}/ext-locked-save-after.png`, clip: { x: 880, y: 0, width: 400, height: 240 } });
 
 await ctx.close();
 server.close();

@@ -446,6 +446,8 @@ export default defineContentScript({
       if (password) ask({ type: 'submitted', username, password }).then((r) => r && showSave()).catch(() => {});
     }
 
+    // тот же знак, что public/icon/logo.svg: в теневом дереве страницы файл расширения не открыть без web_accessible_resources
+    const LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a892ff"/><stop offset="1" stop-color="#6d4aff"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#g)"/><path d="M32 13l15 5.5v11c0 10-6.5 16.5-15 19.5-8.5-3-15-9.5-15-19.5v-11z" fill="none" stroke="#fff" stroke-width="3.6" stroke-linejoin="round"/><circle cx="32" cy="29" r="4.4" fill="#fff"/><path d="M30 31.5h4l1.2 8.5h-6.4z" fill="#fff"/></svg>';
     async function showSave() {
       const p = await ask<{ site: string; username: string; password: string; state: string } | null>({ type: 'pendingSave' }).catch(() => null);
       if (!p || document.querySelector('keywarden-save')) return;
@@ -454,8 +456,8 @@ export default defineContentScript({
       root.innerHTML = `<style>${CSS_BASE}
         .b{position:fixed;top:16px;right:16px;z-index:2147483647;width:340px;overflow:hidden}
         .h{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid #26262b}
-        .logo{flex:none;width:28px;height:28px;border-radius:9px;background:#222227;border:1px solid #2c2d33;color:#a18bff;
-          font:700 12px Inter,system-ui,sans-serif;display:grid;place-items:center}
+        .logo{flex:none;width:28px;height:28px}
+        .logo svg{display:block;width:28px;height:28px}
         .title{font-weight:600}
         .site{font-size:12px}
         .who{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:40px;box-sizing:border-box}
@@ -469,13 +471,46 @@ export default defineContentScript({
         .r{display:flex;gap:6px;align-items:center;padding:10px 14px;border-top:1px solid #26262b;background:#141417}
         .sp{flex:1}</style>
         <div class="b card anim">
-          <div class="h"><div class="logo">K</div><div><div class="title"></div><div class="site muted"></div></div></div>
+          <div class="h"><div class="logo">${LOGO}</div><div><div class="title"></div><div class="site muted"></div></div></div>
           <div class="who"><span class="muted">${t('username')}</span><b class="user"></b></div>
           <div class="who"><span class="muted">${t('password')}</span>
             <span class="pw"><b class="dots"></b><button class="ghost eye"></button></span></div>
           <div class="r"><button class="ghost never">${t('never_here')}</button><span class="sp"></span>
             <button class="n">${t('not_now')}</button><button class="p primary"></button></div>
         </div>`;
+      if (p.state === 'locked') {
+        // сохранять некуда, пока база закрыта: одна кнопка, после разблокировки показываем обычное предложение
+        root.querySelectorAll('.who,.never').forEach((el) => el.remove());
+        root.querySelector('.title')!.textContent = t('prompt_unlock_to_save');
+        root.querySelector('.site')!.textContent = p.site;
+        const btn = root.querySelector('.p') as HTMLButtonElement;
+        btn.textContent = t('unlock');
+        let timer = 0;
+        const close = () => {
+          clearInterval(timer);
+          host.remove();
+        };
+        btn.addEventListener('click', (e) => {
+          if (!e.isTrusted) return;
+          ask({ type: 'openUnlock' }).catch((err) => toast((err as Error).message));
+          clearInterval(timer);
+          let left = 120;
+          timer = window.setInterval(async () => {
+            const st = await ask<{ locked: boolean }>({ type: 'status' }).catch(() => null);
+            if (st && !st.locked) {
+              close();
+              showSave();
+            } else if (--left <= 0) clearInterval(timer);
+          }, 1000);
+        });
+        root.querySelector('.n')!.addEventListener('click', (e) => {
+          if (!e.isTrusted) return;
+          close();
+          ask({ type: 'save', accept: false }).catch(() => {});
+        });
+        document.documentElement.appendChild(host);
+        return;
+      }
       const changed = p.state === 'changed';
       root.querySelector('.title')!.textContent = t(changed ? 'prompt_update_keywarden' : 'prompt_save_keywarden');
       root.querySelector('.site')!.textContent = p.site;
