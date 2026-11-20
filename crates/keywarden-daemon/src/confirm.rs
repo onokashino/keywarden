@@ -91,12 +91,13 @@ fn wait(mut child: std::process::Child, timeout: Duration) -> Option<std::proces
 /// keywarden-ui рядом с демоном, иначе из PATH.
 /// Запустить окно и не ждать его: статус завершения забирает отдельный поток.
 /// Без этого каждое закрытое окно остаётся у демона процессом-зомби до его выхода.
-pub fn spawn_detached(cmd: &mut Command) -> std::io::Result<()> {
+pub fn spawn_detached(cmd: &mut Command) -> std::io::Result<u32> {
     let mut child = cmd.spawn()?;
+    let pid = child.id();
     std::thread::spawn(move || {
         let _ = child.wait();
     });
-    Ok(())
+    Ok(pid)
 }
 
 pub fn ui_binary() -> PathBuf {
@@ -147,27 +148,24 @@ mod tests {
 mod reap_tests {
     use super::*;
 
-    /// Число процессов-зомби, чей родитель этот процесс.
-    fn zombies() -> usize {
-        let me = std::process::id().to_string();
-        std::fs::read_dir("/proc")
-            .unwrap()
-            .flatten()
-            .filter_map(|e| std::fs::read_to_string(e.path().join("stat")).ok())
-            .filter(|stat| {
-                // после имени в скобках идут состояние и pid родителя
-                let rest = stat.rsplit_once(") ").map(|x| x.1).unwrap_or_default();
-                let mut f = rest.split(' ');
-                f.next() == Some("Z") && f.next() == Some(me.as_str())
-            })
-            .count()
+    /// Состояние процесса из /proc: `None`, когда процесса уже нет.
+    fn state(pid: u32) -> Option<String> {
+        let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+        // после имени в скобках идёт состояние
+        let rest = stat.rsplit_once(") ")?.1;
+        rest.split(' ').next().map(str::to_string)
     }
 
+    // смотрим именно на свой процесс: соседние тесты в это же время запускают и ждут свои
     #[test]
     fn detached_window_leaves_no_zombie() {
-        let before = zombies();
-        spawn_detached(Command::new("sh").args(["-c", "exit 0"])).unwrap();
-        std::thread::sleep(Duration::from_millis(300));
-        assert_eq!(zombies(), before, "завершившийся процесс забран");
+        let pid = spawn_detached(Command::new("sh").args(["-c", "exit 0"])).unwrap();
+        for _ in 0..50 {
+            if state(pid).is_none() {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        panic!("процесс {pid} не забран: состояние {:?}", state(pid));
     }
 }
