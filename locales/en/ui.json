@@ -331,5 +331,9 @@
   "Без ключа база не откроется: настройте второй с тем же секретом": "The vault will not open without the key: set up a second one with the same secret",
   "Особенности": "Details",
   "Риски": "Risks",
-  "Не показывать в отчёте": "Do not show in the report"
+  "Не показывать в отчёте": "Do not show in the report",
+  "Такой файл уже есть. Keywarden не затирает существующие файлы: выберите другое имя": "This file already exists. Keywarden never overwrites existing files: pick another name",
+  "Открыть эту базу": "Open this vault",
+  "Подбираю параметры Argon2id под этот компьютер. Обычно это несколько секунд": "Tuning Argon2id for this computer. This usually takes a few seconds",
+  "Столько же будет занимать каждое открытие базы мастер-паролем": "Every unlock with the master password will take about as long"
 }

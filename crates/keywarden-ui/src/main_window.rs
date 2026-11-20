@@ -3203,6 +3203,10 @@ impl MainWindow {
         if path.is_empty() {
             return self.flash(tr!("Укажите путь к базе"), true, cx);
         }
+        // существующий файл не затирается никогда; предупреждение об этом уже стоит под полем файла
+        if self.creating && std::path::Path::new(&path).exists() {
+            return;
+        }
         if self.creating && pw != self.password2.read(cx).value().as_ref() {
             return self.flash(tr!("Пароли не совпадают"), true, cx);
         }
@@ -4925,6 +4929,10 @@ impl MainWindow {
             }
             return self.render_welcome(error, cx);
         }
+        if self.creating && self.mode == Mode::Busy {
+            return self.render_creating(&path, cx);
+        }
+        let taken = self.creating && std::path::Path::new(path.trim()).exists();
         let keyfile_set = !self.keyfile.read(cx).value().trim().is_empty();
         // выбранный ключ или YubiKey не прячем: иначе база молча создастся с ними
         let forced = keyfile_set || !self.yubikey.read(cx).value().trim().is_empty();
@@ -5068,6 +5076,40 @@ impl MainWindow {
                     )
                     .into_any_element(),
                 ))
+                .when(taken, |d| {
+                    d.child(
+                        v_flex()
+                            .gap_2()
+                            .px_3()
+                            .py_2()
+                            .rounded_lg()
+                            .bg(theme.warning.opacity(0.12))
+                            .border_1()
+                            .border_color(theme.warning.opacity(0.35))
+                            .text_sm()
+                            .child(tr!(
+                                "Такой файл уже есть. Keywarden не затирает существующие файлы: выберите другое имя"
+                            ))
+                            .child(
+                                h_flex().child(
+                                    Button::new("open-taken")
+                                        .outline()
+                                        .small()
+                                        .label(tr!("Открыть эту базу"))
+                                        .on_click(cx.listener(|this, _, w, cx| {
+                                            // остаёмся на этом файле, но уже в разблокировке
+                                            this.creating = false;
+                                            this.path_before_create = None;
+                                            this.show_advanced = true;
+                                            this.status = None;
+                                            let h = this.password.read(cx).focus_handle(cx);
+                                            w.focus(&h, cx);
+                                            cx.notify();
+                                        })),
+                                ),
+                            ),
+                    )
+                })
                 .child(
                     h_flex().child(
                         Button::new("create-extras")
@@ -5258,6 +5300,7 @@ impl MainWindow {
                     .primary()
                     .large()
                     .w_full()
+                    .disabled(taken)
                     .loading(busy)
                     .label(match (busy, self.creating) {
                         (true, true) => tr!("Создаю базу…"),
@@ -5340,6 +5383,110 @@ impl MainWindow {
             .justify_center()
             .bg(theme.sidebar)
             .child(card)
+            .into_any_element()
+    }
+
+    /// Пока база создаётся, вместо формы показано, что происходит и почему это не мгновенно.
+    fn render_creating(&mut self, path: &str, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.theme().clone();
+        let step = |text: &'static str| {
+            h_flex()
+                .items_start()
+                .gap_2()
+                .text_sm()
+                .text_color(theme.muted_foreground)
+                .child(
+                    div()
+                        .mt(px(7.))
+                        .size(px(5.))
+                        .flex_shrink_0()
+                        .rounded_full()
+                        .bg(theme.primary),
+                )
+                .child(div().flex_1().min_w_0().child(text))
+        };
+        v_flex()
+            .size_full()
+            .items_center()
+            .justify_center()
+            .bg(theme.sidebar)
+            .child(
+                v_flex()
+                    .w(px(420.))
+                    .gap_5()
+                    .p_8()
+                    .rounded(px(16.))
+                    .border_1()
+                    .border_color(theme.border)
+                    .bg(theme.background)
+                    .shadow_lg()
+                    .child(
+                        h_flex()
+                            .gap_3()
+                            .child(icon_tile(IconName::ShieldKeyhole, 44., &theme))
+                            .child(
+                                v_flex()
+                                    .min_w_0()
+                                    .child(
+                                        div()
+                                            .text_lg()
+                                            .font_weight(FontWeight::SEMIBOLD)
+                                            .child(tr!("Создаю базу…")),
+                                    )
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .truncate()
+                                            .text_color(theme.muted_foreground)
+                                            .child(file_name(path)),
+                                    ),
+                            ),
+                    )
+                    // бегущая полоска: сколько осталось, заранее неизвестно
+                    .child(
+                        div()
+                            .relative()
+                            .h(px(4.))
+                            .w_full()
+                            .rounded_full()
+                            .overflow_hidden()
+                            .bg(theme.secondary)
+                            .child(
+                                div()
+                                    .absolute()
+                                    .top_0()
+                                    .h_full()
+                                    .w(px(120.))
+                                    .rounded_full()
+                                    .bg(theme.primary)
+                                    .with_animation(
+                                        "create-bar",
+                                        Animation::new(Duration::from_millis(1300))
+                                            .repeat()
+                                            .with_easing(ease_in_out),
+                                        |el, t| el.left(px(-120. + 476. * t)),
+                                    ),
+                            ),
+                    )
+                    .child(
+                        v_flex()
+                            .gap_2p5()
+                            .child(step(tr!(
+                                "Подбираю параметры Argon2id под этот компьютер. Обычно это несколько секунд"
+                            )))
+                            .child(step(tr!(
+                                "Argon2id медленный нарочно: так подбор пароля стоит дорого"
+                            )))
+                            .child(step(tr!(
+                                "Столько же будет занимать каждое открытие базы мастер-паролем"
+                            ))),
+                    )
+                    .with_animation(
+                        "creating-card",
+                        Animation::new(Duration::from_millis(220)).with_easing(ease_out_quint()),
+                        |el, t| el.opacity(t),
+                    ),
+            )
             .into_any_element()
     }
 
@@ -8092,7 +8239,7 @@ fn unlock_error(text: SharedString, theme: &gpui_kit::component::Theme) -> impl 
         .text_sm()
         .text_color(theme.danger_foreground)
         .child(Icon::new(IconName::CircleAlert).small())
-        .child(div().flex_1().child(text))
+        .child(div().flex_1().min_w_0().child(text))
         .with_animation(
             "unlock-error",
             Animation::new(Duration::from_millis(180)).with_easing(ease_out_quint()),

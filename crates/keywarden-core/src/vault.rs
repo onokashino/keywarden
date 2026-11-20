@@ -232,26 +232,36 @@ impl Vault {
         kdf: KdfConfig,
     ) -> Result<Self> {
         let path = path.into();
-        if path.exists() {
-            return Err(VaultError::Io(io::Error::new(
-                io::ErrorKind::AlreadyExists,
-                path.display().to_string(),
-            )));
-        }
-        let mut config = DatabaseConfig::default();
-        config.outer_cipher_config = match cipher {
-            Cipher::Aes256 => OuterCipherConfig::AES256,
-            Cipher::ChaCha20 => OuterCipherConfig::ChaCha20,
-        };
-        config.inner_cipher_config = InnerCipherConfig::ChaCha20;
-        config.compression_config = CompressionConfig::GZip;
-        config.kdf_config = kdf;
-        let mut db = Database::with_config(config);
-        db.root_mut().name = "Root".into();
-        db.meta.generator = Some("Keywarden".into());
+        // имя занимается одним атомарным вызовом: файл, появившийся между проверкой и записью,
+        // затереть нельзя. Дальше write_atomic заменяет только эту нашу пустышку
+        open_new(&path, 0o600).map_err(|e| {
+            VaultError::Io(if e.kind() == io::ErrorKind::AlreadyExists {
+                io::Error::new(io::ErrorKind::AlreadyExists, path.display().to_string())
+            } else {
+                e
+            })
+        })?;
+        let written = (|| {
+            let mut config = DatabaseConfig::default();
+            config.outer_cipher_config = match cipher {
+                Cipher::Aes256 => OuterCipherConfig::AES256,
+                Cipher::ChaCha20 => OuterCipherConfig::ChaCha20,
+            };
+            config.inner_cipher_config = InnerCipherConfig::ChaCha20;
+            config.compression_config = CompressionConfig::GZip;
+            config.kdf_config = kdf;
+            let mut db = Database::with_config(config);
+            db.root_mut().name = "Root".into();
+            db.meta.generator = Some("Keywarden".into());
 
-        let bytes = serialize(&db, &creds.key()?)?;
-        write_atomic(&path, &bytes)?;
+            let bytes = serialize(&db, &creds.key()?)?;
+            write_atomic(&path, &bytes)?;
+            Ok(())
+        })();
+        if let Err(e) = written {
+            let _ = fs::remove_file(&path);
+            return Err(e);
+        }
         Self::open(path, creds)
     }
 
@@ -785,6 +795,24 @@ mod tests {
             v.save().unwrap();
         }
         assert_eq!(fs::read_dir(dir.path().join("bak")).unwrap().count(), 3);
+    }
+
+    #[test]
+    fn create_never_overwrites_an_existing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("taken.kdbx");
+        fs::write(&path, b"someone's data").unwrap();
+        let err = Vault::create(&path, &creds(), Cipher::Aes256, test_kdf()).err();
+        assert!(matches!(err, Some(VaultError::Io(e)) if e.kind() == io::ErrorKind::AlreadyExists));
+        assert_eq!(fs::read(&path).unwrap(), b"someone's data");
+        // отказ по другой причине не оставляет после себя пустышку
+        let bad = Credentials {
+            keyfile: Some(dir.path().join("no-such.keyx")),
+            ..creds()
+        };
+        let fresh = dir.path().join("fresh.kdbx");
+        assert!(Vault::create(&fresh, &bad, Cipher::Aes256, test_kdf()).is_err());
+        assert!(!fresh.exists());
     }
 
     #[test]
