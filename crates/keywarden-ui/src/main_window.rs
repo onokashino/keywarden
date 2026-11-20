@@ -440,6 +440,8 @@ pub struct MainWindow {
     guide: Guide,
     // фокус первого варианта на экране первого запуска: иначе Tab некуда идти
     welcome_focus: FocusHandle,
+    /// База заблокирована событием демона: при следующей отрисовке вернуть фокус в поле ключа.
+    refocus: bool,
     // разблокировка / создание
     db_path: Entity<InputState>,
     keyfile: Entity<InputState>,
@@ -621,6 +623,7 @@ impl MainWindow {
             extras_open: false,
             guide: Guide::Password,
             welcome_focus: cx.focus_handle(),
+            refocus: false,
             db_path,
             keyfile,
             yubikey,
@@ -2691,6 +2694,7 @@ impl MainWindow {
             Event::Locked => {
                 self.refresh_quick(cx);
                 self.forget_session(None, cx);
+                self.refocus = true;
                 self.flash(tr!("База заблокирована"), false, cx);
             }
             Event::Unlocked if self.mode != Mode::Ready => {
@@ -3218,11 +3222,6 @@ impl MainWindow {
             i.update(cx, |s, cx| s.set_value("", window, cx));
         }
         let req = if self.creating {
-            self.flash(
-                tr!("Подбираю параметры Argon2id (около секунды)…"),
-                false,
-                cx,
-            );
             Request::Create {
                 path,
                 password,
@@ -3568,6 +3567,9 @@ impl MainWindow {
                 format: keywarden_core::ipc::ImportFormat::TwoFas,
                 key: None,
             };
+            let _ = this.update(cx, |this, cx| {
+                this.flash(tr!("Переношу коды из 2FAS…"), false, cx)
+            });
             let res = cx
                 .background_spawn(async move { client::blocking(&req) })
                 .await;
@@ -4349,6 +4351,7 @@ impl MainWindow {
         if paths.is_empty() {
             return self.flash(tr!("Приложить можно только файлы, не папки"), true, cx);
         }
+        self.flash(tr!("Прикладываю файлы…"), false, cx);
         self.tasks.push(cx.spawn(async move |this, cx| {
             let res = cx
                 .background_spawn(async move {
@@ -4929,8 +4932,9 @@ impl MainWindow {
             }
             return self.render_welcome(error, cx);
         }
-        if self.creating && self.mode == Mode::Busy {
-            return self.render_creating(&path, cx);
+        // PIN открывает базу сразу, там хватает индикатора на кнопке
+        if self.mode == Mode::Busy && !pin {
+            return self.render_working(&path, cx);
         }
         let taken = self.creating && std::path::Path::new(path.trim()).exists();
         let keyfile_set = !self.keyfile.read(cx).value().trim().is_empty();
@@ -5302,25 +5306,17 @@ impl MainWindow {
                     .w_full()
                     .disabled(taken)
                     .loading(busy)
-                    .label(match (busy, self.creating) {
-                        (true, true) => tr!("Создаю базу…"),
-                        (true, false) => tr!("Расшифровка…"),
-                        (false, true) => tr!("Создать базу"),
-                        (false, false) => tr!("Открыть"),
+                    .label(if self.mode == Mode::Connecting {
+                        tr!("Подключаюсь…")
+                    } else if busy {
+                        tr!("Открываю…")
+                    } else if self.creating {
+                        tr!("Создать базу")
+                    } else {
+                        tr!("Открыть")
                     })
                     .on_click(cx.listener(|this, _, w, cx| this.submit_unlock(w, cx))),
             )
-            .when(busy && self.mode == Mode::Busy, |d| {
-                d.child(
-                    div()
-                        .text_xs()
-                        .text_center()
-                        .text_color(theme.muted_foreground)
-                        .child(tr!(
-                            "Argon2id медленный нарочно: так подбор пароля стоит дорого"
-                        )),
-                )
-            })
             .when(pin, |d| {
                 d.child(
                     h_flex().justify_center().child(
@@ -5386,9 +5382,32 @@ impl MainWindow {
             .into_any_element()
     }
 
-    /// Пока база создаётся, вместо формы показано, что происходит и почему это не мгновенно.
-    fn render_creating(&mut self, path: &str, cx: &mut Context<Self>) -> AnyElement {
+    /// Пока база создаётся или расшифровывается, вместо формы показано, что происходит
+    /// и почему это не мгновенно.
+    fn render_working(&mut self, path: &str, cx: &mut Context<Self>) -> AnyElement {
         let theme = cx.theme().clone();
+        let (title, steps) = if self.creating {
+            (
+                tr!("Создаю базу…"),
+                vec![
+                    tr!(
+                        "Подбираю параметры Argon2id под этот компьютер. Обычно это несколько секунд"
+                    ),
+                    tr!("Argon2id медленный нарочно: так подбор пароля стоит дорого"),
+                    tr!("Столько же будет занимать каждое открытие базы мастер-паролем"),
+                ],
+            )
+        } else {
+            (
+                tr!("Расшифровка…"),
+                vec![
+                    tr!("Argon2id медленный нарочно: так подбор пароля стоит дорого"),
+                    tr!(
+                        "После блокировки базу можно открывать коротким PIN. Он задаётся в настройках, раздел «Безопасность»"
+                    ),
+                ],
+            )
+        };
         let step = |text: &'static str| {
             h_flex()
                 .items_start()
@@ -5431,7 +5450,7 @@ impl MainWindow {
                                         div()
                                             .text_lg()
                                             .font_weight(FontWeight::SEMIBOLD)
-                                            .child(tr!("Создаю базу…")),
+                                            .child(title),
                                     )
                                     .child(
                                         div()
@@ -5442,45 +5461,8 @@ impl MainWindow {
                                     ),
                             ),
                     )
-                    // бегущая полоска: сколько осталось, заранее неизвестно
-                    .child(
-                        div()
-                            .relative()
-                            .h(px(4.))
-                            .w_full()
-                            .rounded_full()
-                            .overflow_hidden()
-                            .bg(theme.secondary)
-                            .child(
-                                div()
-                                    .absolute()
-                                    .top_0()
-                                    .h_full()
-                                    .w(px(120.))
-                                    .rounded_full()
-                                    .bg(theme.primary)
-                                    .with_animation(
-                                        "create-bar",
-                                        Animation::new(Duration::from_millis(1300))
-                                            .repeat()
-                                            .with_easing(ease_in_out),
-                                        |el, t| el.left(px(-120. + 476. * t)),
-                                    ),
-                            ),
-                    )
-                    .child(
-                        v_flex()
-                            .gap_2p5()
-                            .child(step(tr!(
-                                "Подбираю параметры Argon2id под этот компьютер. Обычно это несколько секунд"
-                            )))
-                            .child(step(tr!(
-                                "Argon2id медленный нарочно: так подбор пароля стоит дорого"
-                            )))
-                            .child(step(tr!(
-                                "Столько же будет занимать каждое открытие базы мастер-паролем"
-                            ))),
-                    )
+                    .child(crate::ui::progress_bar("work-bar", &theme))
+                    .child(v_flex().gap_2p5().children(steps.into_iter().map(step)))
                     .with_animation(
                         "creating-card",
                         Animation::new(Duration::from_millis(220)).with_easing(ease_out_quint()),
@@ -7883,7 +7865,9 @@ impl Render for MainWindow {
         let theme = cx.theme().clone();
         let ready = self.mode == Mode::Ready;
         // после блокировки событием демона фокус никуда не попадает: ставим его в поле ключа
-        if self.mode == Mode::Locked && window.focused(cx).is_none() {
+        // фокус мог остаться и на поле поиска, которого на экране уже нет: клавиши уходили в никуда
+        let lost = std::mem::take(&mut self.refocus) || window.focused(cx).is_none();
+        if self.mode == Mode::Locked && lost {
             let h = if self.use_pin && !self.creating {
                 self.pin.read(cx).focus_handle(cx)
             } else {

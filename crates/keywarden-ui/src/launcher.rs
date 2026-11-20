@@ -714,8 +714,17 @@ impl Render for Launcher {
                 .gap_3()
                 .text_sm()
                 .text_color(theme.muted_foreground)
-                .child(gpui_kit::component::spinner::Spinner::new())
                 .child(tr!("Расшифровка…"))
+                .child(
+                    div()
+                        .w(px(220.))
+                        .child(crate::ui::progress_bar("unlock-bar", &theme)),
+                )
+                .when(!self.use_pin, |d| {
+                    d.child(div().text_xs().child(tr!(
+                        "Argon2id медленный нарочно: так подбор пароля стоит дорого"
+                    )))
+                })
                 .into_any_element(),
             Mode::Locked => v_flex()
                 .size_full()

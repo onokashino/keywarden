@@ -98,7 +98,6 @@
   "Укажите путь к базе": "Enter the vault path",
   "Пароли не совпадают": "Passwords don't match",
   "Нужен пароль, файл-ключ или оба": "A password, a key file or both are required",
-  "Подбираю параметры Argon2id (около секунды)…": "Tuning Argon2id parameters (about a second)…",
   "Пароль": "Password",
   "Логин": "Login",
   "Код 2FA": "2FA code",
@@ -335,5 +334,10 @@
   "Такой файл уже есть. Keywarden не затирает существующие файлы: выберите другое имя": "This file already exists. Keywarden never overwrites existing files: pick another name",
   "Открыть эту базу": "Open this vault",
   "Подбираю параметры Argon2id под этот компьютер. Обычно это несколько секунд": "Tuning Argon2id for this computer. This usually takes a few seconds",
-  "Столько же будет занимать каждое открытие базы мастер-паролем": "Every unlock with the master password will take about as long"
+  "Столько же будет занимать каждое открытие базы мастер-паролем": "Every unlock with the master password will take about as long",
+  "После блокировки базу можно открывать коротким PIN. Он задаётся в настройках, раздел «Безопасность»": "After a lock the vault can be opened with a short PIN. Set it in Settings, Security",
+  "Подключаюсь…": "Connecting…",
+  "Открываю…": "Opening…",
+  "Переношу коды из 2FAS…": "Importing codes from 2FAS…",
+  "Прикладываю файлы…": "Attaching files…"
 }

@@ -2869,15 +2869,15 @@ impl Render for SettingsPage {
                                     )
                                     .when_some(self.busy, |d, b| {
                                         d.child(
-                                            h_flex()
+                                            v_flex()
                                                 .gap_2()
                                                 .text_sm()
                                                 .text_color(theme.muted_foreground)
-                                                .child(
-                                                    gpui_kit::component::spinner::Spinner::new()
-                                                        .small(),
-                                                )
-                                                .child(b),
+                                                .child(b)
+                                                .child(crate::ui::progress_bar(
+                                                    "settings-bar",
+                                                    &theme,
+                                                )),
                                         )
                                     })
                                     .when_some(

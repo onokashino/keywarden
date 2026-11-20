@@ -69,6 +69,33 @@ pub fn icon_tile(icon: IconName, size: f32, theme: &gpui_kit::component::Theme) 
         .child(gpui_kit::component::Icon::new(icon).text_color(theme.primary))
 }
 
+/// Бегущая полоска: дело идёт, а сколько осталось, заранее неизвестно.
+pub fn progress_bar(id: &'static str, theme: &gpui_kit::component::Theme) -> Div {
+    div()
+        .relative()
+        .h(px(4.))
+        .w_full()
+        .rounded_full()
+        .overflow_hidden()
+        .bg(theme.secondary)
+        .child(
+            div()
+                .absolute()
+                .top_0()
+                .h_full()
+                .w(relative(0.3))
+                .rounded_full()
+                .bg(theme.primary)
+                .with_animation(
+                    id,
+                    Animation::new(std::time::Duration::from_millis(1300))
+                        .repeat()
+                        .with_easing(ease_in_out),
+                    |el, t| el.left(relative(-0.3 + 1.3 * t)),
+                ),
+        )
+}
+
 /// Сегментный переключатель: подложка и «таблетка» у выбранного пункта, иконка внутри неё.
 /// Свой, потому что TabBar из gpui-kit рисует иконку вне таблетки.
 pub fn segmented<V: 'static>(
