@@ -193,7 +193,12 @@ kill $(cat $W/sshd/pid)
 echo "== подпись коммитов git ключом из базы"
 git config --global user.name "E2E"
 git config --global user.email e2e@test
+# a login that mentions the same words must not make the key ambiguous
+$B/kw add --title "Mail" -u "gen key owner" --url https://mail.example >/dev/null
 $B/kw ssh-git-sign "Gen key"
+$B/kw ssh-git-sign --off
+# the short id from the table of matches works too
+$B/kw ssh-git-sign "$($B/kw search "Gen key" | awk '/^Gen key/' | grep -oE '[0-9a-f]{8}' | head -1)"
 git init -q $W/repo
 git -C $W/repo commit -q --allow-empty -m signed
 git -C $W/repo log --show-signature -1 2>&1 | tee $W/sig | head -3

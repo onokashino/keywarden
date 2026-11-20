@@ -319,5 +319,15 @@
   "Открываю базу": "Opening the vault",
   "Создаю базу": "Creating the vault",
   "Получаю базу": "Receiving the vault",
-  "Жду Keywarden": "Waiting for Keywarden"
+  "Жду Keywarden": "Waiting for Keywarden",
+  "Запись": "Entry",
+  "Логин": "Login",
+  "Тип": "Type",
+  "Папка": "Folder",
+  "вложение": "attachment",
+  "{size} байт": "{size} bytes",
+  "история": "history",
+  "заметки": "notes",
+  "Заблокирована": "Locked",
+  "Открыта": "Open"
 }

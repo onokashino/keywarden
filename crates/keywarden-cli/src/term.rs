@@ -20,6 +20,39 @@ pub fn fancy() -> bool {
     })
 }
 
+/// То же для stdout: таблицы и карточки записей.
+pub fn fancy_out() -> bool {
+    static F: OnceLock<bool> = OnceLock::new();
+    *F.get_or_init(|| {
+        std::io::stdout().is_terminal()
+            && std::env::var_os("NO_COLOR").is_none()
+            && std::env::var("TERM").is_ok_and(|t| t != "dumb")
+    })
+}
+
+/// Ширина терминала в знаках; вне терминала считаем 100.
+pub fn width() -> usize {
+    ratatui::crossterm::terminal::size()
+        .map(|(w, _)| w as usize)
+        .unwrap_or(100)
+}
+
+pub fn bold(s: &str) -> String {
+    format!("{BOLD}{s}{RESET}")
+}
+pub fn dim(s: &str) -> String {
+    format!("{}{s}{RESET}", paint(Tone::Muted))
+}
+pub fn accent(s: &str) -> String {
+    format!("{}{s}{RESET}", paint(Tone::Accent))
+}
+pub fn green(s: &str) -> String {
+    format!("{}{s}{RESET}", paint(Tone::Ok))
+}
+pub fn red(s: &str) -> String {
+    format!("{}{s}{RESET}", paint(Tone::Err))
+}
+
 enum Tone {
     Accent,
     Ok,

@@ -726,7 +726,23 @@ fn run(cli: Cli) -> Result<()> {
         }
         Cmd::Status => {
             if let Response::Status(s) = call(&mut c, Request::Status)? {
-                if s.locked {
+                if term::fancy_out() {
+                    let n = s.entries as u64;
+                    let plural = keywarden_core::i18n::plural(n, "запись", "записи", "записей");
+                    if s.locked {
+                        println!("{} {}", term::red("●"), term::bold(tr!("Заблокирована")));
+                    } else {
+                        println!(
+                            "{} {}  {}",
+                            term::green("●"),
+                            term::bold(tr!("Открыта")),
+                            term::dim(&format!("{n} {plural}"))
+                        );
+                    }
+                    if let Some(p) = s.path.or(s.default_path) {
+                        println!("  {}", term::dim(&p));
+                    }
+                } else if s.locked {
                     println!("{}", tr!("заблокирована"));
                     if let Some(p) = s.default_path {
                         println!("{}", tr!("база по умолчанию: {p}", p = p));
@@ -1711,7 +1727,7 @@ fn run(cli: Cli) -> Result<()> {
                 return Ok(());
             }
             let query = query.ok_or_else(|| anyhow!(tr!("укажите запись с ключом SSH")))?;
-            let e = resolve(&mut c, &query, &pick)?;
+            let e = resolve_kind(&mut c, &query, &pick, Some(EntryKind::SshKey))?;
             let Response::Entry { entry } = call(
                 &mut c,
                 Request::Get {
@@ -2258,6 +2274,17 @@ fn groups(c: &mut Client) -> Result<Vec<GroupView>> {
 
 /// Запрос → одна запись: id, точное название, единственное совпадение или --first.
 fn resolve(c: &mut Client, query: &str, pick: &Pick) -> Result<EntrySummary> {
+    resolve_kind(c, query, pick, None)
+}
+
+/// `kind`: команде нужна запись только этого типа (подпись git ищет среди ключей SSH,
+/// а не среди всех записей, где встретилось то же слово).
+fn resolve_kind(
+    c: &mut Client,
+    query: &str,
+    pick: &Pick,
+    kind: Option<EntryKind>,
+) -> Result<EntrySummary> {
     if uuid::Uuid::parse_str(query).is_ok()
         && let Response::Entry { entry } = call(
             c,
@@ -2269,7 +2296,21 @@ fn resolve(c: &mut Client, query: &str, pick: &Pick) -> Result<EntrySummary> {
     {
         return Ok(entry.summary);
     }
-    let hits = search(c, query, 20)?;
+    // короткий id из таблицы совпадений (первые 8 знаков)
+    if query.len() == 8 && query.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        let by_id: Vec<_> = search(c, "", 10_000)?
+            .into_iter()
+            .filter(|e| e.id.starts_with(&query.to_ascii_lowercase()))
+            .collect();
+        if let [one] = by_id.as_slice() {
+            return Ok(one.clone());
+        }
+    }
+    let mut hits = search(c, query, 200)?;
+    if let Some(kind) = kind {
+        hits.retain(|e| e.kind == kind);
+    }
+    hits.truncate(20);
     let exact: Vec<_> = hits
         .iter()
         .filter(|e| e.title.eq_ignore_ascii_case(query))
@@ -2398,6 +2439,9 @@ fn print_table(entries: &[EntrySummary]) {
             .min(32)
     };
     let (wt, wu, wg) = (w(|e| &e.title), w(|e| &e.username), w(|e| &e.group));
+    if term::fancy_out() {
+        return print_table_fancy(entries, wt, wu, wg);
+    }
     for e in entries {
         let otp = if e.has_otp { "2FA" } else { "   " };
         println!(
@@ -2406,7 +2450,68 @@ fn print_table(entries: &[EntrySummary]) {
             clip(&e.username, wu),
             clip(&e.group, wg),
             &e.id[..8],
-            e.url
+            // адреса входа бывают на сотни знаков и ломают таблицу
+            clip(&e.url, 48)
+        );
+    }
+}
+
+/// Таблица для терминала: заголовок, тип записи, адрес по ширине окна. Скрипты получают простую.
+fn print_table_fancy(entries: &[EntrySummary], wt: usize, wu: usize, wg: usize) {
+    let pad = |s: &str, n: usize| format!("{:<n$}", clip(s, n));
+    let heads = [tr!("Запись"), tr!("Логин"), tr!("Тип"), tr!("Папка")];
+    let width_of = |s: &str| s.chars().count();
+    let wk = entries
+        .iter()
+        .map(|e| width_of(e.kind.label()))
+        .max()
+        .unwrap_or(0)
+        .max(width_of(heads[2]));
+    let (wt, wu) = (wt.max(width_of(heads[0])), wu.max(width_of(heads[1])));
+    let wg = if wg == 0 {
+        0
+    } else {
+        wg.max(width_of(heads[3]))
+    };
+    // пустая колонка папки не занимает место
+    let group = |s: &str| {
+        if wg == 0 {
+            String::new()
+        } else {
+            format!("  {}", pad(s, wg))
+        }
+    };
+    let used = 2 + wt + 2 + wu + 2 + wk + if wg == 0 { 0 } else { wg + 2 } + 2 + 3 + 2 + 8 + 2;
+    let wurl = term::width().saturating_sub(used).min(60);
+    println!(
+        "{}",
+        term::dim(&format!(
+            "  {}  {}  {}{}  2FA  id",
+            pad(heads[0], wt),
+            pad(heads[1], wu),
+            pad(heads[2], wk),
+            group(heads[3]),
+        ))
+    );
+    for e in entries {
+        let otp = if e.has_otp {
+            term::accent("2FA")
+        } else {
+            "   ".into()
+        };
+        let url = if wurl >= 12 {
+            clip(&e.url, wurl)
+        } else {
+            String::new()
+        };
+        println!(
+            "  {}  {}  {}{}  {otp}  {}  {}",
+            term::bold(&pad(&e.title, wt)),
+            pad(&e.username, wu),
+            term::dim(&pad(e.kind.label(), wk)),
+            term::dim(&group(&e.group)),
+            term::dim(&e.id[..8]),
+            term::dim(&url)
         );
     }
 }
@@ -2419,7 +2524,57 @@ fn clip(s: &str, n: usize) -> String {
     }
 }
 
+/// Карточка записи для терминала: подписи в одну колонку, скрытое точками.
+fn print_entry_fancy(e: &EntryDetail) {
+    let mut rows: Vec<(String, String)> = vec![];
+    if !e.summary.group.is_empty() {
+        rows.push((tr!("папка").into(), e.summary.group.clone()));
+    }
+    for f in &e.fields {
+        let v = match &f.value {
+            Some(v) => v.expose().to_string(),
+            None => format!("•••••• {}", term::dim("kw show -r")),
+        };
+        if !v.is_empty() {
+            rows.push((f.name.clone(), v));
+        }
+    }
+    for a in &e.attachments {
+        rows.push((
+            tr!("вложение").into(),
+            format!(
+                "{} {}",
+                a.name,
+                term::dim(&tr!("{size} байт", size = a.size))
+            ),
+        ));
+    }
+    if !e.history.is_empty() {
+        rows.push((tr!("история").into(), e.history.len().to_string()));
+    }
+    rows.push(("id".into(), term::dim(&e.summary.id)));
+    let w = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
+    println!(
+        "{} {}  {}",
+        term::accent("◆"),
+        term::bold(&e.summary.title),
+        term::dim(e.summary.kind.label())
+    );
+    for (k, v) in rows {
+        println!("  {}  {v}", term::dim(&format!("{k:<w$}")));
+    }
+    if !e.notes.is_empty() {
+        println!("  {}", term::dim(tr!("заметки")));
+        for l in e.notes.lines() {
+            println!("    {l}");
+        }
+    }
+}
+
 fn print_entry(e: &EntryDetail) {
+    if term::fancy_out() {
+        return print_entry_fancy(e);
+    }
     println!("{}  [{}]", e.summary.title, e.summary.kind.label());
     if !e.summary.group.is_empty() {
         println!("{}", tr!("  группа: {group}", group = e.summary.group));
