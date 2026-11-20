@@ -35,6 +35,7 @@ pub struct SyncState {
     /// компьютеры в сети с этой базой
     pub peers: std::collections::BTreeMap<std::net::IpAddr, crate::lan::Peer>,
     pub lan_state: Option<String>,
+    pub lan_checks: Vec<keywarden_core::ipc::LanCheck>,
     loaded_from: Option<PathBuf>,
 }
 

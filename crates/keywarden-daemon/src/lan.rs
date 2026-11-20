@@ -13,7 +13,7 @@
 
 use crate::state::Daemon;
 use crate::sync::Incoming;
-use keywarden_core::ipc::{Event, LanNetwork, Response};
+use keywarden_core::ipc::{Event, LanCheck, LanNetwork, Response};
 use keywarden_core::remote::{
     self, Beacon, FINISH_LEN, HELLO_LEN, LAN_PORT, Lan, MAX_VAULT_BYTES, REPLY_LEN,
 };
@@ -42,6 +42,7 @@ pub async fn serve(daemon: Arc<Daemon>) {
             run(&daemon, active, &mut events).await;
             let mut g = daemon.inner();
             g.sync.peers.clear();
+            g.sync.lan_checks.clear();
             g.sync.lan_state = None;
         }
         // ждём включения или разблокировки
@@ -58,6 +59,8 @@ pub struct Peer {
     pub seen: String,
     at: Instant,
     pub new: bool,
+    /// почему не удалось забрать его базу (до первой удачи)
+    pub error: Option<String>,
 }
 
 struct Active {
@@ -119,7 +122,8 @@ async fn start(d: &Arc<Daemon>) -> Option<Active> {
             .ok()?
             .ok()?;
     let instance = device_id(d);
-    tracing::info!("сеть: жду соседей на порту {port}");
+    tracing::info!("сеть: жду другие компьютеры на порту {port}");
+    d.refresh_lan_checks(port).await;
     d.set_lan_state(tr!("ищу компьютеры в сети (порт {port})", port = LAN_PORT));
     Some(Active {
         epoch,
@@ -135,6 +139,7 @@ async fn start(d: &Arc<Daemon>) -> Option<Active> {
 /// Работает, пока включено и открыта та же база.
 async fn run(d: &Arc<Daemon>, a: Active, events: &mut tokio::sync::broadcast::Receiver<Event>) {
     let mut tick = tokio::time::interval(BEACON_EVERY);
+    let mut ticks = 0u32;
     let mut buf = [0u8; 128];
     // что уже забрали у каждого соседа: по метке файла
     let mut pulled: HashMap<[u8; 8], [u8; 8]> = HashMap::new();
@@ -151,6 +156,11 @@ async fn run(d: &Arc<Daemon>, a: Active, events: &mut tokio::sync::broadcast::Re
                     return;
                 }
                 d.drop_stale_peers();
+                // раз в минуту: правило брандмауэра могли добавить, пока окно открыто
+                ticks += 1;
+                if ticks.is_multiple_of(4) {
+                    d.refresh_lan_checks(a.port).await;
+                }
                 beacon(d, &a).await
             }
             ev = events.recv() => match ev {
@@ -174,13 +184,12 @@ async fn run(d: &Arc<Daemon>, a: Active, events: &mut tokio::sync::broadcast::Re
                 let (d2, lan, tx) = (d.clone(), a.lan.clone(), done_tx.clone());
                 let addr = SocketAddr::new(from.ip(), b.port);
                 tokio::spawn(async move {
-                    let ok = match pull(&d2, &lan, addr).await {
-                        Ok(()) => true,
-                        Err(e) => {
-                            tracing::warn!("сеть: не удалось забрать базу с {addr}: {e}");
-                            false
-                        }
-                    };
+                    let res = pull(&d2, &lan, addr).await;
+                    if let Err(e) = &res {
+                        tracing::warn!("сеть: не удалось забрать базу с {addr}: {e}");
+                    }
+                    d2.pull_result(addr, res.as_ref().err());
+                    let ok = res.is_ok();
                     tx.send((b.instance, b.tag, ok)).ok();
                 });
             }
@@ -350,13 +359,14 @@ impl Daemon {
         let (appeared, new) = {
             let mut g = self.inner();
             let known = g.config.lan_known.contains(&id);
-            let was = g.sync.peers.get(&ip).map(|p| p.new);
+            let was = g.sync.peers.get(&ip).map(|p| (p.new, p.error.clone()));
             g.sync.peers.insert(
                 ip,
                 Peer {
                     seen,
                     at: Instant::now(),
-                    new: was.unwrap_or(!known),
+                    new: was.as_ref().map(|w| w.0).unwrap_or(!known),
+                    error: was.as_ref().and_then(|w| w.1.clone()),
                 },
             );
             (was.is_none(), !known)
@@ -374,6 +384,48 @@ impl Daemon {
             crate::sync::notify_desktop("Keywarden", &m).await;
         } else if appeared {
             tracing::info!("сеть: рядом {ip} с этой же базой");
+            self.events.send(Event::Changed).ok();
+        }
+    }
+
+    /// Итог попытки забрать базу: ошибка видна в настройках рядом с компьютером.
+    fn pull_result(&self, addr: SocketAddr, err: Option<&String>) {
+        let error = err.map(|e| {
+            if e == "timeout" || e.contains("refused") || e.contains("unreachable") {
+                tr!(
+                    "слышу, но подключиться не могу: на том компьютере закрыт порт {port} (TCP)",
+                    port = addr.port()
+                )
+            } else {
+                e.clone()
+            }
+        });
+        let changed = {
+            let mut g = self.inner();
+            match g.sync.peers.get_mut(&addr.ip()) {
+                Some(p) if p.error != error => {
+                    p.error = error;
+                    true
+                }
+                _ => false,
+            }
+        };
+        if changed {
+            self.events.send(Event::Changed).ok();
+        }
+    }
+
+    async fn refresh_lan_checks(&self, tcp_port: u16) {
+        let checks = tokio::task::spawn_blocking(move || self_checks(tcp_port))
+            .await
+            .unwrap_or_default();
+        let changed = {
+            let mut g = self.inner();
+            let changed = g.sync.lan_checks != checks;
+            g.sync.lan_checks = checks;
+            changed
+        };
+        if changed {
             self.events.send(Event::Changed).ok();
         }
     }
@@ -450,6 +502,166 @@ pub(crate) fn trust_current(c: &mut crate::config::Config) -> bool {
         list.push(n);
     }
     true
+}
+
+/// Самопроверка: свой порт и брандмауэр. Чужой брандмауэр отсюда не виден, о нём говорит
+/// ошибка рядом с компьютером в списке (`pull_result`).
+fn self_checks(tcp_port: u16) -> Vec<LanCheck> {
+    let mut out = vec![if tcp_port == LAN_PORT {
+        LanCheck {
+            ok: Some(true),
+            text: tr!("Keywarden слушает порт {port}: UDP и TCP", port = LAN_PORT),
+            fix: None,
+        }
+    } else {
+        LanCheck {
+            ok: Some(false),
+            text: tr!(
+                "TCP {port} занят другой программой, базу отдаю с порта {other}: в брандмауэре нужен и он",
+                port = LAN_PORT,
+                other = tcp_port
+            ),
+            fix: None,
+        }
+    }];
+    #[cfg(target_os = "linux")]
+    out.extend(firewall_check());
+    out
+}
+
+/// Что известно о брандмауэре этого компьютера без прав администратора: ufw и firewalld.
+// ponytail: голые nftables и iptables читаются только от root, для них проверки нет
+#[cfg(target_os = "linux")]
+fn firewall_check() -> Option<LanCheck> {
+    use std::process::Command;
+    let subnet = std::fs::read_to_string("/proc/net/route")
+        .ok()
+        .zip(std::fs::read_to_string("/proc/net/arp").ok())
+        .and_then(|(r, a)| subnet_from(&r, &a));
+    let ufw_on = std::fs::read_to_string("/etc/ufw/ufw.conf").is_ok_and(|c| {
+        c.lines()
+            .any(|l| l.trim().eq_ignore_ascii_case("ENABLED=yes"))
+    });
+    if ufw_on {
+        let fix = match &subnet {
+            Some(net) => format!("sudo ufw allow from {net} to any port {LAN_PORT}"),
+            None => format!("sudo ufw allow {LAN_PORT}"),
+        };
+        return Some(match std::fs::read_to_string("/etc/ufw/user.rules") {
+            Ok(rules) if ufw_allows(&rules, LAN_PORT) => LanCheck {
+                ok: Some(true),
+                text: tr!("Брандмауэр ufw пропускает порт {port}", port = LAN_PORT),
+                fix: None,
+            },
+            Ok(_) => LanCheck {
+                ok: Some(false),
+                text: tr!(
+                    "Брандмауэр ufw закрывает порт {port}: другие компьютеры вас не услышат",
+                    port = LAN_PORT
+                ),
+                fix: Some(fix),
+            },
+            Err(_) => LanCheck {
+                ok: None,
+                text: tr!(
+                    "Включён брандмауэр ufw, его правила отсюда не прочитать. Если обмен не идёт, разрешите порт"
+                )
+                .into(),
+                fix: Some(fix),
+            },
+        });
+    }
+    let fw = |args: &[&str]| {
+        Command::new("firewall-cmd")
+            .args(args)
+            .output()
+            .is_ok_and(|o| o.status.success())
+    };
+    if fw(&["--state"]) {
+        let open = fw(&[&format!("--query-port={LAN_PORT}/udp")])
+            && fw(&[&format!("--query-port={LAN_PORT}/tcp")]);
+        return Some(if open {
+            LanCheck {
+                ok: Some(true),
+                text: tr!(
+                    "Брандмауэр firewalld пропускает порт {port}",
+                    port = LAN_PORT
+                ),
+                fix: None,
+            }
+        } else {
+            LanCheck {
+                ok: Some(false),
+                text: tr!(
+                    "Брандмауэр firewalld закрывает порт {port}: другие компьютеры вас не услышат",
+                    port = LAN_PORT
+                ),
+                fix: Some(format!(
+                    "sudo firewall-cmd --permanent --add-port={LAN_PORT}/udp --add-port={LAN_PORT}/tcp && sudo firewall-cmd --reload"
+                )),
+            }
+        });
+    }
+    Some(LanCheck {
+        ok: None,
+        text: tr!(
+            "Брандмауэр ufw или firewalld не найден. Если стоит другой, разрешите порт {port} (UDP и TCP) сами",
+            port = LAN_PORT
+        ),
+        fix: None,
+    })
+}
+
+/// Есть ли в правилах ufw разрешение входящих UDP и TCP на порт (строки `### tuple ###`).
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn ufw_allows(rules: &str, port: u16) -> bool {
+    // порт в правиле: «47470», список «80,443» или диапазон «47000:48000»
+    let covers = |spec: &str| {
+        spec == "any"
+            || spec.split(',').any(|p| match p.split_once(':') {
+                Some((a, b)) => {
+                    a.parse().is_ok_and(|a: u16| a <= port)
+                        && b.parse().is_ok_and(|b: u16| port <= b)
+                }
+                None => p.parse() == Ok(port),
+            })
+    };
+    let allowed = |proto: &str| {
+        rules.lines().any(|l| {
+            let Some(t) = l.strip_prefix("### tuple ###") else {
+                return false;
+            };
+            // действие, протокол, порт назначения, адрес назначения, порт и адрес источника, направление
+            let f: Vec<&str> = t.split_whitespace().collect();
+            f.len() >= 7
+                && f[0].starts_with("allow")
+                && (f[1] == proto || f[1] == "any")
+                && covers(f[2])
+                && f[6].starts_with("in")
+        })
+    };
+    allowed("udp") && allowed("tcp")
+}
+
+/// Подсеть текущей сети, «192.168.0.0/24»: для правила брандмауэра только на свою сеть.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn subnet_from(routes: &str, arp: &str) -> Option<String> {
+    let name = network_from(routes, arp)?.name;
+    routes.lines().skip(1).find_map(|line| {
+        let f: Vec<&str> = line.split_whitespace().collect();
+        if f.len() < 8 || !name.contains(&format!("({})", f[0])) {
+            return None;
+        }
+        let net = u32::from_str_radix(f[1], 16).ok()?;
+        let mask = u32::from_str_radix(f[7], 16).ok()?;
+        (u32::from_str_radix(f[2], 16).ok()? == 0 && mask != 0).then(|| {
+            format!(
+                "{}/{}",
+                Ipv4Addr::from(net.to_ne_bytes()),
+                mask.count_ones()
+            )
+        })
+    })
 }
 
 /// Различает ли эта система сети. Где нет, обмен работает в любой сети, как раньше.
@@ -547,6 +759,34 @@ mod tests {
         assert!(n.name.contains("192.168.2.1") && n.name.contains("eth0"));
         // шлюз ещё не ответил на ARP: сеть не определилась
         assert!(super::network_from(routes, "IP address\n").is_none());
+        assert_eq!(super::subnet_from(routes, arp), None);
+        let direct =
+            format!("{routes}eth0\t0002A8C0\t00000000\t0001\t0\t0\t100\t00FFFFFF\t0\t0\t0\n");
+        assert_eq!(
+            super::subnet_from(&direct, arp).as_deref(),
+            Some("192.168.2.0/24")
+        );
+    }
+
+    #[test]
+    fn ufw_rule_must_cover_both_protocols() {
+        let udp = "### tuple ### allow udp 47470 0.0.0.0/0 any 192.168.0.0/24 in\n";
+        let tcp = "### tuple ### allow tcp 47470 0.0.0.0/0 any 192.168.0.0/24 in\n";
+        let any = "### tuple ### allow any 47470 0.0.0.0/0 any 192.168.0.0/24 in\n";
+        assert!(!super::ufw_allows(udp, 47470));
+        assert!(super::ufw_allows(&format!("{udp}{tcp}"), 47470));
+        assert!(super::ufw_allows(any, 47470));
+        let range =
+            "### tuple ### allow any 47000:48000 0.0.0.0/0 any 192.168.0.0/24 in comment=6b77\n";
+        assert!(super::ufw_allows(range, 47470) && !super::ufw_allows(range, 22));
+        assert!(!super::ufw_allows(
+            "### tuple ### deny any 47470 0.0.0.0/0 any 0.0.0.0/0 in\n",
+            47470
+        ));
+        assert!(!super::ufw_allows(
+            "### tuple ### allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in\n",
+            47470
+        ));
     }
 
     #[test]

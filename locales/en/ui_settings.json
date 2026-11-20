@@ -457,5 +457,8 @@
   "Доверенные сети": "Trusted networks",
   "сейчас": "current",
   "Обмен работает только в доверенных сетях. В остальных Keywarden молчит и держит порт закрытым": "The exchange runs only in trusted networks. Elsewhere Keywarden stays silent and keeps the port closed",
-  "О новом компьютере в обмене приходит уведомление. Всё, что пришло, видно в журнале ниже и отменяется оттуда": "A new computer in the exchange triggers a notification. Everything received is listed in the journal below and can be reverted there"
+  "О новом компьютере в обмене приходит уведомление. Всё, что пришло, видно в журнале ниже и отменяется оттуда": "A new computer in the exchange triggers a notification. Everything received is listed in the journal below and can be reverted there",
+  "нет связи": "no link",
+  "Проверка": "Check",
+  "Команда скопирована. Выполните её в терминале: проверка обновится в течение минуты": "Command copied. Run it in a terminal: the check refreshes within a minute"
 }

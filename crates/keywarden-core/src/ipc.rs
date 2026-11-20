@@ -413,6 +413,20 @@ pub struct RemoteInfo {
     /// сети, в которых обмен разрешён
     #[serde(default)]
     pub lan_networks: Vec<LanNetwork>,
+    /// самопроверка обмена: порт, брандмауэр
+    #[serde(default)]
+    pub lan_checks: Vec<LanCheck>,
+}
+
+/// Строка самопроверки обмена в сети.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct LanCheck {
+    /// `Some(true)`: в порядке, `Some(false)`: мешает обмену, `None`: проверить отсюда нельзя
+    pub ok: Option<bool>,
+    pub text: String,
+    /// команда, которая чинит (её выполняет человек: нужны права администратора)
+    #[serde(default)]
+    pub fix: Option<String>,
 }
 
 /// Сеть, как её узнаёт обмен: по аппаратному адресу шлюза.
@@ -432,6 +446,9 @@ pub struct LanPeer {
     pub seen: String,
     /// раньше этот компьютер в обмене не участвовал
     pub new: bool,
+    /// маяк слышен, а забрать базу не вышло: обычно у того компьютера закрыт порт
+    #[serde(default)]
+    pub error: Option<String>,
 }
 
 /// Программа синхронизации, в чьей папке лежит база.

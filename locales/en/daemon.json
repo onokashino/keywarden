@@ -172,5 +172,14 @@
   "эта сеть не в доверенных: обмен выключен, порт закрыт": "this network is not trusted: the exchange is off, the port is closed",
   "В обмене по сети появился новый компьютер: {ip}": "A new computer joined the network exchange: {ip}",
   "сеть не определилась": "network not detected",
-  "шлюз {ip} ({iface})": "gateway {ip} ({iface})"
+  "шлюз {ip} ({iface})": "gateway {ip} ({iface})",
+  "слышу, но подключиться не могу: на том компьютере закрыт порт {port} (TCP)": "heard, but cannot connect: port {port} (TCP) is closed on that computer",
+  "Keywarden слушает порт {port}: UDP и TCP": "Keywarden listens on port {port}: UDP and TCP",
+  "TCP {port} занят другой программой, базу отдаю с порта {other}: в брандмауэре нужен и он": "TCP {port} is used by another program, the vault is served from port {other}: allow it in the firewall too",
+  "Брандмауэр ufw пропускает порт {port}": "The ufw firewall allows port {port}",
+  "Брандмауэр ufw закрывает порт {port}: другие компьютеры вас не услышат": "The ufw firewall blocks port {port}: other computers will not hear you",
+  "Включён брандмауэр ufw, его правила отсюда не прочитать. Если обмен не идёт, разрешите порт": "The ufw firewall is on and its rules cannot be read from here. If the exchange does not work, allow the port",
+  "Брандмауэр firewalld пропускает порт {port}": "The firewalld firewall allows port {port}",
+  "Брандмауэр firewalld закрывает порт {port}: другие компьютеры вас не услышат": "The firewalld firewall blocks port {port}: other computers will not hear you",
+  "Брандмауэр ufw или firewalld не найден. Если стоит другой, разрешите порт {port} (UDP и TCP) сами": "No ufw or firewalld firewall found. If you run another one, allow port {port} (UDP and TCP) yourself"
 }

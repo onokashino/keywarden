@@ -1911,8 +1911,14 @@ impl SettingsPage {
                                 .child(tile(IconName::Monitor, theme.success))
                                 .child(two_lines(
                                     peer.ip.clone(),
-                                    tr!("На связи в {time}", time = peer.seen),
+                                    match &peer.error {
+                                        Some(e) => capitalized(e.clone()).to_string(),
+                                        None => tr!("На связи в {time}", time = peer.seen),
+                                    },
                                 ))
+                                .when(peer.error.is_some(), |d| {
+                                    d.child(crate::ui::badge(tr!("нет связи"), theme.danger))
+                                })
                                 .when(peer.new, |d| {
                                     d.child(crate::ui::badge(tr!("новый"), theme.warning))
                                 })
@@ -1955,6 +1961,68 @@ impl SettingsPage {
                                                 this.lan_trust(Some(id.clone()), false, cx)
                                             })),
                                     )
+                            }))
+                            .into_any_element(),
+                    ))
+                })
+                .when(trusted && !r.lan_checks.is_empty(), |d| {
+                    d.child(cell(
+                        v_flex()
+                            .gap_2()
+                            .child(caption(tr!("Проверка")))
+                            .children(r.lan_checks.iter().enumerate().map(|(i, c)| {
+                                let (icon, color) = match c.ok {
+                                    Some(true) => (IconName::CircleCheck, theme.success),
+                                    Some(false) => (IconName::CircleAlert, theme.danger),
+                                    None => (IconName::Info, theme.muted_foreground),
+                                };
+                                v_flex()
+                                    .gap_1p5()
+                                    .child(
+                                        h_flex()
+                                            .items_start()
+                                            .gap_2()
+                                            .text_sm()
+                                            .child(
+                                                div().pt(px(2.)).child(
+                                                    Icon::new(icon).small().text_color(color),
+                                                ),
+                                            )
+                                            .child(div().flex_1().min_w_0().child(c.text.clone())),
+                                    )
+                                    .when_some(c.fix.clone(), |d, fix| {
+                                        // команду выполняет человек: Keywarden не просит права администратора
+                                        let copy = fix.clone();
+                                        d.child(
+                                            h_flex()
+                                                .ml_6()
+                                                .gap_2()
+                                                .pl_3()
+                                                .pr_1()
+                                                .py_1()
+                                                .rounded_md()
+                                                .bg(theme.secondary)
+                                                .child(
+                                                    div()
+                                                        .flex_1()
+                                                        .min_w_0()
+                                                        .text_xs()
+                                                        .font_family(theme.mono_font_family.clone())
+                                                        .child(fix),
+                                                )
+                                                .child(
+                                                    Button::new(("lan-fix", i))
+                                                        .ghost()
+                                                        .small()
+                                                        .icon(IconName::Copy)
+                                                        .label(tr!("Скопировать"))
+                                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                                            cx.write_to_clipboard(ClipboardItem::new_string(copy.clone()));
+                                                            this.say(tr!("Команда скопирована. Выполните её в терминале: проверка обновится в течение минуты"), false, cx)
+                                                        })),
+                                                ),
+                                        )
+                                    })
                             }))
                             .into_any_element(),
                     ))
