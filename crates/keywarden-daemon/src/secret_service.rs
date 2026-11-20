@@ -113,7 +113,9 @@ impl Shared {
             return Ok(());
         }
         let mut rx = self.daemon.events.subscribe();
-        let _ = std::process::Command::new(crate::confirm::ui_binary()).spawn();
+        let _ = crate::confirm::spawn_detached(&mut std::process::Command::new(
+            crate::confirm::ui_binary(),
+        ));
         let wait = async {
             loop {
                 match rx.recv().await {

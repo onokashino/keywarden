@@ -74,9 +74,9 @@ impl Daemon {
             }) => self.encrypted(client_id, nonce, message).await,
             Ok(Outer::OpenUnlock) => {
                 if !self.is_unlocked()
-                    && let Err(e) = std::process::Command::new(confirm::ui_binary())
-                        .arg("--launcher")
-                        .spawn()
+                    && let Err(e) = confirm::spawn_detached(
+                        std::process::Command::new(confirm::ui_binary()).arg("--launcher"),
+                    )
                 {
                     tracing::warn!("лаунчер не запустился: {e}");
                 }

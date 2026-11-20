@@ -64,6 +64,10 @@ pub async fn run(d: Arc<Daemon>) {
     loop {
         tokio::select! {
             _ = tick.tick() => {
+                // закрытое окно забираем сразу, а не при следующем «Открыть»: иначе висит зомби
+                if window.as_mut().is_some_and(|c| !matches!(c.try_wait(), Ok(None))) {
+                    window = None;
+                }
                 let view = (d.config().tray, d.is_unlocked());
                 if shown != Some(view) {
                     shown = Some(view);
@@ -80,7 +84,10 @@ pub async fn run(d: Arc<Daemon>) {
                     }
                 }
                 Action::Launcher => {
-                    spawn_ui(&["--launcher"]);
+                    let mut cmd = std::process::Command::new(crate::confirm::ui_binary());
+                    if let Err(e) = crate::confirm::spawn_detached(cmd.arg("--launcher")) {
+                        tracing::warn!("keywarden-ui не запустился: {e}");
+                    }
                 }
                 Action::Lock => d.lock("значок в трее").await,
                 Action::Quit => {

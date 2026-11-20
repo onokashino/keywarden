@@ -89,6 +89,16 @@ fn wait(mut child: std::process::Child, timeout: Duration) -> Option<std::proces
 }
 
 /// keywarden-ui рядом с демоном, иначе из PATH.
+/// Запустить окно и не ждать его: статус завершения забирает отдельный поток.
+/// Без этого каждое закрытое окно остаётся у демона процессом-зомби до его выхода.
+pub fn spawn_detached(cmd: &mut Command) -> std::io::Result<()> {
+    let mut child = cmd.spawn()?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
+}
+
 pub fn ui_binary() -> PathBuf {
     std::env::current_exe()
         .ok()
@@ -130,5 +140,34 @@ mod tests {
             ask(Some(&["/нет/такой/программы".to_string()]), &prompt()),
             Decision::Deny
         );
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod reap_tests {
+    use super::*;
+
+    /// Число процессов-зомби, чей родитель этот процесс.
+    fn zombies() -> usize {
+        let me = std::process::id().to_string();
+        std::fs::read_dir("/proc")
+            .unwrap()
+            .flatten()
+            .filter_map(|e| std::fs::read_to_string(e.path().join("stat")).ok())
+            .filter(|stat| {
+                // после имени в скобках идут состояние и pid родителя
+                let rest = stat.rsplit_once(") ").map(|x| x.1).unwrap_or_default();
+                let mut f = rest.split(' ');
+                f.next() == Some("Z") && f.next() == Some(me.as_str())
+            })
+            .count()
+    }
+
+    #[test]
+    fn detached_window_leaves_no_zombie() {
+        let before = zombies();
+        spawn_detached(Command::new("sh").args(["-c", "exit 0"])).unwrap();
+        std::thread::sleep(Duration::from_millis(300));
+        assert_eq!(zombies(), before, "завершившийся процесс забран");
     }
 }
