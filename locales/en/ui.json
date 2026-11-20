@@ -339,5 +339,7 @@
   "Подключаюсь…": "Connecting…",
   "Открываю…": "Opening…",
   "Переношу коды из 2FAS…": "Importing codes from 2FAS…",
-  "Прикладываю файлы…": "Attaching files…"
+  "Прикладываю файлы…": "Attaching files…",
+  "Создать первую запись": "Create the first entry",
+  "Перенести из другого менеджера": "Import from another manager"
 }

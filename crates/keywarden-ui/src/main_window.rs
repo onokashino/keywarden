@@ -6716,6 +6716,43 @@ impl MainWindow {
                             tr!("Ничего не найдено")
                         }),
                 )
+                // только что созданная база: первые шаги вместо одной строки
+                .when(
+                    self.total == 0
+                        && self.nav == Nav::All
+                        && self.search.read(cx).value().is_empty(),
+                    |d| {
+                        d.child(
+                            v_flex()
+                                .pt_3()
+                                .gap_2()
+                                .w(px(300.))
+                                .child(
+                                    Button::new("first-entry")
+                                        .primary()
+                                        .w_full()
+                                        .icon(IconName::Plus)
+                                        .label(tr!("Создать первую запись"))
+                                        .on_click(cx.listener(|this, _, w, cx| {
+                                            this.new_entry(EntryKind::Login, w, cx)
+                                        })),
+                                )
+                                .child(
+                                    Button::new("first-import")
+                                        .outline()
+                                        .w_full()
+                                        .icon(IconName::Import)
+                                        .label(tr!("Перенести из другого менеджера"))
+                                        .on_click(cx.listener(|this, _, w, cx| {
+                                            this.open_settings(w, cx);
+                                            if let Some(page) = this.settings.clone() {
+                                                page.update(cx, |p, cx| p.set_tab(2, w, cx));
+                                            }
+                                        })),
+                                ),
+                        )
+                    },
+                )
                 // серверы обычно уже описаны в ~/.ssh/config: перенос прямо отсюда
                 .when(
                     self.nav == Nav::Kind(EntryKind::SshHost)
@@ -8223,12 +8260,21 @@ fn unlock_error(text: SharedString, theme: &gpui_kit::component::Theme) -> impl 
         .text_sm()
         .text_color(theme.danger_foreground)
         .child(Icon::new(IconName::CircleAlert).small())
-        .child(div().flex_1().min_w_0().child(text))
+        .child(div().flex_1().min_w_0().child(capitalized(&text)))
         .with_animation(
             "unlock-error",
             Animation::new(Duration::from_millis(180)).with_easing(ease_out_quint()),
             |el, t| el.opacity(t),
         )
+}
+
+/// Ошибки ядра начинаются со строчной (так их печатает и `kw`), в окне это выглядит небрежно.
+fn capitalized(text: &str) -> String {
+    let mut c = text.chars();
+    match c.next() {
+        Some(f) => f.to_uppercase().chain(c).collect(),
+        None => String::new(),
+    }
 }
 
 /// Документы/Keywarden.kdbx, а если файл уже есть, то «Keywarden 2.kdbx» и дальше.

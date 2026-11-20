@@ -336,7 +336,6 @@
   "Импорт кладёт записи в новую папку. Слияние объединяет с копией этой же базы по истории правок": "Import puts entries into a new folder. Merge combines with a copy of this same vault using the edit history",
   "Файл": "File",
   "CSV, .kdbx, .kdb или JSON Bitwarden": "CSV, .kdbx, .kdb or Bitwarden JSON",
-  "Выбрать файл": "Choose file",
   "Импортировать": "Import",
   "Слить с этой базой": "Merge with this vault",
   "Безопасность": "Security",
@@ -438,5 +437,8 @@
   "Проверяю сервер…": "Checking the server…",
   "Сервер подключён: база синхронизируется с ним": "Server connected: the vault syncs with it",
   "Укажите адрес сервера": "Enter the server address",
-  "Хранятся в самой базе: одинаковы на всех устройствах": "Stored in the vault itself: the same on every device"
+  "Хранятся в самой базе: одинаковы на всех устройствах": "Stored in the vault itself: the same on every device",
+  "Файлов: {n} ({names})": "Files: {n} ({names})",
+  "Файл {name} не перенесён: {why}": "File {name} was not imported: {why}",
+  "Выбрать файлы": "Choose files"
 }

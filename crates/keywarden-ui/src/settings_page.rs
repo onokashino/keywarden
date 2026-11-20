@@ -96,7 +96,8 @@ pub struct SettingsPage {
     // перенос
     copy_pw: Entity<InputState>,
     other_pw: Entity<InputState>,
-    other_path: Option<PathBuf>,
+    /// Файлы для импорта или слияния: можно выбрать несколько сразу.
+    other_paths: Vec<PathBuf>,
     // этот компьютер
     prefs: Option<Prefs>,
     autolock: Entity<InputState>,
@@ -170,7 +171,7 @@ impl SettingsPage {
             cur_yubikey: None,
             copy_pw: field(window, cx, tr!("Пароль копии"), true),
             other_pw: field(window, cx, tr!("Пароль той базы"), true),
-            other_path: None,
+            other_paths: Vec::new(),
             prefs: None,
             autolock: field(window, cx, "15", false),
             clip_secs: field(window, cx, "30", false),
@@ -436,7 +437,7 @@ impl SettingsPage {
             .into_any_element()
     }
 
-    fn set_tab(&mut self, tab: usize, window: &mut Window, cx: &mut Context<Self>) {
+    pub fn set_tab(&mut self, tab: usize, window: &mut Window, cx: &mut Context<Self>) {
         if !visible_tabs().contains(&tab) {
             return;
         }
@@ -2293,16 +2294,15 @@ impl SettingsPage {
         let rx = cx.prompt_for_paths(PathPromptOptions {
             files: true,
             directories: false,
-            multiple: false,
+            multiple: true,
             prompt: Some(tr!("Выбрать").into()),
         });
         self.tasks.push(cx.spawn_in(window, async move |this, cx| {
-            if let Ok(Ok(Some(mut v))) = rx.await
+            if let Ok(Ok(Some(v))) = rx.await
                 && !v.is_empty()
             {
-                let p = v.remove(0);
                 let _ = this.update(cx, |this, cx| {
-                    this.other_path = Some(p);
+                    this.other_paths = v;
                     this.message = None;
                     cx.notify();
                 });
@@ -2311,84 +2311,140 @@ impl SettingsPage {
     }
 
     fn import_or_merge(&mut self, merge: bool, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(path) = self.other_path.clone() else {
+        if self.other_paths.is_empty() {
             return self.say(tr!("Сначала выберите файл"), true, cx);
-        };
-        let ext = path
-            .extension()
-            .map(|e| e.to_string_lossy().to_lowercase())
-            .unwrap_or_default();
-        let format = match ext.as_str() {
-            "csv" => ImportFormat::Csv,
-            "kdbx" | "kdb" => ImportFormat::Keepass,
-            "json" => ImportFormat::Bitwarden,
-            "2fas" => ImportFormat::TwoFas,
-            _ => {
-                return self.say(
-                    tr!("Поддерживаются .csv, .kdbx, .kdb, .2fas и .json (Bitwarden)"),
-                    true,
-                    cx,
-                );
-            }
-        };
-        if merge && format != ImportFormat::Keepass {
-            return self.say(
-                tr!("Слить можно только с копией этой базы (.kdbx)"),
-                true,
-                cx,
-            );
         }
         let key = KeySpec {
             password: Some(Secret::new(self.other_pw.read(cx).value().to_string())),
             ..Default::default()
         };
-        self.clear(&[&self.other_pw], window, cx);
-        let p = path.display().to_string();
-        let req = if merge {
-            Request::MergeFile { path: p, key }
-        } else {
-            Request::ImportFile {
-                path: p,
-                format,
-                key: (format == ImportFormat::Keepass).then_some(key),
+        // сначала проверяем все файлы: иначе половина импортируется, а на другой всплывёт ошибка
+        let mut reqs = Vec::new();
+        for path in &self.other_paths {
+            let ext = path
+                .extension()
+                .map(|e| e.to_string_lossy().to_lowercase())
+                .unwrap_or_default();
+            let format = match ext.as_str() {
+                "csv" => ImportFormat::Csv,
+                "kdbx" | "kdb" => ImportFormat::Keepass,
+                "json" => ImportFormat::Bitwarden,
+                "2fas" => ImportFormat::TwoFas,
+                _ => {
+                    return self.say(
+                        tr!("Поддерживаются .csv, .kdbx, .kdb, .2fas и .json (Bitwarden)"),
+                        true,
+                        cx,
+                    );
+                }
+            };
+            if merge && format != ImportFormat::Keepass {
+                return self.say(
+                    tr!("Слить можно только с копией этой базы (.kdbx)"),
+                    true,
+                    cx,
+                );
             }
-        };
+            let p = path.display().to_string();
+            let req = if merge {
+                Request::MergeFile {
+                    path: p,
+                    key: key.clone(),
+                }
+            } else {
+                Request::ImportFile {
+                    path: p,
+                    format,
+                    key: (format == ImportFormat::Keepass).then(|| key.clone()),
+                }
+            };
+            reqs.push((file_name(path), req));
+        }
+        self.clear(&[&self.other_pw], window, cx);
         self.busy = Some(if merge {
             tr!("Сливаю…")
         } else {
             tr!("Импортирую…")
         });
         cx.notify();
-        self.tasks
-            .push(client::call(cx, req, |this, res, cx| match res {
-                Ok(Response::Imported { report: r }) => {
+        self.tasks.push(cx.spawn(async move |this, cx| {
+            // по очереди: каждый файл меняет базу, параллельно их пускать нельзя
+            let (done, failed) = cx
+                .background_spawn(async move {
+                    let mut done = Vec::new();
+                    for (name, req) in reqs {
+                        match client::blocking(&req) {
+                            Ok(r) => done.push(r),
+                            Err(e) => return (done, Some((name, e))),
+                        }
+                    }
+                    (done, None)
+                })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                let files = done.len();
+                let (mut total, mut logins, mut cards, mut notes, mut folders, mut review) =
+                    (0, 0, 0, 0, 0, 0);
+                let mut merged = Vec::new();
+                for r in done {
+                    match r {
+                        Response::Imported { report: r } => {
+                            total += r.total();
+                            logins += r.logins;
+                            cards += r.cards;
+                            notes += r.notes;
+                            folders += r.folders;
+                            review += r.review.len();
+                        }
+                        Response::Merged { summary } => merged.push(summary),
+                        _ => {}
+                    }
+                }
+                if files > 0 {
                     cx.emit(SettingsEvent::Changed);
+                }
+                let mut text = if !merged.is_empty() {
+                    tr!("Слияние: {summary}", summary = merged.join("; "))
+                } else if files > 0 {
                     let mut text = tr!(
                         "Перенесено записей: {total} (логины {logins}, карты {cards}, заметки {notes}, папок {folders})",
-                        total = r.total(),
-                        logins = r.logins,
-                        cards = r.cards,
-                        notes = r.notes,
-                        folders = r.folders
+                        total = total,
+                        logins = logins,
+                        cards = cards,
+                        notes = notes,
+                        folders = folders
                     );
-                    if !r.review.is_empty() {
-                        text.push_str(&tr!(". Проверить вручную: {n}", n = r.review.len()));
+                    if review > 0 {
+                        text.push_str(&tr!(". Проверить вручную: {n}", n = review));
                     }
-                    this.other_path = None;
-                    this.say(text, false, cx)
+                    text
+                } else {
+                    String::new()
+                };
+                let Some((name, e)) = failed else {
+                    this.other_paths.clear();
+                    return this.say(text, false, cx);
+                };
+                // уже перенесённые файлы убираем из списка: повтор не задвоит записи
+                this.other_paths.drain(..files);
+                let why = match e {
+                    CallError::WrongKey(m) => tr!("Ключ той базы не подошёл: {m}", m = m),
+                    e => e.message(),
+                };
+                if !text.is_empty() {
+                    text.push_str(". ");
                 }
-                Ok(Response::Merged { summary }) => {
-                    cx.emit(SettingsEvent::Changed);
-                    this.other_path = None;
-                    this.say(tr!("Слияние: {summary}", summary = summary), false, cx)
-                }
-                Ok(_) => this.say(tr!("Готово"), false, cx),
-                Err(CallError::WrongKey(m)) => {
-                    this.say(tr!("Ключ той базы не подошёл: {m}", m = m), true, cx)
-                }
-                Err(e) => this.say(e.message(), true, cx),
-            }));
+                text.push_str(&tr!("Файл {name} не перенесён: {why}", name = name, why = why));
+                this.say(text, true, cx)
+            });
+        }));
     }
+}
+
+fn file_name(p: &std::path::Path) -> String {
+    p.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| p.display().to_string())
 }
 
 enum Either<A, B> {
@@ -2660,13 +2716,23 @@ impl Render for SettingsPage {
             5 => self.ssh_tab(cx),
             6 => self.sync_tab(cx),
             _ => {
-                let other = self
-                    .other_path
-                    .as_ref()
-                    .map(|p| p.display().to_string());
-                let kdbx = other
-                    .as_deref()
-                    .is_some_and(|p| p.ends_with(".kdbx") || p.ends_with(".kdb"));
+                let other = match self.other_paths.as_slice() {
+                    [] => None,
+                    [p] => Some(p.display().to_string()),
+                    many => Some(tr!(
+                        "Файлов: {n} ({names})",
+                        n = many.len(),
+                        names = many
+                            .iter()
+                            .map(|p| file_name(p))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )),
+                };
+                let kdbx = self.other_paths.iter().any(|p| {
+                    p.extension()
+                        .is_some_and(|e| e.eq_ignore_ascii_case("kdbx") || e.eq_ignore_ascii_case("kdb"))
+                });
                 v_flex()
                     .gap_6()
                     .child(
@@ -2747,7 +2813,7 @@ impl Render for SettingsPage {
                                                 Button::new("pick")
                                                     .outline()
                                                     .icon(IconName::FileUp)
-                                                    .label(tr!("Выбрать файл"))
+                                                    .label(tr!("Выбрать файлы"))
                                                     .on_click(cx.listener(|this, _, w, cx| this.pick_other(w, cx))),
                                             ),
                                         &theme,
