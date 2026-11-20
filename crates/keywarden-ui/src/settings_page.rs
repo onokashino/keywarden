@@ -1242,6 +1242,21 @@ impl SettingsPage {
         self.load_prefs(Some(p), window, cx);
     }
 
+    /// Перепроверить порт и брандмауэр сейчас.
+    fn lan_check(&mut self, cx: &mut Context<Self>) {
+        self.tasks.push(client::call(
+            cx,
+            Request::LanCheck,
+            |this, res, cx| match res {
+                Ok(_) => {
+                    this.load_sync(cx);
+                    this.say(tr!("Проверено только что"), false, cx)
+                }
+                Err(e) => this.say(e.message(), true, cx),
+            },
+        ));
+    }
+
     /// Показать одноразовый код передачи базы на новый компьютер или отменить его.
     fn lan_offer(&mut self, on: bool, cx: &mut Context<Self>) {
         self.tasks.push(client::call(
@@ -2096,7 +2111,19 @@ impl SettingsPage {
                     d.child(cell(
                         v_flex()
                             .gap_2()
-                            .child(caption(tr!("Проверка")))
+                            .child(
+                                h_flex()
+                                    .justify_between()
+                                    .child(caption(tr!("Проверка")))
+                                    .child(
+                                        Button::new("lan-recheck")
+                                            .ghost()
+                                            .small()
+                                            .icon(IconName::RefreshCw)
+                                            .label(tr!("Проверить снова"))
+                                            .on_click(cx.listener(|this, _, _, cx| this.lan_check(cx))),
+                                    ),
+                            )
                             .children(r.lan_checks.iter().enumerate().map(|(i, c)| {
                                 let (icon, color) = match c.ok {
                                     Some(true) => (IconName::CircleCheck, theme.success),
@@ -2145,7 +2172,7 @@ impl SettingsPage {
                                                         .label(tr!("Скопировать"))
                                                         .on_click(cx.listener(move |this, _, _, cx| {
                                                             cx.write_to_clipboard(ClipboardItem::new_string(copy.clone()));
-                                                            this.say(tr!("Команда скопирована. Выполните её в терминале: проверка обновится в течение минуты"), false, cx)
+                                                            this.say(tr!("Команда скопирована. Выполните её в терминале и нажмите «Проверить снова»"), false, cx)
                                                         })),
                                                 ),
                                         )

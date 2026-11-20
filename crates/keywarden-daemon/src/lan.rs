@@ -44,6 +44,7 @@ pub async fn serve(daemon: Arc<Daemon>) {
             let mut g = daemon.inner();
             g.sync.peers.clear();
             g.sync.lan_checks.clear();
+            g.sync.lan_port = None;
             g.sync.lan_state = None;
         }
         // ждём включения или разблокировки
@@ -142,6 +143,7 @@ async fn start(d: &Arc<Daemon>) -> Option<Active> {
             .ok()?;
     let instance = device_id(d);
     tracing::info!("сеть: жду другие компьютеры на порту {port}");
+    d.inner().sync.lan_port = Some(port);
     d.refresh_lan_checks(port).await;
     d.set_lan_state(tr!("ищу компьютеры в сети (порт {port})", port = LAN_PORT));
     Some(Active {
@@ -175,9 +177,11 @@ async fn run(d: &Arc<Daemon>, a: Active, events: &mut tokio::sync::broadcast::Re
                     return;
                 }
                 d.drop_stale_peers();
-                // раз в минуту: правило брандмауэра могли добавить, пока окно открыто
+                // раз в минуту, а пока что-то не в порядке, с каждым маяком: правило брандмауэра
+                // добавляют, глядя в окно, и ждать минуту там нечего
                 ticks += 1;
-                if ticks.is_multiple_of(4) {
+                let failing = d.inner().sync.lan_checks.iter().any(|c| c.ok == Some(false));
+                if failing || ticks.is_multiple_of(4) {
                     d.refresh_lan_checks(a.port).await;
                 }
                 beacon(d, &a).await
@@ -629,6 +633,14 @@ impl Daemon {
         };
         if changed {
             self.events.send(Event::Changed).ok();
+        }
+    }
+
+    /// Проверить порт и брандмауэр сейчас, по кнопке в настройках.
+    pub(crate) async fn lan_check(&self) {
+        let port = self.inner().sync.lan_port;
+        if let Some(port) = port {
+            self.refresh_lan_checks(port).await;
         }
     }
 

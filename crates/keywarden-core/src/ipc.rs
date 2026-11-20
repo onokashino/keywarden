@@ -387,6 +387,8 @@ pub enum Request {
         network: Option<String>,
         on: bool,
     },
+    /// Заново проверить порт и брандмауэр для обмена в сети (итог в `RemoteInfo::lan_checks`).
+    LanCheck,
     /// Передать открытую базу на новый компьютер: завести одноразовый код (`on`) или отменить.
     /// Код действует несколько минут и на одну попытку.
     LanOffer {
@@ -754,6 +756,7 @@ impl Request {
             Self::MoveDatabase { .. } => "move_database",
             Self::WebdavSet { .. } => "webdav_set",
             Self::LanTrust { .. } => "lan_trust",
+            Self::LanCheck => "lan_check",
             Self::LanOffer { .. } => "lan_offer",
             Self::LanReceive { .. } => "lan_receive",
         }
