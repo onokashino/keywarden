@@ -354,5 +354,6 @@
   "Открываю базу": "Opening the vault",
   "Ищу компьютер в этой сети": "Looking for the computer on this network",
   "Подождите несколько секунд": "Please wait a few seconds",
-  "Не удалось настроить git: {e}": "Could not configure git: {e}"
+  "Не удалось настроить git: {e}": "Could not configure git: {e}",
+  "Открыть карточку записи": "Open the entry card"
 }

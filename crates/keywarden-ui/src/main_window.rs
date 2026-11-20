@@ -7094,6 +7094,20 @@ impl MainWindow {
                                             .child(sub),
                                     ),
                             )
+                            // в плитке только код: всё остальное (правка, поля, вложения) в карточке
+                            .child({
+                                let id = e.id.clone();
+                                Button::new(("otp-open", ix))
+                                    .ghost()
+                                    .xsmall()
+                                    .icon(IconName::Pencil)
+                                    .tooltip(tr!("Открыть карточку записи"))
+                                    .on_click(cx.listener(move |this, _, w, cx| {
+                                        // иначе сработает и щелчок по плитке: код уйдёт в буфер
+                                        cx.stop_propagation();
+                                        this.open_entry(id.clone(), w, cx);
+                                    }))
+                            })
                             .child(copy_icon(copied, &theme).small().text_color(if copied {
                                 theme.success_foreground
                             } else {
