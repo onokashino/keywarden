@@ -474,7 +474,7 @@ pub struct MainWindow {
     /// ключ, которым git подписывает коммиты (None: ещё не спрашивали git)
     git_signing: Option<Option<String>>,
     /// почему не удалось включить подпись git: держится под переключателем, а не гаснет с тостом
-    git_sign_error: Option<SharedString>,
+    git_sign_error: Option<(String, SharedString)>,
     nav: Nav,
     entries: Vec<EntrySummary>,
     selected: Option<usize>,
@@ -2309,6 +2309,13 @@ impl MainWindow {
         };
         let copy_pub = public.clone();
         let sign_pub = public.clone();
+        let sign_id = d.summary.id.clone();
+        // ошибка относится к той записи, на которой нажали
+        let sign_error = self
+            .git_sign_error
+            .clone()
+            .filter(|(id, _)| *id == d.summary.id)
+            .map(|(_, e)| e);
         v_flex()
             .child(section_head(tr!("Открытый ключ"), None, None, &theme))
             .child(
@@ -2390,10 +2397,11 @@ impl MainWindow {
                                             Ok(()) => {}
                                             Err(e) => {
                                                 tracing::warn!("подпись git не включена: {e}");
-                                                this.git_sign_error = Some(
+                                                this.git_sign_error = Some((
+                                                    sign_id.clone(),
                                                     tr!("Не удалось настроить git: {e}", e = e)
                                                         .into(),
-                                                );
+                                                ));
                                             }
                                         }
                                         this.git_signing = None;
@@ -2407,7 +2415,7 @@ impl MainWindow {
                                 ))
                             }),
                     )
-                    .when_some(self.git_sign_error.clone(), |d, e| {
+                    .when_some(sign_error, |d, e| {
                         d.child(div().px_4().pb_3().child(unlock_error(e, &theme)))
                     }),
             )
