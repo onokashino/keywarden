@@ -810,24 +810,99 @@ fn prompt_done(
 
 // --- отрисовка ---
 
-const ACCENT: Color = Color::Rgb(0x8b, 0x6c, 0xff);
+/// Цвета TUI. Свои по умолчанию; если у окна Keywarden есть тема оболочки
+/// (`~/.config/keywarden/themes`, её пишет Noctalia), берутся из неё, как в окне.
+struct Palette {
+    accent: Color,
+    on_accent: Color,
+    muted: Color,
+    info: Color,
+    ok: Color,
+    err: Color,
+    /// фон выбранной строки в активной и в неактивной панели
+    sel: Color,
+    sel_dim: Color,
+}
+
+fn pal() -> &'static Palette {
+    static P: std::sync::OnceLock<Palette> = std::sync::OnceLock::new();
+    P.get_or_init(|| {
+        let name = std::env::var("KEYWARDEN_THEME").unwrap_or_else(|_| "Noctalia".into());
+        let dir = keywarden_core::ipc::config_file_for(None)
+            .parent()
+            .map(|d| d.join("themes"));
+        let themes = dir
+            .and_then(|d| std::fs::read_dir(d).ok())
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter_map(|e| std::fs::read_to_string(e.path()).ok());
+        themes
+            .filter_map(|text| palette_from(&text, &name))
+            .next()
+            .unwrap_or(Palette {
+                accent: Color::Rgb(0x8b, 0x6c, 0xff),
+                on_accent: Color::Black,
+                muted: Color::DarkGray,
+                info: Color::Cyan,
+                ok: Color::Green,
+                err: Color::Red,
+                sel: Color::Rgb(0x2a, 0x24, 0x48),
+                sel_dim: Color::Rgb(0x26, 0x26, 0x2c),
+            })
+    })
+}
+
+/// Палитра из файла темы окна (формат gpui-kit): тема с именем `name`.
+fn palette_from(text: &str, name: &str) -> Option<Palette> {
+    let json: serde_json::Value = serde_json::from_str(text).ok()?;
+    let colors = json
+        .get("themes")?
+        .as_array()?
+        .iter()
+        .find(|t| t.get("name").and_then(|n| n.as_str()) == Some(name))?
+        .get("colors")?;
+    // «#rrggbb» или «#rrggbbaa»: полупрозрачный цвет кладётся на фон темы
+    let rgba = |key: &str| {
+        let hex = colors.get(key)?.as_str()?.strip_prefix('#')?;
+        let byte = |i: usize| u8::from_str_radix(hex.get(i..i + 2)?, 16).ok();
+        Some((byte(0)?, byte(2)?, byte(4)?, byte(6).unwrap_or(255)))
+    };
+    let (br, bg, bb, _) = rgba("background")?;
+    let color = |key: &str| {
+        let (r, g, b, a) = rgba(key)?;
+        let mix =
+            |c: u8, base: u8| ((c as u32 * a as u32 + base as u32 * (255 - a as u32)) / 255) as u8;
+        Some(Color::Rgb(mix(r, br), mix(g, bg), mix(b, bb)))
+    };
+    Some(Palette {
+        accent: color("primary.background")?,
+        on_accent: color("primary.foreground")?,
+        muted: color("muted.foreground")?,
+        info: color("info.foreground")?,
+        ok: color("success.foreground")?,
+        err: color("danger.foreground")?,
+        sel: color("list.active.background")?,
+        sel_dim: color("muted.background")?,
+    })
+}
 
 fn muted() -> Style {
-    Style::new().fg(Color::DarkGray)
+    Style::new().fg(pal().muted)
 }
 
 fn pane_block(title: String, focused: bool) -> Block<'static> {
     Block::bordered()
         .border_type(BorderType::Rounded)
         .border_style(if focused {
-            Style::new().fg(ACCENT)
+            Style::new().fg(pal().accent)
         } else {
             muted()
         })
         .title(Span::styled(
             format!(" {title} "),
             if focused {
-                Style::new().fg(ACCENT).add_modifier(Modifier::BOLD)
+                Style::new().fg(pal().accent).add_modifier(Modifier::BOLD)
             } else {
                 Style::new()
             },
@@ -849,19 +924,19 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
         Span::styled(
             " Keywarden SSH ",
             Style::new()
-                .fg(Color::Black)
-                .bg(ACCENT)
+                .fg(pal().on_accent)
+                .bg(pal().accent)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw("  "),
-        Span::styled("/ ", Style::new().fg(ACCENT)),
+        Span::styled("/ ", Style::new().fg(pal().accent)),
     ];
     if app.query.is_empty() && !searching {
         head_spans.push(Span::styled(tr!("поиск"), muted()));
     } else {
         head_spans.push(Span::raw(app.query.clone()));
         if searching {
-            head_spans.push(Span::styled("▏", Style::new().fg(ACCENT)));
+            head_spans.push(Span::styled("▏", Style::new().fg(pal().accent)));
         }
     }
     f.render_widget(Paragraph::new(Line::from(head_spans)), head);
@@ -895,7 +970,7 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
             let pad = width.saturating_sub(name.chars().count() + count.len());
             ListItem::new(Line::from(vec![
                 Span::raw("  ".repeat(depth)),
-                Span::styled(mark, Style::new().fg(ACCENT)),
+                Span::styled(mark, Style::new().fg(pal().accent)),
                 Span::raw(name),
                 Span::raw(" ".repeat(pad)),
                 Span::styled(count, muted()),
@@ -938,7 +1013,7 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
                 Span::raw("  "),
                 Span::styled(
                     format!("{:<target_w$}", clip(&h.target, target_w)),
-                    Style::new().fg(Color::Cyan),
+                    Style::new().fg(pal().info),
                 ),
             ];
             if !app.query.is_empty() {
@@ -1009,7 +1084,7 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
                 Line::from(vec![
                     Span::styled(h.name.clone(), Style::new().add_modifier(Modifier::BOLD)),
                     Span::raw("  "),
-                    Span::styled(h.target.clone(), Style::new().fg(Color::Cyan)),
+                    Span::styled(h.target.clone(), Style::new().fg(pal().info)),
                 ]),
                 Line::from(Span::raw(facts.join("  •  "))),
                 Line::from(vec![
@@ -1032,7 +1107,7 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
     let footer = match &app.status {
         Some((text, err)) => Line::from(Span::styled(
             format!(" {text}"),
-            Style::new().fg(if *err { Color::Red } else { Color::Green }),
+            Style::new().fg(if *err { pal().err } else { pal().ok }),
         )),
         None => {
             let keys: Vec<(&str, &str)> = match (&app.mode, app.pane) {
@@ -1082,7 +1157,7 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
                     Line::from(vec![
                         Span::styled(
                             format!(" {k:<8}"),
-                            Style::new().fg(ACCENT).add_modifier(Modifier::BOLD),
+                            Style::new().fg(pal().accent).add_modifier(Modifier::BOLD),
                         ),
                         Span::raw(*v),
                     ])
@@ -1104,9 +1179,9 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
             };
             let lines = vec![
                 Line::from(vec![
-                    Span::styled("› ", Style::new().fg(ACCENT)),
+                    Span::styled("› ", Style::new().fg(pal().accent)),
                     Span::raw(input.clone()),
-                    Span::styled("▏", Style::new().fg(ACCENT)),
+                    Span::styled("▏", Style::new().fg(pal().accent)),
                 ]),
                 Line::from(Span::styled(hint, muted())),
                 hints(&[("Enter", tr!("готово")), ("Esc", tr!("отмена"))]),
@@ -1126,7 +1201,10 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
                         Style::new()
                     };
                     Line::from(vec![
-                        Span::styled(if i == *sel { "› " } else { "  " }, Style::new().fg(ACCENT)),
+                        Span::styled(
+                            if i == *sel { "› " } else { "  " },
+                            Style::new().fg(pal().accent),
+                        ),
                         Span::styled(e.title.clone(), style),
                         Span::styled(format!("  {}", e.group), muted()),
                     ])
@@ -1145,11 +1223,9 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
 
 fn highlight(focused: bool) -> Style {
     if focused {
-        Style::new()
-            .bg(Color::Rgb(0x2a, 0x24, 0x48))
-            .add_modifier(Modifier::BOLD)
+        Style::new().bg(pal().sel).add_modifier(Modifier::BOLD)
     } else {
-        Style::new().bg(Color::Rgb(0x26, 0x26, 0x2c))
+        Style::new().bg(pal().sel_dim)
     }
 }
 
@@ -1158,7 +1234,7 @@ fn hints(keys: &[(&str, &str)]) -> Line<'static> {
     for (k, what) in keys {
         spans.push(Span::styled(
             format!(" {k} "),
-            Style::new().fg(ACCENT).add_modifier(Modifier::BOLD),
+            Style::new().fg(pal().accent).add_modifier(Modifier::BOLD),
         ));
         spans.push(Span::styled(format!("{what} "), muted()));
     }
@@ -1192,6 +1268,21 @@ fn clip(s: &str, n: usize) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn palette_follows_the_window_theme() {
+        let theme = r##"{"themes":[{"name":"Noctalia","colors":{
+            "background":"#000000","primary.background":"#a8472a","primary.foreground":"#fbefe9",
+            "muted.foreground":"#a5a29d","info.foreground":"#6cc4b8","success.foreground":"#4ade9b",
+            "danger.foreground":"#ff6b5e","list.active.background":"#ff000080",
+            "muted.background":"#302f2e"}}]}"##;
+        let p = super::palette_from(theme, "Noctalia").unwrap();
+        assert_eq!(p.accent, super::Color::Rgb(0xa8, 0x47, 0x2a));
+        // полупрозрачный цвет смешан с фоном
+        assert_eq!(p.sel, super::Color::Rgb(128, 0, 0));
+        assert!(super::palette_from(theme, "Other").is_none());
+        assert!(super::palette_from("{}", "Noctalia").is_none());
+    }
+
     use super::*;
 
     fn entry(title: &str, group: &str, url: &str) -> EntrySummary {
