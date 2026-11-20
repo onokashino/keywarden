@@ -69,6 +69,59 @@ pub fn icon_tile(icon: IconName, size: f32, theme: &gpui_kit::component::Theme) 
         .child(gpui_kit::component::Icon::new(icon).text_color(theme.primary))
 }
 
+/// Индикатор ожидания: значок, от которого расходятся и гаснут два кольца.
+pub fn pulse_loader(icon: IconName, theme: &gpui_kit::component::Theme) -> Div {
+    const BOX: f32 = 132.;
+    const CORE: f32 = 56.;
+    let ring = |id: &'static str, shift: f32| {
+        let color = theme.primary;
+        div().absolute().rounded_full().border_2().with_animation(
+            id,
+            Animation::new(std::time::Duration::from_millis(2200)).repeat(),
+            move |el, t| {
+                // второе кольцо идёт с отставанием на полкруга
+                let t = ease_out_quint()((t + shift).fract());
+                let size = CORE + (BOX - CORE) * t;
+                el.size(px(size))
+                    .left(px((BOX - size) / 2.))
+                    .top(px((BOX - size) / 2.))
+                    .border_color(color.opacity(0.55 * (1. - t)))
+            },
+        )
+    };
+    div()
+        .relative()
+        .size(px(BOX))
+        .flex()
+        .items_center()
+        .justify_center()
+        .child(ring("pulse-ring-a", 0.))
+        .child(ring("pulse-ring-b", 0.5))
+        .child(
+            div()
+                .size(px(CORE))
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded_full()
+                .border_1()
+                .border_color(theme.primary.opacity(0.35))
+                .bg(theme.primary.opacity(0.14))
+                .child(
+                    gpui_kit::component::Icon::new(icon)
+                        .with_size(px(26.))
+                        .text_color(theme.primary),
+                )
+                .with_animation(
+                    "pulse-core",
+                    Animation::new(std::time::Duration::from_millis(1100))
+                        .repeat()
+                        .with_easing(ease_in_out),
+                    |el, t| el.opacity(0.75 + 0.25 * (1. - (2. * t - 1.).abs())),
+                ),
+        )
+}
+
 /// Бегущая полоска: дело идёт, а сколько осталось, заранее неизвестно.
 pub fn progress_bar(id: &'static str, theme: &gpui_kit::component::Theme) -> Div {
     div()

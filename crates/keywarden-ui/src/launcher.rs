@@ -711,20 +711,23 @@ impl Render for Launcher {
                 .size_full()
                 .items_center()
                 .justify_center()
-                .gap_3()
-                .text_sm()
-                .text_color(theme.muted_foreground)
-                .child(tr!("Расшифровка…"))
+                .gap_1()
+                .child(crate::ui::pulse_loader(
+                    gpui_kit_assets::IconName::LockOpen,
+                    &theme,
+                ))
                 .child(
                     div()
-                        .w(px(220.))
-                        .child(crate::ui::progress_bar("unlock-bar", &theme)),
+                        .text_base()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .child(tr!("Открываю базу")),
                 )
-                .when(!self.use_pin, |d| {
-                    d.child(div().text_xs().child(tr!(
-                        "Argon2id медленный нарочно: так подбор пароля стоит дорого"
-                    )))
-                })
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(theme.muted_foreground)
+                        .child(tr!("Подождите несколько секунд")),
+                )
                 .into_any_element(),
             Mode::Locked => v_flex()
                 .size_full()

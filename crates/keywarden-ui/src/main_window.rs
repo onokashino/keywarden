@@ -5483,56 +5483,21 @@ impl MainWindow {
             .into_any_element()
     }
 
-    /// Пока база создаётся или расшифровывается, вместо формы показано, что происходит
-    /// и почему это не мгновенно.
+    /// Пока база создаётся, расшифровывается или едет с другого компьютера: что происходит
+    /// и просьба подождать, без подробностей.
     fn render_working(&mut self, path: &str, cx: &mut Context<Self>) -> AnyElement {
         let theme = cx.theme().clone();
-        let (title, steps) = if self.receiving {
-            (
-                tr!("Получаю базу…"),
-                vec![
-                    tr!("Ищу в этой сети компьютер, который ждёт с таким кодом"),
-                    tr!("База идёт зашифрованной: без мастер-пароля она бесполезна"),
-                    tr!("Файлы на этом компьютере не затираются: база ляжет под свободным именем"),
-                ],
-            )
+        let (icon, title) = if self.receiving {
+            (IconName::Monitor, tr!("Получаю базу"))
         } else if self.creating {
-            (
-                tr!("Создаю базу…"),
-                vec![
-                    tr!(
-                        "Подбираю параметры Argon2id под этот компьютер. Обычно это несколько секунд"
-                    ),
-                    tr!("Argon2id медленный нарочно: так подбор пароля стоит дорого"),
-                    tr!("Столько же будет занимать каждое открытие базы мастер-паролем"),
-                ],
-            )
+            (IconName::ShieldKeyhole, tr!("Создаю базу"))
         } else {
-            (
-                tr!("Расшифровка…"),
-                vec![
-                    tr!("Argon2id медленный нарочно: так подбор пароля стоит дорого"),
-                    tr!(
-                        "После блокировки базу можно открывать коротким PIN. Он задаётся в настройках, раздел «Безопасность»"
-                    ),
-                ],
-            )
+            (IconName::LockOpen, tr!("Открываю базу"))
         };
-        let step = |text: &'static str| {
-            h_flex()
-                .items_start()
-                .gap_2()
-                .text_sm()
-                .text_color(theme.muted_foreground)
-                .child(
-                    div()
-                        .mt(px(7.))
-                        .size(px(5.))
-                        .flex_shrink_0()
-                        .rounded_full()
-                        .bg(theme.primary),
-                )
-                .child(div().flex_1().min_w_0().child(text))
+        let sub = if self.receiving {
+            tr!("Ищу компьютер в этой сети").to_string()
+        } else {
+            file_name(path)
         };
         v_flex()
             .size_full()
@@ -5541,40 +5506,33 @@ impl MainWindow {
             .bg(theme.sidebar)
             .child(
                 v_flex()
-                    .w(px(420.))
-                    .gap_5()
-                    .p_8()
-                    .rounded(px(16.))
-                    .border_1()
-                    .border_color(theme.border)
-                    .bg(theme.background)
-                    .shadow_lg()
+                    .items_center()
+                    .gap_1()
+                    .child(crate::ui::pulse_loader(icon, &theme))
                     .child(
-                        h_flex()
-                            .gap_3()
-                            .child(icon_tile(IconName::ShieldKeyhole, 44., &theme))
-                            .child(
-                                v_flex()
-                                    .min_w_0()
-                                    .child(
-                                        div()
-                                            .text_lg()
-                                            .font_weight(FontWeight::SEMIBOLD)
-                                            .child(title),
-                                    )
-                                    .child(
-                                        div()
-                                            .text_sm()
-                                            .truncate()
-                                            .text_color(theme.muted_foreground)
-                                            .child(file_name(path)),
-                                    ),
-                            ),
+                        div()
+                            .pt_2()
+                            .text_lg()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .child(title),
                     )
-                    .child(crate::ui::progress_bar("work-bar", &theme))
-                    .child(v_flex().gap_2p5().children(steps.into_iter().map(step)))
+                    .child(
+                        div()
+                            .max_w(px(360.))
+                            .truncate()
+                            .text_sm()
+                            .text_color(theme.muted_foreground)
+                            .child(sub),
+                    )
+                    .child(
+                        div()
+                            .pt_3()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .child(tr!("Подождите несколько секунд")),
+                    )
                     .with_animation(
-                        "creating-card",
+                        "working",
                         Animation::new(Duration::from_millis(220)).with_easing(ease_out_quint()),
                         |el, t| el.opacity(t),
                     ),

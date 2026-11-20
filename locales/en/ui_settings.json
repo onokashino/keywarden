@@ -111,7 +111,6 @@
   "В базе пока нет записей": "The vault has no entries yet",
   "Ничего не найдено": "Nothing found",
   "Подключаюсь к keywardend…": "Connecting to keywardend…",
-  "Расшифровка…": "Decrypting…",
   "Хранилище заблокировано": "Vault is locked",
   "{file}: введите PIN и нажмите Enter": "{file}: enter your PIN and press Enter",
   "{file}: введите мастер-пароль и нажмите Enter": "{file}: enter the master password and press Enter",
