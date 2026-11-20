@@ -825,6 +825,7 @@ pub(crate) fn trust_current(c: &mut crate::config::Config) -> bool {
 /// Самопроверка: свой порт и брандмауэр. Чужой брандмауэр отсюда не виден, о нём говорит
 /// ошибка рядом с компьютером в списке (`pull_result`).
 fn self_checks(tcp_port: u16) -> Vec<LanCheck> {
+    #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
     let mut out = vec![if tcp_port == LAN_PORT {
         LanCheck {
             ok: Some(true),
