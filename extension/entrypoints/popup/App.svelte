@@ -493,7 +493,7 @@
   {:else}
    <div class="screen" in:fly={{ x: back ? -20 : 0, y: back ? 0 : 4, duration: ms(back ? 220 : 160), easing: cubicOut }}>
     <header class="bar">
-      <span class="logo">K</span>
+      <img class="logo" src="/icon/logo.svg" alt="" />
       <span class="title">{t(tab)}</span>
       {#if tab === 'vault' && ready}
         <button class="primary small" onclick={startNew}>{@render svg('plus')}{t('new_short')}</button>
@@ -556,7 +556,7 @@
           </div>
         {:else if !status.associated}
           <div class="empty">
-            <span class="big">K</span>
+            <img class="biglogo" src="/icon/logo.svg" alt="" />
             <b>{t('connect_title')}</b>
             <p class="muted">{t('connect_hint')}</p>
             <button class="primary" disabled={busy} onclick={() => run({ type: 'associate' }, t('connected'))}>{t('connect')}</button>
@@ -804,14 +804,12 @@
     flex: none;
     width: 28px;
     height: 28px;
-    border-radius: 9px;
-    background: linear-gradient(135deg, #2c2540, #222227);
-    border: 1px solid #34303f;
-    color: #b8a6ff;
-    display: grid;
-    place-items: center;
-    font-weight: 700;
-    font-size: 12px;
+    display: block;
+  }
+  .biglogo {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 6px;
   }
 
   /* поиск и фильтры */
