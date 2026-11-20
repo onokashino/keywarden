@@ -1782,10 +1782,29 @@ impl SettingsPage {
                         )
                     }),
             );
+        // что, зачем, особенности, риски: коротко, как в подсказках формы создания
+        let point = |risk: bool, text: &'static str| {
+            h_flex()
+                .items_start()
+                .gap_2()
+                .text_xs()
+                .text_color(theme.muted_foreground)
+                .child(
+                    div()
+                        .mt(px(6.))
+                        .size(px(5.))
+                        .flex_shrink_0()
+                        .rounded_full()
+                        .bg(if risk { theme.warning } else { theme.primary }),
+                )
+                .child(div().flex_1().min_w_0().child(text))
+        };
+        let caption =
+            |text: &'static str| div().text_xs().font_weight(FontWeight::MEDIUM).child(text);
         let lan = panel(&theme)
             .child(section(
                 tr!("В одной сети"),
-                tr!("Компьютеры с этой базой и тем же паролем находят друг друга сами и обмениваются изменениями напрямую, без облака. Порт 47470 (UDP и TCP): разрешите его в брандмауэре"),
+                tr!("Компьютеры с этой базой сами находят друг друга в сети и обмениваются изменениями напрямую, без облака и без настройки"),
                 &theme,
             ))
             .child(card(&theme).child(row(
@@ -1794,18 +1813,112 @@ impl SettingsPage {
                 &theme,
             )))
             .when(p.lan_sync, |d| {
-                if r.peers.is_empty() {
-                    d.child(
-                        div()
-                            .px_4()
-                            .pb_3()
-                            .text_xs()
-                            .text_color(theme.muted_foreground)
-                            .child(r.lan_state.clone().unwrap_or_else(|| tr!("Включаю…").into())),
-                    )
+                let status = if r.peers.is_empty() {
+                    h_flex()
+                        .gap_3()
+                        .child(
+                            // пульс: поиск идёт всё время, пока обмен включён
+                            div()
+                                .size(px(32.))
+                                .flex_shrink_0()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .rounded_full()
+                                .bg(theme.primary.opacity(0.12))
+                                .child(div().size(px(8.)).rounded_full().bg(theme.primary))
+                                .with_animation(
+                                    "lan-pulse",
+                                    Animation::new(std::time::Duration::from_millis(1600))
+                                        .repeat()
+                                        .with_easing(ease_in_out),
+                                    |el, t| el.opacity(0.45 + 0.55 * (1. - (2. * t - 1.).abs())),
+                                ),
+                        )
+                        .child(
+                            v_flex()
+                                .min_w_0()
+                                .child(div().text_sm().child(
+                                    r.lan_state.clone().map(capitalized).unwrap_or_else(|| tr!("Включаю…").into()),
+                                ))
+                                .child(div().text_xs().text_color(theme.muted_foreground).child(tr!(
+                                    "Откройте эту базу на другом компьютере в той же сети: он появится здесь сам"
+                                ))),
+                        )
+                        .into_any_element()
                 } else {
-                    d.children(r.peers.iter().map(|peer| status_line(true, peer.clone())))
-                }
+                    v_flex()
+                        .gap_2()
+                        .children(r.peers.iter().map(|peer| {
+                            // «192.168.1.20, на связи в 14:03»: адрес отдельно от времени
+                            let (ip, seen) = peer.split_once(", ").unwrap_or((peer, ""));
+                            h_flex()
+                                .gap_3()
+                                .child(
+                                    div()
+                                        .size(px(32.))
+                                        .flex_shrink_0()
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .rounded_lg()
+                                        .bg(theme.success.opacity(0.12))
+                                        .child(
+                                            Icon::new(IconName::Monitor)
+                                                .small()
+                                                .text_color(theme.success),
+                                        ),
+                                )
+                                .child(
+                                    v_flex()
+                                        .min_w_0()
+                                        .child(div().text_sm().child(ip.to_string()))
+                                        .child(
+                                            div()
+                                                .text_xs()
+                                                .text_color(theme.muted_foreground)
+                                                .child(seen.to_string()),
+                                        ),
+                                )
+                        }))
+                        .into_any_element()
+                };
+                d.child(
+                    div()
+                        .px_4()
+                        .py_3()
+                        .border_t_1()
+                        .border_color(theme.table_row_border)
+                        .child(status),
+                )
+                .child(
+                    v_flex()
+                        .px_4()
+                        .py_3()
+                        .gap_1p5()
+                        .border_t_1()
+                        .border_color(theme.table_row_border)
+                        .child(caption(tr!("Защита")))
+                        .child(point(false, tr!(
+                            "Базу получит только компьютер, у которого уже есть эта база и её ключ. Остальным она не отдаётся"
+                        )))
+                        .child(point(false, tr!(
+                            "По сети база идёт зашифрованной дважды: сама по себе и отдельным ключом на каждую передачу"
+                        )))
+                        .child(point(false, tr!(
+                            "Всё, что пришло, видно в журнале ниже и отменяется оттуда"
+                        )))
+                        .child(div().pt_1().child(caption(tr!("Риски"))))
+                        .child(point(true, tr!(
+                            "Устройства не подтверждаются по одному: кто знает ключ и имеет копию базы, тот участвует в обмене"
+                        )))
+                        .child(point(true, tr!(
+                            "В чужой сети (кафе, гостиница) видно, что здесь работает Keywarden. Там обмен лучше выключить"
+                        )))
+                        .child(point(true, tr!(
+                            "Нужен порт 47470 (UDP и TCP): разрешите его в брандмауэре только для своей сети"
+                        ))),
+                )
             });
         v_flex()
             .gap_6()
@@ -2438,6 +2551,14 @@ impl SettingsPage {
                 this.say(text, true, cx)
             });
         }));
+    }
+}
+
+fn capitalized(text: String) -> SharedString {
+    let mut c = text.chars();
+    match c.next() {
+        Some(f) => f.to_uppercase().chain(c).collect::<String>().into(),
+        None => text.into(),
     }
 }
 

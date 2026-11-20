@@ -427,7 +427,6 @@
   "WebDAV отключён": "WebDAV disconnected",
   "В одной сети": "On the same network",
   "Включаю…": "Turning on…",
-  "Компьютеры с этой базой и тем же паролем находят друг друга сами и обмениваются изменениями напрямую, без облака. Порт 47470 (UDP и TCP): разрешите его в брандмауэре": "Computers with this vault and the same password find each other and exchange changes directly, without a cloud. Port 47470 (UDP and TCP): allow it in the firewall",
   "Обмен": "Exchange",
   "Обмениваться с компьютерами в этой сети": "Exchange with computers on this network",
   "Отключаю…": "Disconnecting…",
@@ -440,5 +439,14 @@
   "Хранятся в самой базе: одинаковы на всех устройствах": "Stored in the vault itself: the same on every device",
   "Файлов: {n} ({names})": "Files: {n} ({names})",
   "Файл {name} не перенесён: {why}": "File {name} was not imported: {why}",
-  "Выбрать файлы": "Choose files"
+  "Выбрать файлы": "Choose files",
+  "Компьютеры с этой базой сами находят друг друга в сети и обмениваются изменениями напрямую, без облака и без настройки": "Computers with this vault find each other on the network and exchange changes directly, with no cloud and no setup",
+  "Откройте эту базу на другом компьютере в той же сети: он появится здесь сам": "Open this vault on another computer in the same network: it will show up here by itself",
+  "Риски": "Risks",
+  "Базу получит только компьютер, у которого уже есть эта база и её ключ. Остальным она не отдаётся": "Only a computer that already has this vault and its key receives it. Nobody else gets it",
+  "По сети база идёт зашифрованной дважды: сама по себе и отдельным ключом на каждую передачу": "On the network the vault is encrypted twice: by itself and with a separate key for every transfer",
+  "Всё, что пришло, видно в журнале ниже и отменяется оттуда": "Everything received is listed in the journal below and can be reverted there",
+  "Устройства не подтверждаются по одному: кто знает ключ и имеет копию базы, тот участвует в обмене": "Devices are not approved one by one: whoever knows the key and has a copy of the vault takes part",
+  "В чужой сети (кафе, гостиница) видно, что здесь работает Keywarden. Там обмен лучше выключить": "On someone else's network (cafe, hotel) others can see Keywarden is running here. Turn the exchange off there",
+  "Нужен порт 47470 (UDP и TCP): разрешите его в брандмауэре только для своей сети": "Port 47470 (UDP and TCP) is required: allow it in the firewall for your own network only"
 }
