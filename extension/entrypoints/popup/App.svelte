@@ -95,8 +95,6 @@
     ['login', t('kind_login')],
     ['card', t('kind_card')],
     ['identity', t('kind_identity')],
-    ['note', t('kind_note')],
-    ['ssh_key', 'SSH'],
     ['passkey', t('kind_passkey')],
     ['crypto_wallet', t('kind_crypto_wallet')],
   ];
@@ -423,7 +421,9 @@
             <button class="icon" title={t('copy')} onclick={() => copy(item!.id, 'totp')}>{@render copyIcon(`${item!.id}:totp`)}</button>
           </div>
         {/if}
-        {#if !item.username && !item.has_password && !item.totp}
+        {#if item.kind === 'card' || item.kind === 'identity'}
+          <p class="hint pad">{t('fill_on_site_hint')}</p>
+        {:else if !item.username && !item.has_password && !item.totp}
           <p class="hint pad">{t('no_login_password')}</p>
         {/if}
       </section>

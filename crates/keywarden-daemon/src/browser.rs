@@ -246,6 +246,13 @@ impl Daemon {
                         Ok(
                             keywarden_core::search::search_filtered(db, &query, 200, &filter)
                                 .into_iter()
+                                // в браузере с ключами и серверами SSH и с заметками делать нечего
+                                .filter(|s| {
+                                    !matches!(
+                                        s.kind,
+                                        EntryKind::SshKey | EntryKind::SshHost | EntryKind::Note
+                                    )
+                                })
                                 .map(|s| Login {
                                     id: s.id,
                                     title: s.title,

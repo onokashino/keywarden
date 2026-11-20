@@ -606,5 +606,8 @@
   },
   "passkey_use_device_sub": {
     "message": "Обычный вход браузера, без Keywarden"
+  },
+  "fill_on_site_hint": {
+    "message": "Заполняется на сайте: меню под полем формы или правая кнопка мыши, пункт Keywarden"
   }
 }

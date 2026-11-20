@@ -606,5 +606,8 @@
   },
   "passkey_use_device_sub": {
     "message": "The browser's own sign-in, without Keywarden"
+  },
+  "fill_on_site_hint": {
+    "message": "Filled on the site: the menu under a form field, or right-click and choose Keywarden"
   }
 }
