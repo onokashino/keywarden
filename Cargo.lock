@@ -4411,7 +4411,7 @@ dependencies = [
 
 [[package]]
 name = "keywarden-cli"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -4425,7 +4425,7 @@ dependencies = [
 
 [[package]]
 name = "keywarden-core"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "aes 0.8.4",
  "bech32",
@@ -4470,7 +4470,7 @@ dependencies = [
 
 [[package]]
 name = "keywarden-daemon"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "arboard",
@@ -4511,7 +4511,7 @@ dependencies = [
 
 [[package]]
 name = "keywarden-ext"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "crypto_box",
  "data-encoding",
@@ -4526,7 +4526,7 @@ dependencies = [
 
 [[package]]
 name = "keywarden-host"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "keywarden-core",
@@ -4535,7 +4535,7 @@ dependencies = [
 
 [[package]]
 name = "keywarden-ui"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "chrono",
