@@ -442,6 +442,11 @@ pub struct MainWindow {
     welcome_focus: FocusHandle,
     /// База заблокирована событием демона: при следующей отрисовке вернуть фокус в поле ключа.
     refocus: bool,
+    /// экран «Получить базу с другого компьютера»
+    receiving: bool,
+    recv_code: Entity<InputState>,
+    /// база только что получена по сети: над формой входа подсказка, что делать дальше
+    received: bool,
     // разблокировка / создание
     db_path: Entity<InputState>,
     keyfile: Entity<InputState>,
@@ -575,6 +580,7 @@ impl MainWindow {
         let password = input(tr!("Мастер-пароль"), true, window, cx);
         let pin = input("PIN", true, window, cx);
         let password2 = input(tr!("Мастер-пароль ещё раз"), true, window, cx);
+        let recv_code = input("0000 0000", false, window, cx);
         let search = input(
             tr!("Поиск: слова, #тег, user:, url:, is:expired"),
             false,
@@ -595,6 +601,11 @@ impl MainWindow {
             cx.subscribe_in(&pin, window, |this, _, ev, window, cx| {
                 if let InputEvent::PressEnter { .. } = ev {
                     this.submit_unlock(window, cx);
+                }
+            }),
+            cx.subscribe_in(&recv_code, window, |this, _, ev, window, cx| {
+                if let InputEvent::PressEnter { .. } = ev {
+                    this.submit_receive(window, cx);
                 }
             }),
             cx.subscribe_in(&password2, window, |this, _, ev, window, cx| {
@@ -624,6 +635,9 @@ impl MainWindow {
             guide: Guide::Password,
             welcome_focus: cx.focus_handle(),
             refocus: false,
+            receiving: false,
+            recv_code,
+            received: false,
             db_path,
             keyfile,
             yubikey,
@@ -3145,6 +3159,65 @@ impl MainWindow {
         cx.notify();
     }
 
+    /// Открыть или закрыть экран «Получить базу с другого компьютера».
+    fn toggle_receive(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.receiving = !self.receiving;
+        self.status = None;
+        self.recv_code
+            .update(cx, |i, cx| i.set_value("", window, cx));
+        let h = if self.receiving {
+            self.recv_code.read(cx).focus_handle(cx)
+        } else {
+            self.welcome_focus.clone()
+        };
+        window.focus(&h, cx);
+        cx.notify();
+    }
+
+    fn submit_receive(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let code = self.recv_code.read(cx).value().to_string();
+        if code.chars().filter(char::is_ascii_digit).count() != 8 {
+            return self.flash(tr!("В коде 8 цифр"), true, cx);
+        }
+        let dir = dirs::document_dir()
+            .or_else(dirs::home_dir)
+            .unwrap_or_default();
+        self.status = None;
+        self.mode = Mode::Busy;
+        cx.notify();
+        self.tasks.push(client::call_in(
+            window,
+            cx,
+            Request::LanReceive {
+                code: code.into(),
+                dir: dir.display().to_string(),
+            },
+            |this, res, window, cx| match res {
+                Ok(Response::LanReceived { path }) => {
+                    this.receiving = false;
+                    this.received = true;
+                    this.show_advanced = false;
+                    this.recv_code
+                        .update(cx, |i, cx| i.set_value("", window, cx));
+                    this.db_path
+                        .update(cx, |i, cx| i.set_value(path, window, cx));
+                    // у полученной базы свои ключи: прежние поля к ней не относятся
+                    for i in [&this.keyfile, &this.yubikey] {
+                        i.update(cx, |i, cx| i.set_value("", window, cx));
+                    }
+                    this.set_locked(window, cx);
+                }
+                Ok(_) => this.set_locked(window, cx),
+                Err(e) => {
+                    this.mode = Mode::Locked;
+                    let h = this.recv_code.read(cx).focus_handle(cx);
+                    window.focus(&h, cx);
+                    this.flash(e.message(), true, cx);
+                }
+            },
+        ));
+    }
+
     /// Новый файл-ключ для создаваемой базы: «Сохранить как», затем путь попадает в поле.
     fn create_keyfile(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // не рядом с базой: папку с базой часто синхронизируют, а ключ должен лежать отдельно
@@ -3246,6 +3319,7 @@ impl MainWindow {
             |this, res, window, cx| match res {
                 Ok(_) => {
                     this.creating = false;
+                    this.received = false;
                     this.path_before_create = None;
                     this.status = None;
                     this.set_ready(window, cx);
@@ -4925,6 +4999,12 @@ impl MainWindow {
         let error = self.status.clone().filter(|s| s.1).map(|s| s.0);
         let pin = self.use_pin && !self.creating;
         let advanced = self.show_advanced && !pin && !self.creating;
+        if self.receiving {
+            if self.mode == Mode::Busy {
+                return self.render_working(&path, cx);
+            }
+            return self.render_receive(error, cx);
+        }
         // базы ещё нет: вместо формы выбор «создать или открыть»
         if path.is_empty() && !self.creating && !pin {
             if self.mode == Mode::Connecting && error.is_none() {
@@ -5298,6 +5378,27 @@ impl MainWindow {
                         .into_any_element(),
                 ))
             })
+            .when(self.received && !self.creating, |d| {
+                d.child(
+                    h_flex()
+                        .gap_2()
+                        .px_3()
+                        .py_2()
+                        .rounded_lg()
+                        .bg(theme.success.opacity(0.12))
+                        .border_1()
+                        .border_color(theme.success.opacity(0.35))
+                        .text_sm()
+                        .child(
+                            Icon::new(IconName::CircleCheck)
+                                .small()
+                                .text_color(theme.success),
+                        )
+                        .child(div().flex_1().min_w_0().child(tr!(
+                            "База получена. Введите её мастер-пароль: тот же, что на первом компьютере"
+                        ))),
+                )
+            })
             .when_some(error, |d, e| d.child(unlock_error(e, &theme)))
             .child(
                 Button::new("unlock")
@@ -5386,7 +5487,16 @@ impl MainWindow {
     /// и почему это не мгновенно.
     fn render_working(&mut self, path: &str, cx: &mut Context<Self>) -> AnyElement {
         let theme = cx.theme().clone();
-        let (title, steps) = if self.creating {
+        let (title, steps) = if self.receiving {
+            (
+                tr!("Получаю базу…"),
+                vec![
+                    tr!("Ищу в этой сети компьютер, который ждёт с таким кодом"),
+                    tr!("База идёт зашифрованной: без мастер-пароля она бесполезна"),
+                    tr!("Файлы на этом компьютере не затираются: база ляжет под свободным именем"),
+                ],
+            )
+        } else if self.creating {
             (
                 tr!("Создаю базу…"),
                 vec![
@@ -5465,6 +5575,134 @@ impl MainWindow {
                     .child(v_flex().gap_2p5().children(steps.into_iter().map(step)))
                     .with_animation(
                         "creating-card",
+                        Animation::new(Duration::from_millis(220)).with_easing(ease_out_quint()),
+                        |el, t| el.opacity(t),
+                    ),
+            )
+            .into_any_element()
+    }
+
+    /// База приезжает с другого компьютера по одноразовому коду: что сделать там, что ввести здесь.
+    fn render_receive(
+        &mut self,
+        error: Option<SharedString>,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = cx.theme().clone();
+        let step = |n: &'static str, text: &'static str| {
+            h_flex()
+                .items_start()
+                .gap_3()
+                .child(
+                    div()
+                        .size(px(22.))
+                        .flex_shrink_0()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded_full()
+                        .bg(theme.secondary)
+                        .text_xs()
+                        .font_weight(FontWeight::MEDIUM)
+                        .child(n),
+                )
+                .child(div().flex_1().min_w_0().text_sm().child(text))
+        };
+        let point = |risk: bool, text: &'static str| {
+            h_flex()
+                .items_start()
+                .gap_2()
+                .text_xs()
+                .text_color(theme.muted_foreground)
+                .child(
+                    div()
+                        .mt(px(6.))
+                        .size(px(5.))
+                        .flex_shrink_0()
+                        .rounded_full()
+                        .bg(if risk { theme.warning } else { theme.primary }),
+                )
+                .child(div().flex_1().min_w_0().child(text))
+        };
+        v_flex()
+            .size_full()
+            .items_center()
+            .justify_center()
+            .bg(theme.sidebar)
+            .child(
+                v_flex()
+                    .w(px(460.))
+                    .gap_5()
+                    .p_8()
+                    .rounded(px(16.))
+                    .border_1()
+                    .border_color(theme.border)
+                    .bg(theme.background)
+                    .shadow_lg()
+                    .child(
+                        h_flex()
+                            .gap_3()
+                            .child(
+                                Button::new("receive-back")
+                                    .ghost()
+                                    .icon(IconName::ArrowLeft)
+                                    .tooltip(tr!("Назад"))
+                                    .on_click(cx.listener(|this, _, w, cx| this.toggle_receive(w, cx))),
+                            )
+                            .child(
+                                v_flex()
+                                    .min_w_0()
+                                    .child(
+                                        div()
+                                            .text_lg()
+                                            .font_weight(FontWeight::SEMIBOLD)
+                                            .child(tr!("Получить базу")),
+                                    )
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .text_color(theme.muted_foreground)
+                                            .child(tr!("С компьютера, где она уже открыта")),
+                                    ),
+                            ),
+                    )
+                    .child(
+                        v_flex()
+                            .gap_2p5()
+                            .child(step("1", tr!(
+                                "На том компьютере откройте Настройки, «Синхронизация» и нажмите «Показать код»"
+                            )))
+                            .child(step("2", tr!("Введите код здесь. Оба компьютера должны быть в одной сети")))
+                            .child(step("3", tr!("Откройте полученную базу её мастер-паролем"))),
+                    )
+                    .child(Input::new(&self.recv_code).large())
+                    .when_some(error, |d, e| d.child(unlock_error(e, &theme)))
+                    .child(
+                        Button::new("receive")
+                            .primary()
+                            .large()
+                            .w_full()
+                            .label(tr!("Получить базу"))
+                            .on_click(cx.listener(|this, _, w, cx| this.submit_receive(w, cx))),
+                    )
+                    .child(
+                        v_flex()
+                            .gap_1p5()
+                            .child(point(false, tr!(
+                                "Код одноразовый и действует 5 минут. По сети идёт только зашифрованный файл базы"
+                            )))
+                            .child(point(false, tr!(
+                                "Дальше компьютеры сами обмениваются изменениями в этой сети"
+                            )))
+                            .child(point(true, tr!(
+                                "Ошибка в коде отменяет его: на первом компьютере понадобится новый"
+                            )))
+                            .child(point(true, tr!(
+                                "Файл-ключ и YubiKey не передаются: перенесите их сами"
+                            ))),
+                    )
+                    .with_animation(
+                        "receive-card",
                         Animation::new(Duration::from_millis(220)).with_easing(ease_out_quint()),
                         |el, t| el.opacity(t),
                     ),
@@ -5584,6 +5822,15 @@ impl MainWindow {
                                         cx,
                                     )
                                 })),
+                            )
+                            .child(
+                                row(
+                                    "welcome-receive",
+                                    IconName::Monitor,
+                                    tr!("Получить с другого компьютера"),
+                                    tr!("По одноразовому коду, в одной сети"),
+                                )
+                                .on_click(cx.listener(|this, _, w, cx| this.toggle_receive(w, cx))),
                             ),
                     )
                     .when_some(error, |d, e| d.child(unlock_error(e, &theme)))

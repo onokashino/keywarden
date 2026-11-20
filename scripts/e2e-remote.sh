@@ -58,6 +58,22 @@ if [ "$ROLE" = a ]; then
   $B/kw sync status
   touch $S/a-done
   waitfor test -e $S/b-done
+
+  step "первая передача: неверный код отменяет передачу"
+  $B/kw sync offer > $S/code-burnt
+  $B/kw sync status | grep -q "$(cat $S/code-burnt)"
+  touch $S/offer1
+  waitfor test -e $S/wrong-tried
+  ! $B/kw sync status | grep -q "$(cat $S/code-burnt)"
+  step "первая передача: новый код, база уходит на пустой компьютер"
+  $B/kw sync offer > $S/code
+  touch $S/offer2
+  waitfor test -e $S/received
+  # код одноразовый: после удачной передачи его больше нет
+  ! $B/kw sync status | grep -q "$(cat $S/code)"
+  $B/kw add --title after-pair -u ap
+  touch $S/a-paired
+  waitfor test -e $S/b-paired
 else
   waitfor test -e $S/dav-ready
   step "WebDAV: база с сервера, настройка пришла вместе с ней"
@@ -80,6 +96,24 @@ else
   waitfor has lan-a la
   touch $S/b-done
   waitfor test -e $S/a-done
+
+  step "первая передача: получить можно только с верным кодом и не поверх своего файла"
+  waitfor test -e $S/offer1
+  $B/kw lock
+  mkdir $W/recv && echo mine > $W/recv/lan.kdbx
+  ! $B/kw sync receive 00000000 --dir $W/recv
+  touch $S/wrong-tried
+  waitfor test -e $S/offer2
+  $B/kw sync receive "$(cat $S/code)" --dir $W/recv
+  [ "$(cat $W/recv/lan.kdbx)" = mine ]
+  test -s "$W/recv/lan 2.kdbx"
+  touch $S/received
+  step "первая передача: полученная база открывается и дальше обменивается сама"
+  echo pw2 | $B/kw unlock --password-stdin
+  has lan-a la
+  waitfor test -e $S/a-paired
+  waitfor has after-pair ap
+  touch $S/b-paired
 fi
 grep -c "База синхронизирована" $W/daemon.log || true
 echo "OK [$ROLE]"

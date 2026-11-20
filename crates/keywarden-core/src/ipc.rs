@@ -387,6 +387,17 @@ pub enum Request {
         network: Option<String>,
         on: bool,
     },
+    /// Передать открытую базу на новый компьютер: завести одноразовый код (`on`) или отменить.
+    /// Код действует несколько минут и на одну попытку.
+    LanOffer {
+        on: bool,
+    },
+    /// Получить базу с компьютера в этой сети по одноразовому коду и положить её в каталог
+    /// `dir`. Существующие файлы не затираются. Работает, пока своя база не открыта.
+    LanReceive {
+        code: crate::secret::Secret,
+        dir: String,
+    },
 }
 
 /// Состояние синхронизации без папки.
@@ -416,6 +427,16 @@ pub struct RemoteInfo {
     /// самопроверка обмена: порт, брандмауэр
     #[serde(default)]
     pub lan_checks: Vec<LanCheck>,
+    /// идёт передача базы на новый компьютер: код и сколько секунд он ещё действует
+    #[serde(default)]
+    pub lan_offer: Option<LanOffer>,
+}
+
+/// Одноразовый код передачи базы на новый компьютер.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct LanOffer {
+    pub code: String,
+    pub seconds: u64,
 }
 
 /// Строка самопроверки обмена в сети.
@@ -733,6 +754,8 @@ impl Request {
             Self::MoveDatabase { .. } => "move_database",
             Self::WebdavSet { .. } => "webdav_set",
             Self::LanTrust { .. } => "lan_trust",
+            Self::LanOffer { .. } => "lan_offer",
+            Self::LanReceive { .. } => "lan_receive",
         }
     }
 }
@@ -860,6 +883,10 @@ pub enum Response {
     },
     Backups {
         backups: Vec<BackupInfo>,
+    },
+    /// База получена с другого компьютера и лежит здесь
+    LanReceived {
+        path: String,
     },
     SyncJournal {
         records: Vec<SyncRecord>,

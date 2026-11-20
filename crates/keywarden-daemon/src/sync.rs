@@ -36,6 +36,8 @@ pub struct SyncState {
     pub peers: std::collections::BTreeMap<std::net::IpAddr, crate::lan::Peer>,
     pub lan_state: Option<String>,
     pub lan_checks: Vec<keywarden_core::ipc::LanCheck>,
+    /// идёт передача базы на новый компьютер по одноразовому коду
+    pub offer: Option<crate::lan::Offer>,
     loaded_from: Option<PathBuf>,
 }
 

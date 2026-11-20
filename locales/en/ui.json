@@ -341,5 +341,22 @@
   "Переношу коды из 2FAS…": "Importing codes from 2FAS…",
   "Прикладываю файлы…": "Attaching files…",
   "Создать первую запись": "Create the first entry",
-  "Перенести из другого менеджера": "Import from another manager"
+  "Перенести из другого менеджера": "Import from another manager",
+  "В коде 8 цифр": "The code has 8 digits",
+  "Получаю базу…": "Receiving the vault…",
+  "Ищу в этой сети компьютер, который ждёт с таким кодом": "Looking on this network for a computer waiting with this code",
+  "База идёт зашифрованной: без мастер-пароля она бесполезна": "The vault travels encrypted: it is useless without the master password",
+  "Файлы на этом компьютере не затираются: база ляжет под свободным именем": "Files on this computer are never overwritten: the vault is saved under a free name",
+  "База получена. Введите её мастер-пароль: тот же, что на первом компьютере": "Vault received. Enter its master password: the same as on the first computer",
+  "Получить с другого компьютера": "Get from another computer",
+  "По одноразовому коду, в одной сети": "With a one-time code, on the same network",
+  "Получить базу": "Get the vault",
+  "С компьютера, где она уже открыта": "From a computer where it is already open",
+  "На том компьютере откройте Настройки, «Синхронизация» и нажмите «Показать код»": "On that computer open Settings, Sync and click \"Show code\"",
+  "Введите код здесь. Оба компьютера должны быть в одной сети": "Enter the code here. Both computers must be on the same network",
+  "Откройте полученную базу её мастер-паролем": "Open the received vault with its master password",
+  "Код одноразовый и действует 5 минут. По сети идёт только зашифрованный файл базы": "The code is one-time and valid for 5 minutes. Only the encrypted vault file travels over the network",
+  "Дальше компьютеры сами обмениваются изменениями в этой сети": "After that the computers exchange changes on this network by themselves",
+  "Ошибка в коде отменяет его: на первом компьютере понадобится новый": "A mistake in the code cancels it: you will need a new one on the first computer",
+  "Файл-ключ и YubiKey не передаются: перенесите их сами": "The key file and YubiKey are not transferred: move them yourself"
 }

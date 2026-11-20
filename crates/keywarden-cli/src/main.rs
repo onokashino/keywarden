@@ -65,6 +65,15 @@ enum SyncCmd {
     },
     #[command(about = tr!("Обмен базой с компьютерами в той же сети: on или off"))]
     Lan { state: String },
+    #[command(about = tr!("Передать открытую базу на новый компьютер: показывает одноразовый код"))]
+    Offer,
+    #[command(about = tr!("Получить базу с компьютера в этой сети по одноразовому коду"))]
+    Receive {
+        code: String,
+        #[arg(help = tr!("куда положить файл базы (по умолчанию: домашняя папка)"))]
+        #[arg(long)]
+        dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -863,6 +872,9 @@ fn run(cli: Cli) -> Result<()> {
                     if let Some(s) = &r.lan_state {
                         println!("{}\t{s}", tr!("сеть"));
                     }
+                    if let Some(o) = &r.lan_offer {
+                        println!("{}\t{}", tr!("код передачи"), o.code);
+                    }
                     for p in &r.peers {
                         println!("{}\t{p}", tr!("компьютер"));
                     }
@@ -944,6 +956,42 @@ fn run(cli: Cli) -> Result<()> {
                     } else {
                         tr!("WebDAV подключён: база синхронизируется с сервером")
                     }
+                );
+            }
+            SyncCmd::Offer => {
+                call(&mut c, Request::LanOffer { on: true })?;
+                let Response::SyncJournal { remote, .. } = call(&mut c, Request::SyncJournal)?
+                else {
+                    bail!(tr!("нет ответа"))
+                };
+                let Some(offer) = remote.and_then(|r| r.lan_offer) else {
+                    bail!(tr!("нет ответа"))
+                };
+                // сам код в stdout: его удобно передать дальше, пояснение в stderr
+                println!("{}", offer.code);
+                eprintln!(
+                    "{}",
+                    tr!(
+                        "Введите этот код на новом компьютере: kw sync receive КОД. Он одноразовый и действует {min} мин",
+                        min = offer.seconds.div_ceil(60)
+                    )
+                );
+            }
+            SyncCmd::Receive { code, dir } => {
+                let dir = dir.unwrap_or_else(|| PathBuf::from("~"));
+                let Response::LanReceived { path } = call(
+                    &mut c,
+                    Request::LanReceive {
+                        code: code.into(),
+                        dir: dir.display().to_string(),
+                    },
+                )?
+                else {
+                    bail!(tr!("нет ответа"))
+                };
+                eprintln!(
+                    "{}",
+                    tr!("База получена: {path}. Откройте её: kw unlock", path = path)
                 );
             }
             SyncCmd::Lan { state } => {

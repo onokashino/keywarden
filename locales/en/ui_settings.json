@@ -222,7 +222,7 @@
   "отменено": "reverted",
   "слито": "merged",
   "Точно отменить?": "Really revert?",
-  "Отменить": "Revert",
+  "Отменить": "Cancel",
   "Как синхронизировать": "How to sync",
   "Файл базы лежит в папке, которую синхронизирует Syncthing, Nextcloud или Dropbox. Наружу уходит только зашифрованный файл": "The vault file lives in a folder synced by Syncthing, Nextcloud or Dropbox. Only the encrypted file leaves this computer",
   "Файл базы": "Vault file",
@@ -460,5 +460,16 @@
   "О новом компьютере в обмене приходит уведомление. Всё, что пришло, видно в журнале ниже и отменяется оттуда": "A new computer in the exchange triggers a notification. Everything received is listed in the journal below and can be reverted there",
   "нет связи": "no link",
   "Проверка": "Check",
-  "Команда скопирована. Выполните её в терминале: проверка обновится в течение минуты": "Command copied. Run it in a terminal: the check refreshes within a minute"
+  "Команда скопирована. Выполните её в терминале: проверка обновится в течение минуты": "Command copied. Run it in a terminal: the check refreshes within a minute",
+  "Передать базу на новый компьютер": "Send the vault to a new computer",
+  "Одноразовый код вместо флешки: новый компьютер сам заберёт базу по сети и дальше будет обмениваться изменениями": "A one-time code instead of a USB stick: the new computer fetches the vault over the network and keeps exchanging changes afterwards",
+  "Код": "Code",
+  "Показать код": "Show code",
+  "На новом компьютере: «Получить с другого компьютера»": "On the new computer: \"Get from another computer\"",
+  "Действует ещё {m}:{s}": "Valid for {m}:{s}",
+  "Введите его на новом компьютере. Никому не диктуйте и не пересылайте": "Enter it on the new computer. Do not dictate or forward it to anyone",
+  "Код на одну попытку и на 5 минут. Неверный ввод с любого компьютера сразу его отменяет": "The code is good for one attempt and 5 minutes. A wrong entry from any computer cancels it at once",
+  "По сети идёт только зашифрованный файл базы: без мастер-пароля он бесполезен": "Only the encrypted vault file travels over the network: it is useless without the master password",
+  "Файл-ключ и YubiKey не передаются: перенесите их на новый компьютер сами": "The key file and YubiKey are not transferred: move them to the new computer yourself",
+  "Показ кода включает обмен в сети и добавляет эту сеть в доверенные": "Showing the code turns on the network exchange and adds this network to the trusted ones"
 }

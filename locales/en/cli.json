@@ -310,5 +310,11 @@
   "пароль от сервера одной строкой из stdin": "server password as one line from stdin",
   "сеть": "network",
   "компьютер": "computer",
-  "укажите on или off": "say on or off"
+  "укажите on или off": "say on or off",
+  "Передать открытую базу на новый компьютер: показывает одноразовый код": "Send the open vault to a new computer: shows a one-time code",
+  "Получить базу с компьютера в этой сети по одноразовому коду": "Get a vault from a computer on this network with a one-time code",
+  "куда положить файл базы (по умолчанию: домашняя папка)": "where to put the vault file (default: the home folder)",
+  "Введите этот код на новом компьютере: kw sync receive КОД. Он одноразовый и действует {min} мин": "Enter this code on the new computer: kw sync receive CODE. It is one-time and valid for {min} min",
+  "База получена: {path}. Откройте её: kw unlock": "Vault received: {path}. Open it: kw unlock",
+  "код передачи": "transfer code"
 }

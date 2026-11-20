@@ -181,5 +181,12 @@
   "Включён брандмауэр ufw, его правила отсюда не прочитать. Если обмен не идёт, разрешите порт": "The ufw firewall is on and its rules cannot be read from here. If the exchange does not work, allow the port",
   "Брандмауэр firewalld пропускает порт {port}": "The firewalld firewall allows port {port}",
   "Брандмауэр firewalld закрывает порт {port}: другие компьютеры вас не услышат": "The firewalld firewall blocks port {port}: other computers will not hear you",
-  "Брандмауэр ufw или firewalld не найден. Если стоит другой, разрешите порт {port} (UDP и TCP) сами": "No ufw or firewalld firewall found. If you run another one, allow port {port} (UDP and TCP) yourself"
+  "Брандмауэр ufw или firewalld не найден. Если стоит другой, разрешите порт {port} (UDP и TCP) сами": "No ufw or firewalld firewall found. If you run another one, allow port {port} (UDP and TCP) yourself",
+  "База передана на компьютер {ip}. Откройте её там мастер-паролем": "The vault was sent to computer {ip}. Open it there with the master password",
+  "Код передачи отменён: с {ip} подключились с неверным кодом. Создайте новый код": "The transfer code was cancelled: {ip} connected with a wrong code. Create a new code",
+  "сначала заблокируйте открытую базу: получить можно только на её место": "lock the open vault first: a vault can only be received in its place",
+  "в коде должно быть 8 цифр": "the code must have 8 digits",
+  "Компьютер с таким кодом не найден. Проверьте код (он одноразовый: после ошибки нужен новый), что оба компьютера в одной сети и что на том открыт порт {port} (TCP)": "No computer with this code was found. Check the code (it is one-time: after a mistake you need a new one), that both computers are on the same network and that port {port} (TCP) is open on the other one",
+  "получен не файл базы": "what was received is not a vault file",
+  "база получена, но не записана: {e}": "the vault was received but not saved: {e}"
 }

@@ -9,6 +9,12 @@
 //! без пароля не пройдёт рукопожатие, а подслушанное рукопожатие перебирается не быстрее
 //! самого файла базы (тот же порядок стоимости Argon2). Сам файл идёт зашифрованным дважды:
 //! KDBX и X25519 + XSalsa20-Poly1305 с одноразовыми ключами сеанса.
+//!
+//! Первая передача базы на новый компьютер идёт тем же рукопожатием, но ключ связи выводится
+//! из одноразового кода (`pair_key`). Отдающая сторона отвечает на рукопожатие один раз и сразу
+//! забывает код: её ответ позволяет проверять догадки о коде без сети, но к тому времени код
+//! уже ничего не открывает. Перехвативший обмен кода не узнает вовремя, а без него не подменит
+//! одноразовые ключи, так что получить можно только зашифрованный файл, и только зная код.
 
 use crate::secret::Secret;
 use crypto_box::aead::{Aead, AeadCore, OsRng};
@@ -220,6 +226,72 @@ impl Lan {
 }
 
 const HELLO_MAGIC: &[u8; 6] = b"KWLAN1";
+/// рукопожатие первой передачи: по нему слушающий отличает её от обычного обмена
+const PAIR_MAGIC: &[u8; 6] = b"KWPAIR";
+/// Сколько секунд действует одноразовый код.
+pub const PAIR_SECONDS: u64 = 300;
+const PAIR_DIGITS: usize = 8;
+
+/// Одноразовый код передачи базы: 8 случайных цифр.
+pub fn pair_code() -> String {
+    // отбрасываем хвост диапазона, иначе младшие коды выпадали бы чаще
+    const LIMIT: u32 = u32::MAX - u32::MAX % 100_000_000;
+    loop {
+        let mut b = [0u8; 4];
+        rand::fill(&mut b);
+        let n = u32::from_le_bytes(b);
+        if n < LIMIT {
+            return format!("{:08}", n % 100_000_000);
+        }
+    }
+}
+
+/// Ключ связи из одноразового кода (пробелы и дефисы в нём не считаются). Медленно:
+/// Argon2id, 128 МиБ. `None`: в коде не 8 цифр.
+pub fn pair_key(code: &str) -> Option<Lan> {
+    let digits: String = code.chars().filter(|c| !matches!(c, ' ' | '-')).collect();
+    if digits.len() != PAIR_DIGITS || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let cfg = argon2::Config {
+        variant: argon2::Variant::Argon2id,
+        version: argon2::Version::Version13,
+        mem_cost: 128 * 1024,
+        time_cost: 3,
+        lanes: 1,
+        thread_mode: argon2::ThreadMode::Sequential,
+        hash_length: 32,
+        ad: &[],
+        secret: &[],
+    };
+    let raw = Zeroizing::new(
+        argon2::hash_raw(digits.as_bytes(), b"keywarden-pair-v1", &cfg)
+            .expect("валидные параметры Argon2"),
+    );
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&raw);
+    Some(Lan { key })
+}
+
+/// Это рукопожатие первой передачи, а не обычного обмена?
+pub fn is_pair_hello(hello: &[u8]) -> bool {
+    hello.starts_with(PAIR_MAGIC)
+}
+
+/// Содержимое первой передачи: имя файла базы и сам файл.
+pub fn pair_pack(name: &str, vault: &[u8]) -> Vec<u8> {
+    let name = &name.as_bytes()[..name.len().min(255)];
+    let mut out = vec![name.len() as u8];
+    out.extend_from_slice(name);
+    out.extend_from_slice(vault);
+    out
+}
+
+pub fn pair_unpack(data: &[u8]) -> Option<(String, &[u8])> {
+    let (len, rest) = data.split_first()?;
+    let (name, vault) = rest.split_at_checked(*len as usize)?;
+    Some((String::from_utf8_lossy(name).into_owned(), vault))
+}
 pub const HELLO_LEN: usize = 6 + 32 + 16;
 pub const REPLY_LEN: usize = 32 + 16 + 32;
 pub const FINISH_LEN: usize = 32;
@@ -234,10 +306,19 @@ pub struct ClientHello {
 /// ключ связи; клиент доказывает то же. Подпись охватывает оба одноразовых ключа, поэтому
 /// подменить их посередине нельзя.
 pub fn client_hello() -> ClientHello {
+    hello_with(HELLO_MAGIC)
+}
+
+/// Начало первой передачи базы (ключ связи из `pair_key`).
+pub fn pair_hello() -> ClientHello {
+    hello_with(PAIR_MAGIC)
+}
+
+fn hello_with(magic: &[u8; 6]) -> ClientHello {
     let secret = SecretKey::generate(&mut OsRng);
     let mut nonce = [0u8; 16];
     rand::fill(&mut nonce);
-    let mut hello = HELLO_MAGIC.to_vec();
+    let mut hello = magic.to_vec();
     hello.extend_from_slice(secret.public_key().as_bytes());
     hello.extend_from_slice(&nonce);
     ClientHello { secret, hello }
@@ -274,7 +355,8 @@ pub struct ServerReply {
 }
 
 pub fn server_reply(lan: &Lan, hello: &[u8]) -> Result<(ServerReply, Vec<u8>), String> {
-    if hello.len() != HELLO_LEN || &hello[..6] != HELLO_MAGIC {
+    // вид рукопожатия входит в подпись вместе с ним, а ключи у обычного обмена и передачи разные
+    if hello.len() != HELLO_LEN || (&hello[..6] != HELLO_MAGIC && &hello[..6] != PAIR_MAGIC) {
         return Err("handshake: bad hello".into());
     }
     let secret = SecretKey::generate(&mut OsRng);
@@ -354,6 +436,37 @@ mod tests {
         let mut bad = frame.clone();
         *bad.last_mut().unwrap() ^= 1;
         assert!(client.open(&bad).is_err());
+    }
+
+    #[test]
+    fn pairing_by_one_time_code() {
+        let code = pair_code();
+        assert!(code.len() == 8 && code.bytes().all(|b| b.is_ascii_digit()));
+        assert!(pair_key("1234567").is_none() && pair_key("1234567x").is_none());
+        // как человек его вводит: с пробелом посередине
+        let giver = pair_key(&code).unwrap();
+        let taker = pair_key(&format!("{} {}", &code[..4], &code[4..])).unwrap();
+        let hello = pair_hello();
+        assert!(is_pair_hello(hello.message()) && !is_pair_hello(client_hello().message()));
+        let (pending, reply) = server_reply(&giver, hello.message()).unwrap();
+        let (session, fin) = hello.finish(&taker, &reply).unwrap();
+        let frame = pending
+            .finish(&giver, &fin)
+            .unwrap()
+            .seal(&pair_pack("Мой сейф.kdbx", b"kdbx bytes"));
+        let plain = session.open(&frame).unwrap();
+        let (name, vault) = pair_unpack(&plain).unwrap();
+        assert_eq!(
+            (name.as_str(), vault),
+            ("Мой сейф.kdbx", &b"kdbx bytes"[..])
+        );
+
+        // другой код: получатель не верит отдающему и ничего ему не доказывает
+        let wrong = pair_key("00000000").unwrap();
+        let hello = pair_hello();
+        let (_, reply) = server_reply(&giver, hello.message()).unwrap();
+        assert!(hello.finish(&wrong, &reply).is_err());
+        assert!(pair_unpack(&[5, 1, 2]).is_none());
     }
 
     #[test]

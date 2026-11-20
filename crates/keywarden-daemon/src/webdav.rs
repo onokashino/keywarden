@@ -347,6 +347,7 @@ impl Daemon {
             lan_network: crate::lan::current_network(),
             lan_networks: g.config.lan_networks.clone().unwrap_or_default(),
             lan_checks: g.sync.lan_checks.clone(),
+            lan_offer: g.sync.offer.as_ref().and_then(crate::lan::Offer::info),
         }
     }
 

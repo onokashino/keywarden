@@ -20,6 +20,7 @@ use keywarden_core::remote::{
 use keywarden_core::tr;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -50,6 +51,24 @@ pub async fn serve(daemon: Arc<Daemon>) {
             ev = events.recv() => if matches!(ev, Err(tokio::sync::broadcast::error::RecvError::Closed)) { return; },
             _ = tokio::time::sleep(Duration::from_secs(5)) => {}
         }
+    }
+}
+
+/// Передача базы на новый компьютер: код, ключ связи из него и срок.
+pub struct Offer {
+    code: String,
+    lan: Arc<Lan>,
+    until: Instant,
+}
+
+impl Offer {
+    /// `None`: срок вышел.
+    pub fn info(&self) -> Option<keywarden_core::ipc::LanOffer> {
+        let left = self.until.checked_duration_since(Instant::now())?;
+        Some(keywarden_core::ipc::LanOffer {
+            code: self.code.clone(),
+            seconds: left.as_secs(),
+        })
     }
 }
 
@@ -203,7 +222,7 @@ async fn run(d: &Arc<Daemon>, a: Active, events: &mut tokio::sync::broadcast::Re
                 let Ok((stream, peer)) = conn else { continue };
                 let (d2, lan) = (d.clone(), a.lan.clone());
                 tokio::spawn(async move {
-                    if let Err(e) = tokio::time::timeout(Duration::from_secs(120), give(&d2, &lan, stream)).await.unwrap_or_else(|_| Err("timeout".into())) {
+                    if let Err(e) = tokio::time::timeout(Duration::from_secs(120), give(&d2, &lan, stream, peer)).await.unwrap_or_else(|_| Err("timeout".into())) {
                         tracing::debug!("сеть: {peer} не получил базу: {e}");
                     }
                 });
@@ -286,8 +305,16 @@ async fn write_all(s: &mut TcpStream, data: &[u8]) -> Result<(), String> {
 }
 
 /// Отдать свой файл соседу, который доказал, что знает ключ базы.
-async fn give(d: &Arc<Daemon>, lan: &Lan, mut s: TcpStream) -> Result<(), String> {
+async fn give(
+    d: &Arc<Daemon>,
+    lan: &Lan,
+    mut s: TcpStream,
+    peer: SocketAddr,
+) -> Result<(), String> {
     let hello = read_exact(&mut s, HELLO_LEN).await?;
+    if remote::is_pair_hello(&hello) {
+        return give_first(d, s, &hello, peer.ip()).await;
+    }
     let (pending, reply) = remote::server_reply(lan, &hello)?;
     write_all(&mut s, &reply).await?;
     let fin = read_exact(&mut s, FINISH_LEN).await?;
@@ -302,6 +329,196 @@ async fn give(d: &Arc<Daemon>, lan: &Lan, mut s: TcpStream) -> Result<(), String
     write_all(&mut s, &frame).await?;
     s.shutdown().await.ok();
     Ok(())
+}
+
+/// Первая передача базы на новый компьютер по одноразовому коду.
+///
+/// Код забывается до ответа: на него приходится ровно одна попытка, удачная или нет. Ответ
+/// позволяет перебирать код без сети, поэтому после него код не должен ничего открывать.
+async fn give_first(
+    d: &Arc<Daemon>,
+    mut s: TcpStream,
+    hello: &[u8],
+    ip: IpAddr,
+) -> Result<(), String> {
+    let offer = d.inner().sync.offer.take().filter(|o| o.info().is_some());
+    let Some(offer) = offer else {
+        return Err("no offer".into());
+    };
+    d.events.send(Event::Changed).ok();
+    let sent = async {
+        let (pending, reply) = remote::server_reply(&offer.lan, hello)?;
+        write_all(&mut s, &reply).await?;
+        let fin = read_exact(&mut s, FINISH_LEN).await?;
+        let session = pending.finish(&offer.lan, &fin)?;
+        let reader = d.with_vault(|v, _| v.reader()).ok_or("locked")?;
+        let name = reader
+            .path()
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let (bytes, _) = tokio::task::spawn_blocking(move || reader.read_bytes())
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+        let frame = session.seal(&remote::pair_pack(&name, &bytes));
+        write_all(&mut s, &(frame.len() as u32).to_be_bytes()).await?;
+        write_all(&mut s, &frame).await?;
+        s.shutdown().await.ok();
+        Ok::<_, String>(())
+    }
+    .await;
+    let message = match &sent {
+        Ok(()) => tr!(
+            "База передана на компьютер {ip}. Откройте её там мастер-паролем",
+            ip = ip
+        ),
+        Err(_) => tr!(
+            "Код передачи отменён: с {ip} подключились с неверным кодом. Создайте новый код",
+            ip = ip
+        ),
+    };
+    tracing::info!("сеть: {message}");
+    d.events
+        .send(Event::Merged {
+            message: message.clone(),
+        })
+        .ok();
+    crate::sync::notify_desktop("Keywarden", &message).await;
+    sent
+}
+
+/// Попытка получить базу с одного адреса. `Ok(None)`: там нет передачи с нашим кодом.
+async fn take_first(lan: &Lan, addr: SocketAddr) -> Option<(String, Vec<u8>)> {
+    let mut s = tokio::time::timeout(Duration::from_millis(1500), TcpStream::connect(addr))
+        .await
+        .ok()?
+        .ok()?;
+    let hello = remote::pair_hello();
+    write_all(&mut s, hello.message()).await.ok()?;
+    let reply = read_exact(&mut s, REPLY_LEN).await.ok()?;
+    // отдающий не знает наш код: это чужая передача, ему ничего не доказываем
+    let (session, fin) = hello.finish(lan, &reply).ok()?;
+    write_all(&mut s, &fin).await.ok()?;
+    let len = u32::from_be_bytes(read_exact(&mut s, 4).await.ok()?.try_into().ok()?) as usize;
+    if len > MAX_VAULT_BYTES + FRAME_OVERHEAD + 256 {
+        return None;
+    }
+    let mut frame = vec![0u8; len];
+    tokio::time::timeout(Duration::from_secs(120), s.read_exact(&mut frame))
+        .await
+        .ok()?
+        .ok()?;
+    let plain = session.open(&frame).ok()?;
+    let (name, vault) = remote::pair_unpack(&plain)?;
+    Some((name, vault.to_vec()))
+}
+
+/// Адреса, где искать отдающий компьютер: все соседи по каждой своей сети IPv4.
+fn sweep_targets() -> Vec<Ipv4Addr> {
+    let mut out = Vec::new();
+    for (addr, mask) in local_nets() {
+        // сеть крупнее /22 (1022 адреса) целиком не обходим: берём /24 вокруг своего адреса
+        let mask = if u32::from(mask).count_ones() < 22 {
+            0xffff_ff00
+        } else {
+            u32::from(mask)
+        };
+        let net = u32::from(addr) & mask;
+        for host in 1..!mask {
+            let ip = Ipv4Addr::from(net | host);
+            if ip != addr && !out.contains(&ip) {
+                out.push(ip);
+            }
+        }
+    }
+    out
+}
+
+/// Свои адреса IPv4 с масками (кроме петли).
+fn local_nets() -> Vec<(Ipv4Addr, Ipv4Addr)> {
+    #[cfg_attr(not(unix), allow(unused_mut))]
+    let mut out = Vec::new();
+    #[cfg(unix)]
+    // SAFETY: список от getifaddrs читается только до freeifaddrs, указатели проверяются на null
+    unsafe {
+        let mut ifs: *mut libc::ifaddrs = std::ptr::null_mut();
+        if libc::getifaddrs(&mut ifs) == 0 {
+            let mut cur = ifs;
+            while !cur.is_null() {
+                let i = &*cur;
+                let flags = i.ifa_flags as libc::c_int;
+                let v4 = |p: *const libc::sockaddr| {
+                    (!p.is_null() && (*p).sa_family as libc::c_int == libc::AF_INET).then(|| {
+                        let sin = &*(p as *const libc::sockaddr_in);
+                        Ipv4Addr::from(u32::from_be(sin.sin_addr.s_addr))
+                    })
+                };
+                if flags & libc::IFF_UP != 0
+                    && flags & libc::IFF_LOOPBACK == 0
+                    && let (Some(a), Some(m)) = (v4(i.ifa_addr), v4(i.ifa_netmask))
+                {
+                    out.push((a, m));
+                }
+                cur = i.ifa_next;
+            }
+            libc::freeifaddrs(ifs);
+        }
+    }
+    // ponytail: без getifaddrs (Windows) берём адрес основной сети и считаем её /24
+    #[cfg(not(unix))]
+    if let Ok(s) = std::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
+        && s.connect((Ipv4Addr::new(192, 0, 2, 1), 9)).is_ok()
+        && let Ok(SocketAddr::V4(a)) = s.local_addr()
+    {
+        out.push((*a.ip(), Ipv4Addr::new(255, 255, 255, 0)));
+    }
+    out
+}
+
+/// Имя для полученной базы: только имя файла .kdbx, без путей и скрытых файлов.
+fn safe_vault_name(name: &str) -> String {
+    let base = std::path::Path::new(name)
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let ok = base.to_lowercase().ends_with(".kdbx")
+        && !base.starts_with('.')
+        && !base.contains(['/', '\\', '\0']);
+    if ok { base } else { "Keywarden.kdbx".into() }
+}
+
+/// Записать полученную базу в `dir` под свободным именем. Существующий файл не затирается:
+/// имя занимается атомарно, как при создании базы.
+fn save_received(dir: &std::path::Path, name: &str, bytes: &[u8]) -> std::io::Result<PathBuf> {
+    use std::io::Write;
+    std::fs::create_dir_all(dir)?;
+    let name = safe_vault_name(name);
+    let stem = name[..name.len() - ".kdbx".len()].to_string();
+    for n in 1..1000 {
+        let path = dir.join(if n == 1 {
+            name.clone()
+        } else {
+            format!("{stem} {n}.kdbx")
+        });
+        let mut o = std::fs::OpenOptions::new();
+        o.write(true).create_new(true);
+        #[cfg(unix)]
+        std::os::unix::fs::OpenOptionsExt::mode(&mut o, 0o600);
+        match o.open(&path) {
+            Ok(mut f) => {
+                let written = f.write_all(bytes).and_then(|()| f.sync_all());
+                if let Err(e) = written {
+                    let _ = std::fs::remove_file(&path);
+                    return Err(e);
+                }
+                return Ok(path);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e),
+        }
+    }
+    Err(std::io::ErrorKind::AlreadyExists.into())
 }
 
 /// Забрать файл соседа и слить.
@@ -440,6 +657,107 @@ impl Daemon {
         if dropped {
             self.events.send(Event::Changed).ok();
         }
+    }
+
+    /// Завести одноразовый код передачи базы на новый компьютер или отменить его.
+    pub(crate) async fn lan_offer(&self, on: bool) -> Result<Response, Response> {
+        let invalid = |m: &str| Response::error(keywarden_core::ipc::ErrorCode::Invalid, m);
+        if !on {
+            self.inner().sync.offer = None;
+            self.events.send(Event::Changed).ok();
+            return Ok(Response::Ok);
+        }
+        if self.with_vault(|_, _| ()).is_none() {
+            return Err(Response::error(
+                keywarden_core::ipc::ErrorCode::Locked,
+                tr!("база заблокирована"),
+            ));
+        }
+        let code = remote::pair_code();
+        let c2 = code.clone();
+        let lan = tokio::task::spawn_blocking(move || remote::pair_key(&c2))
+            .await
+            .ok()
+            .flatten()
+            .ok_or_else(|| invalid("pair key"))?;
+        // передачу принимает тот же порт, что и обмен, а после неё компьютеры обмениваются сами
+        self.update_config(|c| {
+            trust_current(c);
+            c.lan_sync = true;
+            true
+        });
+        self.inner().sync.offer = Some(Offer {
+            code,
+            lan: Arc::new(lan),
+            until: Instant::now() + Duration::from_secs(remote::PAIR_SECONDS),
+        });
+        self.events.send(Event::Changed).ok();
+        Ok(Response::Ok)
+    }
+
+    /// Получить базу с компьютера в этой сети по одноразовому коду.
+    pub(crate) async fn lan_receive(
+        &self,
+        code: keywarden_core::secret::Secret,
+        dir: String,
+    ) -> Result<Response, Response> {
+        let invalid = |m: String| Response::error(keywarden_core::ipc::ErrorCode::Invalid, m);
+        if self.with_vault(|_, _| ()).is_some() {
+            return Err(invalid(
+                tr!("сначала заблокируйте открытую базу: получить можно только на её место").into(),
+            ));
+        }
+        let lan = tokio::task::spawn_blocking(move || remote::pair_key(code.expose()))
+            .await
+            .ok()
+            .flatten()
+            .ok_or_else(|| invalid(tr!("в коде должно быть 8 цифр").into()))?;
+        let lan = Arc::new(lan);
+        // сами стучимся к каждому адресу своей сети: так на этом компьютере не нужен открытый порт
+        let mut tries = tokio::task::JoinSet::new();
+        for ip in sweep_targets() {
+            let lan = lan.clone();
+            tries
+                .spawn(async move { take_first(&lan, SocketAddr::new(ip.into(), LAN_PORT)).await });
+        }
+        let mut got = None;
+        while let Some(res) = tries.join_next().await {
+            if let Ok(Some(found)) = res {
+                got = Some(found);
+                break;
+            }
+        }
+        tries.abort_all();
+        let (name, bytes) = got.ok_or_else(|| {
+            invalid(tr!(
+                "Компьютер с таким кодом не найден. Проверьте код (он одноразовый: после ошибки нужен новый), что оба компьютера в одной сети и что на том открыт порт {port} (TCP)",
+                port = LAN_PORT
+            ))
+        })?;
+        // подпись KDBX: по коду мог прийти только файл базы, но чужой мусор на диск не пишем
+        if bytes.len() < 8 || bytes[..4] != [0x03, 0xd9, 0xa2, 0x9a] {
+            return Err(invalid(tr!("получен не файл базы").into()));
+        }
+        let dir = crate::config::expand(std::path::Path::new(&dir));
+        let path = tokio::task::spawn_blocking(move || save_received(&dir, &name, &bytes))
+            .await
+            .map_err(|e| invalid(e.to_string()))?
+            .map_err(|e| invalid(tr!("база получена, но не записана: {e}", e = e)))?;
+        self.update_config(|c| {
+            c.database = Some(path.clone());
+            // у полученной базы свои ключи: прежние файл-ключ, YubiKey и PIN к ней не относятся
+            c.keyfile = None;
+            c.yubikey = None;
+            c.pin = None;
+            trust_current(c);
+            c.lan_sync = true;
+            true
+        });
+        tracing::info!("сеть: база получена и записана в {}", path.display());
+        self.events.send(Event::Changed).ok();
+        Ok(Response::LanReceived {
+            path: path.display().to_string(),
+        })
     }
 
     /// Доверять сети или убрать её из списка. `None`: сеть, в которой компьютер сейчас.
@@ -766,6 +1084,27 @@ mod tests {
             super::subnet_from(&direct, arp).as_deref(),
             Some("192.168.2.0/24")
         );
+    }
+
+    #[test]
+    fn received_vault_never_overwrites() {
+        let dir = std::env::temp_dir().join(format!("kw-recv-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let first = super::save_received(&dir, "../../etc/Сейф.kdbx", b"one").unwrap();
+        assert_eq!(first, dir.join("Сейф.kdbx"));
+        let second = super::save_received(&dir, "Сейф.kdbx", b"two").unwrap();
+        assert_eq!(second, dir.join("Сейф 2.kdbx"));
+        assert_eq!(std::fs::read(&first).unwrap(), b"one");
+        // имя без .kdbx или скрытое: берём своё
+        assert_eq!(super::safe_vault_name(".bashrc"), "Keywarden.kdbx");
+        assert_eq!(super::safe_vault_name("x.exe"), "Keywarden.kdbx");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn sweep_skips_own_address() {
+        let own: Vec<_> = super::local_nets().into_iter().map(|n| n.0).collect();
+        assert!(super::sweep_targets().iter().all(|ip| !own.contains(ip)));
     }
 
     #[test]

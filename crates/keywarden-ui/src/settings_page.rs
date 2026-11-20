@@ -126,6 +126,8 @@ pub struct SettingsPage {
     busy: Option<&'static str>,
     message: Option<(SharedString, bool)>,
     tasks: Vec<Task<()>>,
+    /// пока показан код передачи, раз в секунду обновляет остаток времени
+    offer_tick: Option<Task<()>>,
 }
 
 fn field(
@@ -204,6 +206,7 @@ impl SettingsPage {
             dav_user: field(window, cx, tr!("Логин"), false),
             dav_pw: field(window, cx, tr!("Пароль или пароль приложения"), true),
             confirm_revert: None,
+            offer_tick: None,
             busy: None,
             message: None,
             tasks: vec![],
@@ -1239,6 +1242,21 @@ impl SettingsPage {
         self.load_prefs(Some(p), window, cx);
     }
 
+    /// Показать одноразовый код передачи базы на новый компьютер или отменить его.
+    fn lan_offer(&mut self, on: bool, cx: &mut Context<Self>) {
+        self.tasks.push(client::call(
+            cx,
+            Request::LanOffer { on },
+            |this, res, cx| match res {
+                Ok(_) => {
+                    this.message = None;
+                    this.load_sync(cx)
+                }
+                Err(e) => this.say(e.message(), true, cx),
+            },
+        ));
+    }
+
     /// Доверять сети в обмене или убрать её из списка (`None`: текущая сеть).
     fn lan_trust(&mut self, network: Option<String>, on: bool, cx: &mut Context<Self>) {
         self.tasks.push(client::call(
@@ -1342,6 +1360,21 @@ impl SettingsPage {
                     this.sync_path = db_path;
                     this.sync_folder = folder.map(|f| *f);
                     this.sync_remote = remote.map(|r| *r).unwrap_or_default();
+                    // показ кода включает обмен в службе: переключатель в окне должен это знать
+                    if this.sync_remote.lan_offer.is_some()
+                        && let Some(p) = this.prefs.as_mut()
+                    {
+                        p.lan_sync = true;
+                    }
+                    // код на экране: время на нём должно идти
+                    this.offer_tick = this.sync_remote.lan_offer.is_some().then(|| {
+                        cx.spawn(async move |this, cx| {
+                            cx.background_executor()
+                                .timer(std::time::Duration::from_secs(1))
+                                .await;
+                            let _ = this.update(cx, |this, cx| this.load_sync(cx));
+                        })
+                    });
                 }
                 cx.notify();
             }));
@@ -1794,6 +1827,100 @@ impl SettingsPage {
                         )
                     }),
             );
+        let offer = panel(&theme)
+            .child(section(
+                tr!("Передать базу на новый компьютер"),
+                tr!("Одноразовый код вместо флешки: новый компьютер сам заберёт базу по сети и дальше будет обмениваться изменениями"),
+                &theme,
+            ))
+            .child(match &r.lan_offer {
+                None => row(
+                    tr!("Код"),
+                    h_flex()
+                        .gap_3()
+                        .child(
+                            Button::new("lan-offer")
+                                .outline()
+                                .icon(IconName::KeyRound)
+                                .label(tr!("Показать код"))
+                                .disabled(busy)
+                                .on_click(cx.listener(|this, _, _, cx| this.lan_offer(true, cx))),
+                        )
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .text_xs()
+                                .text_color(theme.muted_foreground)
+                                .child(tr!("На новом компьютере: «Получить с другого компьютера»")),
+                        ),
+                    &theme,
+                ),
+                Some(o) => row(
+                    tr!("Код"),
+                    h_flex()
+                        .gap_4()
+                        .child(
+                            div()
+                                .px_4()
+                                .py_2()
+                                .rounded_lg()
+                                .border_1()
+                                .border_color(theme.primary.opacity(0.35))
+                                .bg(theme.primary.opacity(0.1))
+                                .text_2xl()
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .font_family(theme.mono_font_family.clone())
+                                .child(match o.code.split_at_checked(4) {
+                                    Some((a, b)) => format!("{a} {b}"),
+                                    None => o.code.clone(),
+                                }),
+                        )
+                        .child(
+                            v_flex()
+                                .flex_1()
+                                .min_w_0()
+                                .child(div().text_sm().child(tr!(
+                                    "Действует ещё {m}:{s}",
+                                    m = o.seconds / 60,
+                                    s = format!("{:02}", o.seconds % 60)
+                                )))
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(theme.muted_foreground)
+                                        .child(tr!("Введите его на новом компьютере. Никому не диктуйте и не пересылайте")),
+                                ),
+                        )
+                        .child(
+                            Button::new("lan-offer-off")
+                                .ghost()
+                                .label(tr!("Отменить"))
+                                .on_click(cx.listener(|this, _, _, cx| this.lan_offer(false, cx))),
+                        ),
+                    &theme,
+                ),
+            })
+            .child(
+                v_flex()
+                    .px_4()
+                    .py_3()
+                    .gap_1p5()
+                    .border_t_1()
+                    .border_color(theme.table_row_border)
+                    .child(offer_point(false, tr!(
+                        "Код на одну попытку и на 5 минут. Неверный ввод с любого компьютера сразу его отменяет"
+                    ), &theme))
+                    .child(offer_point(false, tr!(
+                        "По сети идёт только зашифрованный файл базы: без мастер-пароля он бесполезен"
+                    ), &theme))
+                    .child(offer_point(true, tr!(
+                        "Файл-ключ и YubiKey не передаются: перенесите их на новый компьютер сами"
+                    ), &theme))
+                    .child(offer_point(true, tr!(
+                        "Показ кода включает обмен в сети и добавляет эту сеть в доверенные"
+                    ), &theme)),
+            );
         // что, зачем, особенности, риски: коротко, как в подсказках формы создания
         let point = |risk: bool, text: &'static str| {
             h_flex()
@@ -2097,6 +2224,7 @@ impl SettingsPage {
                     ),
             )
             .child(webdav)
+            .child(offer)
             .child(lan)
             .child(
                 panel(&theme)
@@ -2695,6 +2823,24 @@ impl SettingsPage {
             });
         }));
     }
+}
+
+/// Пункт списка «особенность или риск» с цветной точкой.
+fn offer_point(risk: bool, text: &'static str, theme: &gpui_kit::component::Theme) -> Div {
+    h_flex()
+        .items_start()
+        .gap_2()
+        .text_xs()
+        .text_color(theme.muted_foreground)
+        .child(
+            div()
+                .mt(px(6.))
+                .size(px(5.))
+                .flex_shrink_0()
+                .rounded_full()
+                .bg(if risk { theme.warning } else { theme.primary }),
+        )
+        .child(div().flex_1().min_w_0().child(text))
 }
 
 fn capitalized(text: String) -> SharedString {
