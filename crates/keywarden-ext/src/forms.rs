@@ -44,6 +44,7 @@ const USER_HINTS: &[&str] = &[
     "телефон",
     "phone",
 ];
+const PHONE_HINTS: &[&str] = &["phone", "телефон"];
 const NEW_HINTS: &[&str] = &[
     "new",
     "confirm",
@@ -165,6 +166,13 @@ pub fn classify(fields: &[FieldInfo]) -> Vec<LoginForm> {
         out.username = candidates
             .iter()
             .find(|f| f.auto("username") || f.auto("email"))
+            // телефон это тоже логин, но только если нет поля почты или имени пользователя:
+            // в анкетах перед паролем часто стоит телефон или факс
+            .or_else(|| {
+                candidates.iter().find(|f| {
+                    f.has(USER_HINTS) && !f.has(PHONE_HINTS) && anchor.is_none_or(|a| f.index < a)
+                })
+            })
             .or_else(|| {
                 candidates
                     .iter()
@@ -222,6 +230,7 @@ const IDENTITY_ROLES: &[&str] = &[
     "organization",
     "street-address",
     "address-line1",
+    "address-line2",
     "address-level2",
     "postal-code",
     "country",
@@ -313,6 +322,8 @@ const IDENTITY_HINTS: &[(&str, &[&str])] = &[
         "given-name",
         &["first name", "firstname", "fname", "given", "имя"],
     ),
+    // раньше фамилии: в «fullname» есть «lname»
+    ("name", &["fullname", "full name", "your name", "фио"]),
     ("additional-name", &["middle", "patronym", "отчеств"]),
     (
         "family-name",
@@ -341,8 +352,20 @@ const IDENTITY_HINTS: &[(&str, &[&str])] = &[
     ),
     ("address-level2", &["city", "town", "город"]),
     ("country", &["country", "страна"]),
+    // вторая строка адреса распознаётся, чтобы в неё не попал тот же адрес: заполнять её нечем
+    (
+        "address-line2",
+        &[
+            "address2",
+            "address 2",
+            "line2",
+            "line 2",
+            "apartment",
+            "suite",
+            "квартир",
+        ],
+    ),
     ("street-address", &["address", "street", "адрес", "улиц"]),
-    ("name", &["fullname", "full name", "your name", "фио"]),
 ];
 // слова, с которыми поле точно не про человека (логин, поиск, название компании как «name»)
 const NOT_IDENTITY: &[&str] = &[
@@ -425,7 +448,29 @@ pub fn classify_data(fields: &[FieldInfo]) -> Vec<DataField> {
             .collect();
         let has_card = card.iter().any(|d| d.role == "cc-number");
         if has_card {
+            // в форме карты списки «month» и «year» без слова «срок» это всё равно срок карты
+            let known: Vec<usize> = card.iter().map(|d| d.index).collect();
+            let has_role = |r: &str| card.iter().any(|d| d.role == r);
+            let extra: Vec<DataField> = [
+                ("cc-exp-month", ["month", "мес"]),
+                ("cc-exp-year", ["year", "год"]),
+            ]
+            .into_iter()
+            .filter(|(role, _)| !has_role(role) && !has_role("cc-exp"))
+            .filter_map(|(role, hints)| {
+                all.iter()
+                    .find(|f| f.kind == "select" && !known.contains(&f.index) && f.has(&hints))
+                    .map(|f| DataField {
+                        index: f.index,
+                        form,
+                        group: "card",
+                        role,
+                        auto: true,
+                    })
+            })
+            .collect();
             out.extend(card);
+            out.extend(extra);
         }
         let taken: Vec<usize> = out.iter().map(|d| d.index).collect();
         // поле CVC типа password не делает форму формой входа
@@ -658,5 +703,51 @@ mod tests {
         ]);
         assert_eq!(v.iter().filter(|d| d.group == "card").count(), 3);
         assert_eq!(v.iter().filter(|d| d.group == "identity").count(), 3);
+    }
+
+    #[test]
+    fn lessons_from_real_pages() {
+        // анкета: факс и телефон перед паролем, логином всё равно считается почта
+        let forms = classify(&[
+            f(0, 0, "text", "faxphone"),
+            f(1, 0, "text", "emailadr"),
+            f(2, 0, "password", "password"),
+        ]);
+        assert_eq!(forms[0].username, Some(1));
+        // вход по телефону, когда другого поля нет
+        let forms = classify(&[f(0, 0, "tel", "phone"), f(1, 0, "password", "password")]);
+        assert_eq!(forms[0].username, Some(0));
+        // форма оплаты со списками month и year без слова «срок»
+        let v = classify_data(&[
+            f(0, 0, "text", "card_number"),
+            f(1, 0, "select", "month"),
+            f(2, 0, "select", "year"),
+            f(3, 0, "text", "cvv_code"),
+        ]);
+        assert_eq!(
+            roles(&v),
+            [
+                (0, "card", "cc-number"),
+                (3, "card", "cc-csc"),
+                (1, "card", "cc-exp-month"),
+                (2, "card", "cc-exp-year")
+            ]
+        );
+        // «fullname» это полное имя, а не фамилия; вторая строка адреса отдельно
+        let v = classify_data(&[
+            f(0, 0, "text", "fullname"),
+            f(1, 0, "text", "address1"),
+            f(2, 0, "text", "address2"),
+            f(3, 0, "text", "city"),
+        ]);
+        assert_eq!(
+            roles(&v),
+            [
+                (0, "identity", "name"),
+                (1, "identity", "street-address"),
+                (2, "identity", "address-line2"),
+                (3, "identity", "address-level2")
+            ]
+        );
     }
 }
