@@ -104,6 +104,43 @@ pub fn info(text: impl AsRef<str>) {
     }
 }
 
+/// Итог команды в stdout (его ждут скрипты): в терминале с галочкой.
+pub fn done(text: impl AsRef<str>) {
+    if fancy_out() {
+        println!("{} {}", green("✓"), text.as_ref());
+    } else {
+        println!("{}", text.as_ref());
+    }
+}
+
+/// Следующий шаг или пояснение в stdout.
+pub fn note(text: impl AsRef<str>) {
+    if fancy_out() {
+        println!("{} {}", accent("›"), text.as_ref());
+    } else {
+        println!("{}", text.as_ref());
+    }
+}
+
+/// То, на что надо обратить внимание, в stdout.
+pub fn warn(text: impl AsRef<str>) {
+    if fancy_out() {
+        println!("{} {}", red("!"), bold(text.as_ref()));
+    } else {
+        println!("{}", text.as_ref());
+    }
+}
+
+/// Строка «что: значение…»: скриптам через табуляцию, в терминале колонкой с приглушённой подписью.
+pub fn row(cells: &[&str]) {
+    if fancy_out() {
+        let (head, rest) = cells.split_first().unwrap_or((&"", &[]));
+        println!("  {}  {}", dim(&format!("{head:<14}")), rest.join("  "));
+    } else {
+        println!("{}", cells.join("\t"));
+    }
+}
+
 pub fn fail(text: &str) {
     if fancy() {
         line(Tone::Err, "✗", text);

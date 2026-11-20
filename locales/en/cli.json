@@ -329,5 +329,6 @@
   "история": "history",
   "заметки": "notes",
   "Заблокирована": "Locked",
-  "Открыта": "Open"
+  "Открыта": "Open",
+  "Обменов пока не было. Настроить: kw sync lan on или kw sync webdav АДРЕС": "No exchanges yet. Set up: kw sync lan on or kw sync webdav URL"
 }

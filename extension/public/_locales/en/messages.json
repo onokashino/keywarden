@@ -497,13 +497,13 @@
     "message": "Icon in fields"
   },
   "pref_icons_hint": {
-    "message": "K button in username and password fields"
+    "message": "Keywarden icon in login, password, card and address fields"
   },
   "pref_menu": {
     "message": "Account menu on focus"
   },
   "pref_menu_hint": {
-    "message": "Site accounts right under the field. When off: only via the K icon"
+    "message": "Site accounts right under the field. When off: only via the Keywarden icon in the field"
   },
   "pref_offer": {
     "message": "Offer to save"

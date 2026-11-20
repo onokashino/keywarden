@@ -1167,48 +1167,54 @@ impl EntryEditor {
         let entity = cx.entity();
         h_flex()
             .gap_3()
-            .items_center()
+            .items_start()
             .child(
                 div()
                     .w(px(150.))
                     .flex_shrink_0()
+                    .pt_1p5()
                     .text_sm()
                     .text_color(theme.muted_foreground)
                     .child(tr!("В браузере")),
             )
             .child(
-                DropdownButton::new("url-match")
-                    .button(
-                        Button::new("url-match-btn")
-                            .outline()
-                            .icon(IconName::Globe)
-                            .label(label),
-                    )
-                    .dropdown_menu_with_anchor(Anchor::TopLeft, move |menu, _, _| {
-                        let mut menu = menu.min_w(px(260.));
-                        for (value, label, _) in options {
-                            let e = entity.clone();
-                            menu = menu.item(
-                                gpui_kit::component::menu::PopupMenuItem::new(label)
-                                    .checked(value == current)
-                                    .on_click(move |_, _, cx| {
-                                        e.update(cx, |this, cx| {
-                                            this.url_match = value.to_string();
-                                            cx.notify();
-                                        });
-                                    }),
-                            );
-                        }
-                        menu
-                    }),
-            )
-            .child(
-                div()
+                v_flex()
                     .flex_1()
                     .min_w_0()
-                    .text_xs()
-                    .text_color(theme.muted_foreground)
-                    .child(hint),
+                    .gap_1()
+                    .items_start()
+                    .child(
+                        DropdownButton::new("url-match")
+                            .button(
+                                Button::new("url-match-btn")
+                                    .outline()
+                                    .icon(IconName::Globe)
+                                    .label(label),
+                            )
+                            .dropdown_menu_with_anchor(Anchor::TopLeft, move |menu, _, _| {
+                                let mut menu = menu.min_w(px(260.));
+                                for (value, label, _) in options {
+                                    let e = entity.clone();
+                                    menu = menu.item(
+                                        gpui_kit::component::menu::PopupMenuItem::new(label)
+                                            .checked(value == current)
+                                            .on_click(move |_, _, cx| {
+                                                e.update(cx, |this, cx| {
+                                                    this.url_match = value.to_string();
+                                                    cx.notify();
+                                                });
+                                            }),
+                                    );
+                                }
+                                menu
+                            }),
+                    )
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .child(hint),
+                    ),
             )
             .into_any_element()
     }

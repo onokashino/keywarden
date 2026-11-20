@@ -6617,10 +6617,17 @@ impl MainWindow {
                             .when(
                                 !matches!(self.nav, Nav::Otp | Nav::Settings | Nav::Health),
                                 |d| {
-                                    d.child(kbd_hint("enter", tr!("пароль")))
-                                        .child(kbd_hint("ctrl-u", tr!("логин")))
-                                        .child(kbd_hint("ctrl-t", "2FA"))
-                                        .child(kbd_hint("ctrl-e", tr!("правка")))
+                                    // у ключей SSH, карт и заметок нет «пароля и логина»: остаётся правка
+                                    let logins = !matches!(
+                                        self.nav,
+                                        Nav::Kind(k) if k != EntryKind::Login
+                                    );
+                                    d.when(logins, |d| {
+                                        d.child(kbd_hint("enter", tr!("пароль")))
+                                            .child(kbd_hint("ctrl-u", tr!("логин")))
+                                            .child(kbd_hint("ctrl-t", "2FA"))
+                                    })
+                                    .child(kbd_hint("ctrl-e", tr!("правка")))
                                 },
                             ),
                     )

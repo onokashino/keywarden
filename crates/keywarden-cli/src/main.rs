@@ -650,21 +650,15 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::ProfileAdd { name, db } => {
             ipc::add_profile(name, db).map_err(|e| anyhow!(e))?;
             if cfg!(target_os = "linux") {
-                println!(
-                    "{}",
-                    tr!(
-                        "База «{name}» добавлена. Запуск: systemctl --user start keywardend@{name} (или keywardend --profile {name})",
-                        name = name
-                    )
-                );
+                term::done(tr!(
+                    "База «{name}» добавлена. Запуск: systemctl --user start keywardend@{name} (или keywardend --profile {name})",
+                    name = name
+                ));
             } else {
-                println!(
-                    "{}",
-                    tr!(
-                        "База «{name}» добавлена. Запуск: keywardend --profile {name}",
-                        name = name
-                    )
-                );
+                term::done(tr!(
+                    "База «{name}» добавлена. Запуск: keywardend --profile {name}",
+                    name = name
+                ));
             }
             return Ok(());
         }
@@ -683,20 +677,19 @@ fn run(cli: Cli) -> Result<()> {
                 }
                 .map_err(|e| anyhow!(tr!("не удалось: {e}", e = e)))?;
             }
-            println!(
-                "{}",
-                match ssh_setup::status() {
-                    Status::Off => tr!("Агент Keywarden для всех программ выключен").to_string(),
-                    Status::Active =>
-                        tr!("Агент Keywarden работает для всех новых программ").to_string(),
-                    Status::AfterRelogin =>
-                        tr!("Включено: заработает после перезахода в систему").to_string(),
-                    Status::Overridden(v) => tr!(
-                        "Включено, но SSH_AUTH_SOCK сейчас указывает на другой агент: {path}",
-                        path = v
-                    ),
+            term::done(match ssh_setup::status() {
+                Status::Off => tr!("Агент Keywarden для всех программ выключен").to_string(),
+                Status::Active => {
+                    tr!("Агент Keywarden работает для всех новых программ").to_string()
                 }
-            );
+                Status::AfterRelogin => {
+                    tr!("Включено: заработает после перезахода в систему").to_string()
+                }
+                Status::Overridden(v) => tr!(
+                    "Включено, но SSH_AUTH_SOCK сейчас указывает на другой агент: {path}",
+                    path = v
+                ),
+            });
             return Ok(());
         }
         _ => {}
@@ -710,14 +703,11 @@ fn run(cli: Cli) -> Result<()> {
             };
             prefs.ssh_host_config = hosts;
             call(&mut c, Request::Prefs { set: Some(*prefs) })?;
-            println!(
-                "{}",
-                if hosts {
-                    tr!("Ключ под каждый хост включён: ~/.ssh/keywarden/config")
-                } else {
-                    tr!("Ключ под каждый хост выключен")
-                }
-            );
+            term::done(if hosts {
+                tr!("Ключ под каждый хост включён: ~/.ssh/keywarden/config")
+            } else {
+                tr!("Ключ под каждый хост выключен")
+            });
         }
         Cmd::Ping => {
             if let Response::Pong { version } = call(&mut c, Request::Ping)? {
@@ -889,49 +879,53 @@ fn run(cli: Cli) -> Result<()> {
                 else {
                     bail!(tr!("нет ответа"))
                 };
+                let quiet = remote.as_ref().is_none_or(|r| {
+                    r.webdav_url.is_none()
+                        && r.lan_state.is_none()
+                        && r.lan_offer.is_none()
+                        && r.peers.is_empty()
+                });
+                // пустой вывод в терминале выглядит как поломка: говорим, что показывать нечего
+                if quiet && held.is_none() && records.is_empty() && term::fancy_out() {
+                    term::note(tr!(
+                        "Обменов пока не было. Настроить: kw sync lan on или kw sync webdav АДРЕС"
+                    ));
+                }
                 if let Some(r) = remote {
                     if let Some(url) = &r.webdav_url {
-                        println!(
-                            "WebDAV\t{url}\t{}",
-                            r.webdav_state.as_deref().unwrap_or("…")
-                        );
+                        term::row(&["WebDAV", url, r.webdav_state.as_deref().unwrap_or("…")]);
                     }
                     if let Some(s) = &r.lan_state {
-                        println!("{}\t{s}", tr!("сеть"));
+                        term::row(&[tr!("сеть"), s]);
                     }
                     if let Some(o) = &r.lan_offer {
-                        println!("{}\t{}", tr!("код передачи"), o.code);
+                        term::row(&[tr!("код передачи"), &o.code]);
                     }
                     for p in &r.peers {
-                        println!("{}\t{p}", tr!("компьютер"));
+                        term::row(&[tr!("компьютер"), p]);
                     }
                 }
                 if let Some(h) = held {
-                    println!(
-                        "{}",
-                        tr!(
-                            "НА ПАУЗЕ: {source} убирает {removed} из {live} записей ({summary}). kw sync reject или kw sync accept",
-                            source = h.source,
-                            removed = h.removed,
-                            live = h.live,
-                            summary = h.summary
-                        )
-                    );
+                    term::warn(tr!(
+                        "НА ПАУЗЕ: {source} убирает {removed} из {live} записей ({summary}). kw sync reject или kw sync accept",
+                        source = h.source,
+                        removed = h.removed,
+                        live = h.live,
+                        summary = h.summary
+                    ));
                 }
                 for r in records {
-                    println!(
-                        "{}\t{}\t{}\t{}\t{}{}",
-                        r.id,
-                        r.when,
-                        r.status,
-                        r.source,
-                        r.summary,
-                        if r.snapshot.is_some() && r.status != "reverted" {
-                            String::new()
-                        } else {
-                            format!("\t{}", tr!("(без отмены)"))
-                        }
-                    );
+                    let mut cells = vec![
+                        r.id.to_string(),
+                        r.when.to_string(),
+                        r.status.to_string(),
+                        r.source.to_string(),
+                        r.summary.to_string(),
+                    ];
+                    if r.snapshot.is_none() || r.status == "reverted" {
+                        cells.push(tr!("(без отмены)").into());
+                    }
+                    term::row(&cells.iter().map(String::as_str).collect::<Vec<_>>());
                 }
             }
             SyncCmd::Accept | SyncCmd::Reject => {
@@ -1308,14 +1302,11 @@ fn run(cli: Cli) -> Result<()> {
             else {
                 bail!(tr!("нет ответа"))
             };
-            println!(
-                "{}",
-                tr!(
-                    "Перенесено секретов: {items}, пропущено: {skipped}",
-                    items = items,
-                    skipped = skipped
-                )
-            );
+            term::done(tr!(
+                "Перенесено секретов: {items}, пропущено: {skipped}",
+                items = items,
+                skipped = skipped
+            ));
         }
         Cmd::Icon { query, clear, pick } => {
             let e = resolve(&mut c, &query, &pick)?;
@@ -1600,20 +1591,14 @@ fn run(cli: Cli) -> Result<()> {
         }
         Cmd::SshImportConfig => match call(&mut c, Request::SshImportConfig { only: None })? {
             Response::SshImported { added, skipped } => {
-                println!(
-                    "{}",
-                    tr!(
-                        "Перенесено в базу: {added}, уже были: {skipped}. Папка «SSH».",
-                        added = added,
-                        skipped = skipped
-                    )
-                );
+                term::done(tr!(
+                    "Перенесено в базу: {added}, уже были: {skipped}. Папка «SSH».",
+                    added = added,
+                    skipped = skipped
+                ));
                 if !matches!(call(&mut c, Request::Prefs { set: None })?, Response::Prefs { prefs } if prefs.ssh_host_config)
                 {
-                    println!(
-                        "{}",
-                        tr!("Чтобы ssh видел серверы из базы: kw ssh-setup --hosts")
-                    );
+                    term::note(tr!("Чтобы ssh видел серверы из базы: kw ssh-setup --hosts"));
                 }
             }
             _ => bail!(tr!("нет ответа")),
@@ -1720,10 +1705,7 @@ fn run(cli: Cli) -> Result<()> {
             use keywarden_core::git_signing;
             if off {
                 git_signing::disable().map_err(|e| anyhow!(e))?;
-                println!(
-                    "{}",
-                    tr!("git больше не подписывает коммиты ключом Keywarden")
-                );
+                term::done(tr!("git больше не подписывает коммиты ключом Keywarden"));
                 return Ok(());
             }
             let query = query.ok_or_else(|| anyhow!(tr!("укажите запись с ключом SSH")))?;
@@ -1744,13 +1726,10 @@ fn run(cli: Cli) -> Result<()> {
                 .find(|l| git_signing::key_body(l).is_some())
                 .ok_or_else(|| anyhow!(tr!("в записи нет открытого ключа SSH")))?;
             git_signing::enable(public).map_err(|e| anyhow!(e))?;
-            println!(
-                "{}",
-                tr!(
-                    "git подписывает коммиты и теги ключом «{title}». Проверка: git log --show-signature",
-                    title = entry.summary.title
-                )
-            );
+            term::done(tr!(
+                "git подписывает коммиты и теги ключом «{title}». Проверка: git log --show-signature",
+                title = entry.summary.title
+            ));
         }
         Cmd::ImportBitwarden { file } => {
             let json =
@@ -1759,13 +1738,10 @@ fn run(cli: Cli) -> Result<()> {
             else {
                 bail!(tr!("нет ответа"))
             };
-            println!(
-                "{}",
-                tr!(
-                    "Перенесено {n} записей в группу «Bitwarden»:",
-                    n = r.total()
-                )
-            );
+            term::done(tr!(
+                "Перенесено {n} записей в группу «Bitwarden»:",
+                n = r.total()
+            ));
             println!(
                 "{}",
                 tr!(
@@ -1788,9 +1764,9 @@ fn run(cli: Cli) -> Result<()> {
                 );
             }
             if r.review.is_empty() {
-                println!("{}", tr!("Ручная проверка не нужна."));
+                term::done(tr!("Ручная проверка не нужна."));
             } else {
-                println!("{}", tr!("Проверьте вручную:"));
+                term::note(tr!("Проверьте вручную:"));
                 for x in &r.review {
                     println!("  - {x}");
                 }
@@ -1834,10 +1810,9 @@ fn run(cli: Cli) -> Result<()> {
                 yubikey,
             };
             call(&mut c, Request::ChangeKey { current, new })?;
-            println!(
-                "{}",
-                tr!("Ключ сменён. Бэкапы до смены по-прежнему открываются старым ключом.")
-            );
+            term::done(tr!(
+                "Ключ сменён. Бэкапы до смены по-прежнему открываются старым ключом."
+            ));
         }
         Cmd::Keyfile { path } => {
             call(
@@ -1846,13 +1821,10 @@ fn run(cli: Cli) -> Result<()> {
                     path: abs(path.clone()),
                 },
             )?;
-            println!(
-                "{}",
-                tr!(
-                    "Создан {path}. Без него база не откроется: сохраните копию отдельно от базы.",
-                    path = path.display()
-                )
-            );
+            term::done(tr!(
+                "Создан {path}. Без него база не откроется: сохраните копию отдельно от базы.",
+                path = path.display()
+            ));
         }
         Cmd::DbSettings {
             name,
@@ -1932,7 +1904,7 @@ fn run(cli: Cli) -> Result<()> {
                     bail!(tr!("нет ответа"))
                 };
                 s = settings;
-                println!("{}", tr!("Сохранено."));
+                term::done(tr!("Сохранено."));
             }
             println!("{}", tr!("Имя:        {name}", name = s.name));
             println!("{}", tr!("Описание:   {text}", text = s.description));
@@ -1984,13 +1956,10 @@ fn run(cli: Cli) -> Result<()> {
                         path: abs(path.clone()),
                     },
                 )?;
-                println!(
-                    "{}",
-                    tr!(
-                        "Выгружено в {path}. В файле пароли открытым текстом: удалите его после переноса.",
-                        path = path.display()
-                    )
-                );
+                term::done(tr!(
+                    "Выгружено в {path}. В файле пароли открытым текстом: удалите его после переноса.",
+                    path = path.display()
+                ));
             }
             ExportArg::TwoFas => {
                 call(
@@ -1999,13 +1968,10 @@ fn run(cli: Cli) -> Result<()> {
                         path: abs(path.clone()),
                     },
                 )?;
-                println!(
-                    "{}",
-                    tr!(
-                        "Коды 2FA выгружены в {path}. В файле секреты открытым текстом: удалите после импорта в 2FAS.",
-                        path = path.display()
-                    )
-                );
+                term::done(tr!(
+                    "Коды 2FA выгружены в {path}. В файле секреты открытым текстом: удалите после импорта в 2FAS.",
+                    path = path.display()
+                ));
             }
             ExportArg::Kdbx => {
                 let password = if password_stdin {
@@ -2028,10 +1994,7 @@ fn run(cli: Cli) -> Result<()> {
                         },
                     },
                 )?;
-                println!(
-                    "{}",
-                    tr!("Копия сохранена в {path}.", path = path.display())
-                );
+                term::done(tr!("Копия сохранена в {path}.", path = path.display()));
             }
         },
         Cmd::Import {
@@ -2081,20 +2044,17 @@ fn run(cli: Cli) -> Result<()> {
             else {
                 bail!(tr!("нет ответа"))
             };
-            println!(
-                "{}",
-                tr!(
-                    "Перенесено {n} записей в папку «Импорт {name}»: логины {logins}, карты {cards}, личные данные {identities}, заметки {notes}, ключи SSH {ssh}; папок {folders}",
-                    n = r.total(),
-                    name = file.file_stem().unwrap_or_default().to_string_lossy(),
-                    logins = r.logins,
-                    cards = r.cards,
-                    identities = r.identities,
-                    notes = r.notes,
-                    ssh = r.ssh_keys,
-                    folders = r.folders
-                )
-            );
+            term::done(tr!(
+                "Перенесено {n} записей в папку «Импорт {name}»: логины {logins}, карты {cards}, личные данные {identities}, заметки {notes}, ключи SSH {ssh}; папок {folders}",
+                n = r.total(),
+                name = file.file_stem().unwrap_or_default().to_string_lossy(),
+                logins = r.logins,
+                cards = r.cards,
+                identities = r.identities,
+                notes = r.notes,
+                ssh = r.ssh_keys,
+                folders = r.folders
+            ));
             for x in &r.review {
                 println!("{}", tr!("  проверить: {x}", x = x));
             }
@@ -2123,7 +2083,7 @@ fn run(cli: Cli) -> Result<()> {
             else {
                 bail!(tr!("нет ответа"))
             };
-            println!("{}", tr!("Слияние: {summary}", summary = summary));
+            term::done(tr!("Слияние: {summary}", summary = summary));
         }
         Cmd::SshEnv => {
             let sock = keywarden_core::ipc::endpoint("ssh");
