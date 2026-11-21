@@ -73,7 +73,24 @@ const OTP_HINTS: &[&str] = &[
     "token",
     "код",
 ];
-const NOT_USER: &[&str] = &["search", "query", "captcha", "coupon", "promo", "поиск"];
+// поиск, промокоды и контакты «для связи» (ник в мессенджере) это не логин этого сайта
+const NOT_USER: &[&str] = &[
+    "search",
+    "query",
+    "captcha",
+    "coupon",
+    "promo",
+    "поиск",
+    "telegram",
+    "whatsapp",
+    "viber",
+    "skype",
+    "jabber",
+    "contact",
+    "контакт",
+    "для связи",
+    "телеграм",
+];
 
 impl FieldInfo {
     fn text(&self) -> String {
@@ -717,6 +734,11 @@ mod tests {
         // вход по телефону, когда другого поля нет
         let forms = classify(&[f(0, 0, "tel", "phone"), f(1, 0, "password", "password")]);
         assert_eq!(forms[0].username, Some(0));
+        // обменник: одно поле «Telegram для связи» с подсказкой @username это контакт, а не вход
+        let mut tg = f(0, 0, "text", "");
+        tg.placeholder = "@username".into();
+        tg.label = "Telegram для связи".into();
+        assert!(classify(&[tg]).is_empty());
         // форма оплаты со списками month и year без слова «срок»
         let v = classify_data(&[
             f(0, 0, "text", "card_number"),

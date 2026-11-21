@@ -129,9 +129,27 @@ export default defineContentScript({
         svg{display:block;width:20px;height:20px}</style><button title="Keywarden" aria-label="Keywarden">${LOGO}</button>`;
       Object.assign(host.style, { position: 'absolute', zIndex: '2147483646' });
       document.documentElement.appendChild(host);
+      // поле закрыто чужим слоем (окно выбора поверх формы): значок не должен торчать сквозь него
+      const covered = () => {
+        const r = el.getBoundingClientRect();
+        const x = r.right - 18;
+        const y = r.top + r.height / 2;
+        if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return false;
+        const top = document.elementsFromPoint(x, y).find((n) => !n.localName.startsWith('keywarden-'));
+        if (!top || top === el || el.contains(top) || top.contains(el)) return false;
+        // подпись или кнопка рядом с полем лежат в той же обёртке: это не «закрыто»
+        let near: Element | null = el;
+        for (let i = 0; i < 3 && near; i++) {
+          near = near.parentElement;
+          // до самой страницы не поднимаемся: в body лежит всё, включая окна поверх
+          if (!near || near === document.body || near === document.documentElement) break;
+          if (near.contains(top)) return false;
+        }
+        return true;
+      };
       const place = () => {
         const r = el.getBoundingClientRect();
-        host.style.display = visible(el) ? 'block' : 'none';
+        host.style.display = visible(el) && !covered() ? 'block' : 'none';
         host.style.top = `${r.top + window.scrollY + (r.height - 20) / 2}px`;
         host.style.left = `${r.right + window.scrollX - 28}px`;
       };

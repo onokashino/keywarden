@@ -396,6 +396,21 @@ if (SHOTS) {
   await popup.waitForTimeout(400);
   await popup.screenshot({ path: `${SHOTS}/ext-settings.png` });
 }
+// значок в поле прячется, когда форму закрыло окно поверх неё
+const cov = await ctx.newPage();
+await cov.goto('http://127.0.0.2:8765/login-otp');
+await cov.waitForTimeout(1500);
+const shownIcons = () => cov.evaluate(() => [...document.querySelectorAll('keywarden-icon')].filter((h) => h.style.display !== 'none').length);
+assert((await shownIcons()) === 2, 'значки в полях логина и пароля');
+await cov.evaluate(() => {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;inset:0;background:#000c;z-index:1000';
+  document.body.appendChild(d);
+});
+await cov.waitForTimeout(900);
+assert((await shownIcons()) === 0, 'под окном поверх формы значков не видно');
+await cov.close();
+
 // 10a. карта (из kpxc-full.xml) и личные данные: меню под полем, стрелка и Enter заполняют всю группу полей
 const pay = await ctx.newPage();
 await pay.setViewportSize({ width: 1280, height: 900 });
