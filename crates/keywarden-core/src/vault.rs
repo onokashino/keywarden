@@ -172,6 +172,14 @@ pub enum Cipher {
     ChaCha20,
 }
 
+/// База закрыта (блокировка): ключ шифрования, который keepass держит между сохранением и
+/// его проверкой, больше не нужен.
+impl Drop for Vault {
+    fn drop(&mut self) {
+        keepass::forget_derived_key();
+    }
+}
+
 pub struct Vault {
     pub db: Database,
     key: DatabaseKey,

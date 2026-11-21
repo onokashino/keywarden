@@ -14,6 +14,42 @@ pub(crate) trait Kdf {
     ) -> Result<GenericArray<u8, U32>, CryptographyError>;
 }
 
+/// Keywarden: the last derived key, see KEYWARDEN-PATCH.md. A save derives the key for the
+/// new seed and then the written bytes are parsed back to verify them: same password, same
+/// seed, same parameters. Without this the slow derivation ran twice per save.
+static LAST: std::sync::Mutex<Option<([u8; 32], [u8; 32])>> = std::sync::Mutex::new(None);
+
+/// Fingerprint of everything the derived key depends on.
+fn fingerprint(composite_key: &[u8], parts: &[&[u8]]) -> [u8; 32] {
+    let mut d = Sha256::new();
+    d.update(composite_key);
+    for p in parts {
+        d.update((p.len() as u64).to_le_bytes());
+        d.update(p);
+    }
+    d.finalize().into()
+}
+
+fn remembered(fp: &[u8; 32]) -> Option<GenericArray<u8, U32>> {
+    let g = LAST.lock().unwrap_or_else(|p| p.into_inner());
+    g.as_ref().filter(|(k, _)| k == fp).map(|(_, v)| GenericArray::from(*v))
+}
+
+fn remember(fp: [u8; 32], key: &GenericArray<u8, U32>) {
+    let mut v = [0u8; 32];
+    v.copy_from_slice(key.as_slice());
+    *LAST.lock().unwrap_or_else(|p| p.into_inner()) = Some((fp, v));
+}
+
+/// Wipe the remembered derived key (the vault is being locked).
+pub fn forget_derived_key() {
+    if let Some((a, b)) = LAST.lock().unwrap_or_else(|p| p.into_inner()).as_mut() {
+        a.fill(0);
+        b.fill(0);
+    }
+    *LAST.lock().unwrap_or_else(|p| p.into_inner()) = None;
+}
+
 pub struct AesKdf {
     pub seed: Vec<u8>,
     pub rounds: u64,
@@ -30,6 +66,10 @@ impl Kdf for AesKdf {
             .as_slice()
             .try_into()
             .map_err(|_| CryptographyError::InvalidLength(cipher::InvalidLength))?;
+        let fp = fingerprint(composite_key, &[&self.seed, &self.rounds.to_le_bytes(), b"aes"]);
+        if let Some(key) = remembered(&fp) {
+            return Ok(key);
+        }
         let cipher = Aes256::new(&seed_arr);
         let mut block1: GenericArray<u8, _> = composite_key[..16]
             .try_into()
@@ -47,7 +87,9 @@ impl Kdf for AesKdf {
         digest.update(block1);
         digest.update(block2);
 
-        Ok(digest.finalize())
+        let key = digest.finalize();
+        remember(fp, &key);
+        Ok(key)
     }
 }
 
@@ -65,6 +107,20 @@ impl Kdf for Argon2Kdf {
         &self,
         composite_key: &GenericArray<u8, U32>,
     ) -> Result<GenericArray<u8, U32>, CryptographyError> {
+        let fp = fingerprint(
+            composite_key,
+            &[
+                &self.salt,
+                &self.memory.to_le_bytes(),
+                &self.iterations.to_le_bytes(),
+                &self.parallelism.to_le_bytes(),
+                &[self.version as u8, self.variant as u8],
+            ],
+        );
+        if let Some(key) = remembered(&fp) {
+            return Ok(key);
+        }
+
         // Disable Argon2 multithreading on wasm32 targets to avoid panics on platforms without thread support.
         let thread_mode = if cfg!(target_arch = "wasm32") {
             argon2::ThreadMode::Sequential
@@ -86,9 +142,12 @@ impl Kdf for Argon2Kdf {
 
         let key = argon2::hash_raw(composite_key, &self.salt, &config)?;
 
-        key.as_slice()
+        let key: GenericArray<u8, U32> = key
+            .as_slice()
             .try_into()
-            .map_err(|_| CryptographyError::InvalidLength(cipher::InvalidLength))
+            .map_err(|_| CryptographyError::InvalidLength(cipher::InvalidLength))?;
+        remember(fp, &key);
+        Ok(key)
     }
 }
 
@@ -134,5 +193,12 @@ mod tests {
             .expect("argon2 kdf should derive successfully");
 
         assert_eq!(actual.as_slice(), expected.as_slice());
+
+        // Keywarden: the second call is answered from memory, another salt is derived anew
+        assert_eq!(kdf.transform_key(&composite_key).unwrap().as_slice(), expected.as_slice());
+        let other = Argon2Kdf { salt: vec![8_u8; 32], ..kdf };
+        assert_ne!(other.transform_key(&composite_key).unwrap().as_slice(), expected.as_slice());
+        super::forget_derived_key();
+        assert!(super::LAST.lock().unwrap().is_none());
     }
 }

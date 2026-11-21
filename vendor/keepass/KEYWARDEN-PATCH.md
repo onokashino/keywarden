@@ -53,3 +53,11 @@ macOS интерфейс ключа держит системный HID-драй
 меняется при каждой записи, поэтому две копии базы с тем же паролем дают одно значение. Из него
 Keywarden выводит ключ для синхронизации в локальной сети (`keywarden-core/src/remote.rs`).
 Ответ YubiKey зависит от соли KDF и в отпечаток не входит.
+
+## Derived key is remembered between a save and its verification
+
+`crypt::kdf` keeps the last derived key together with a fingerprint of its inputs (composite key,
+seed, parameters). A save derives the key for a fresh seed, then Keywarden parses the written
+bytes back to verify them, which asked for the very same derivation again: every save paid for
+Argon2 twice. The second request is now answered from memory. `forget_derived_key()` wipes it;
+Keywarden calls it when the vault is locked. Test: `crypt::kdf::tests`.

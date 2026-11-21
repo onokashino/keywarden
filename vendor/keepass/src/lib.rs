@@ -10,6 +10,9 @@ pub(crate) mod format;
 
 mod key;
 
+// Keywarden: see KEYWARDEN-PATCH.md
+pub use crypt::kdf::forget_derived_key;
+
 pub use self::db::Database;
 
 #[cfg(feature = "yubikey_usb")]
