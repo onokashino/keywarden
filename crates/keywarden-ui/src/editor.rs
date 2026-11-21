@@ -1219,6 +1219,11 @@ impl EntryEditor {
             .into_any_element()
     }
 
+    /// запрос на сохранение ушёл, ответа ещё нет
+    pub fn saving(&self) -> bool {
+        self.saving
+    }
+
     fn save(&mut self, cx: &mut Context<Self>) {
         if self.saving {
             return;

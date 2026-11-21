@@ -1,10 +1,9 @@
-//! Записи «Сервер SSH»: поля, разбор `~/.ssh/config` (импорт и `kw ssh`), автопапки по
-//! именам, проброс портов, port knocking и блок для `~/.ssh/keywarden/config`.
+//! Записи «Сервер SSH»: поля, разбор `~/.ssh/config` (импорт и `kw ssh`),
+//! проброс портов, port knocking и блок для `~/.ssh/keywarden/config`.
 //!
 //! Адрес хоста в поле URL (`user@host:port`), остальное в своих полях. Названия полей
 //! английские: так их видят KeePassXC и мобильные клиенты.
 
-use std::collections::BTreeMap;
 use std::net::{TcpStream, ToSocketAddrs, UdpSocket};
 use std::path::Path;
 use std::time::Duration;
@@ -348,39 +347,6 @@ pub fn parse_config(text: &str) -> Vec<ConfigHost> {
     out
 }
 
-/// Папки без ручной работы: общий префикс имени (prod-api, prod-db: «prod»), иначе общий
-/// домен (a.example.com, b.example.com: «example.com»). Группа из одного хоста не заводится.
-/// `items`: (имя, хост).
-pub fn auto_groups(items: &[(&str, &str)]) -> Vec<Option<String>> {
-    let prefix = |name: &str| {
-        let first = name.split(['-', '_', '.']).next().unwrap_or_default();
-        let base = first.trim_end_matches(|c: char| c.is_ascii_digit());
-        (base.len() >= 2 && base.len() < name.len()).then(|| base.to_lowercase())
-    };
-    let domain = |host: &str| {
-        let labels: Vec<&str> = host.split('.').collect();
-        let ip = labels.iter().all(|l| l.chars().all(|c| c.is_ascii_digit()));
-        (labels.len() >= 2 && !ip).then(|| labels[labels.len() - 2..].join(".").to_lowercase())
-    };
-    let count = |keys: Vec<Option<String>>| {
-        let mut m: BTreeMap<String, usize> = BTreeMap::new();
-        for k in keys.into_iter().flatten() {
-            *m.entry(k).or_default() += 1;
-        }
-        m
-    };
-    let by_prefix = count(items.iter().map(|(n, _)| prefix(n)).collect());
-    let by_domain = count(items.iter().map(|(_, h)| domain(h)).collect());
-    items
-        .iter()
-        .map(|(n, h)| {
-            prefix(n)
-                .filter(|p| by_prefix[p] >= 2)
-                .or_else(|| domain(h).filter(|d| by_domain[d] >= 2))
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -477,26 +443,5 @@ mod tests {
         assert_eq!(h[0].forwards, ["8080:localhost:80"]);
         assert_eq!(h[0].other, ["ForwardAgent yes"]);
         assert_eq!(h[2].address().display(), "git@github.com");
-    }
-
-    #[test]
-    fn groups_by_prefix_then_domain() {
-        let g = auto_groups(&[
-            ("prod-api", "10.0.0.1"),
-            ("prod-db", "10.0.0.2"),
-            ("a", "a.example.com"),
-            ("b", "b.example.com"),
-            ("solo", "1.2.3.4"),
-        ]);
-        assert_eq!(
-            g,
-            [
-                Some("prod".into()),
-                Some("prod".into()),
-                Some("example.com".into()),
-                Some("example.com".into()),
-                None
-            ]
-        );
     }
 }

@@ -661,7 +661,7 @@ pub struct Planned {
     pub in_vault: bool,
 }
 
-/// План переноса ~/.ssh/config: папка «SSH» с автопапками по именам, ключи по открытому
+/// План переноса ~/.ssh/config: все серверы в папку «SSH» (дальше раскладывает человек), ключи по открытому
 /// ключу IdentityFile (`keys`: путь -> «тип base64» с диска).
 pub fn plan_config(
     db: &Database,
@@ -672,29 +672,11 @@ pub fn plan_config(
     let titles = vault_key_titles(db);
     let taken: Vec<String> = load_hosts(db).into_iter().map(|h| h.alias).collect();
     let in_vault = |c: &h::ConfigHost| taken.iter().any(|t| t.eq_ignore_ascii_case(&c.alias));
-    let pairs: Vec<(String, String)> = hosts
-        .iter()
-        .filter(|c| !in_vault(c))
-        .map(|c| (c.alias.clone(), c.address().host))
-        .collect();
-    let refs: Vec<(&str, &str)> = pairs
-        .iter()
-        .map(|(a, b)| (a.as_str(), b.as_str()))
-        .collect();
-    let groups = h::auto_groups(&refs);
-    let any = groups.iter().any(Option::is_some);
-    let mut groups = groups.into_iter();
     hosts
         .iter()
         .map(|c| {
-            let mut folder = vec!["SSH".to_string()];
+            let folder = vec!["SSH".to_string()];
             let exists = in_vault(c);
-            if !exists {
-                let g = groups.next().flatten();
-                if any {
-                    folder.push(g.unwrap_or_else(|| tr!("Прочие").to_string()));
-                }
-            }
             let key = c.identity.as_ref().and_then(|i| {
                 let body = keys.iter().find(|(p, _)| p == i).map(|(_, b)| b)?;
                 titles

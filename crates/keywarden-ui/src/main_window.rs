@@ -444,6 +444,8 @@ pub struct MainWindow {
     refocus: bool,
     /// «Коды 2FA»: что копировали последним (id записей, свежие первыми) и плотный вид списком
     otp_view: OtpView,
+    /// свёрнутые папки боковой панели (id), помнятся на этом компьютере
+    closed_groups: ClosedGroups,
     /// в поле поиска сейчас подсказка про коды
     search_hint_otp: bool,
     /// экран «Получить базу с другого компьютера»
@@ -642,6 +644,7 @@ impl MainWindow {
             welcome_focus: cx.focus_handle(),
             refocus: false,
             otp_view: OtpView::load(),
+            closed_groups: ClosedGroups::load(),
             search_hint_otp: false,
             receiving: false,
             recv_code,
@@ -3051,11 +3054,21 @@ impl MainWindow {
     fn navs(&self) -> Vec<Nav> {
         let mut v = vec![Nav::All, Nav::Otp, Nav::Health];
         v.extend(EntryKind::ALL.into_iter().map(Nav::Kind));
-        v.extend(self.groups.iter().skip(1).map(|g| Nav::Group(g.id.clone())));
+        let hidden = self.closed_groups.hidden(&self.groups);
+        v.extend(
+            self.groups
+                .iter()
+                .skip(1)
+                .filter(|g| !hidden.contains(&g.id))
+                .map(|g| Nav::Group(g.id.clone())),
+        );
         v
     }
 
     fn open_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.saving(cx) {
+            return;
+        }
         let page = cx.new(|cx| crate::settings_page::SettingsPage::new(window, cx));
         self._subs
             .push(cx.subscribe(&page, |this, _, ev, cx| match ev {
@@ -3068,7 +3081,26 @@ impl MainWindow {
         cx.notify();
     }
 
+    /// Запись сохраняется: окно ждёт ответа и никуда не переключается.
+    fn saving(&self, cx: &App) -> bool {
+        self.editor.as_ref().is_some_and(|e| e.read(cx).saving())
+    }
+
+    /// Свернуть или развернуть папку. Открытая папка внутри свёрнутой: переходим на свёрнутую.
+    fn toggle_group(&mut self, id: String, cx: &mut Context<Self>) {
+        self.closed_groups.toggle(&id);
+        if let Nav::Group(cur) = &self.nav
+            && self.closed_groups.hidden(&self.groups).contains(cur)
+        {
+            return self.set_nav(Nav::Group(id), cx);
+        }
+        cx.notify();
+    }
+
     fn set_nav(&mut self, nav: Nav, cx: &mut Context<Self>) {
+        if self.saving(cx) {
+            return;
+        }
         self.settings = None;
         if nav == Nav::Health {
             self.nav = nav;
@@ -3505,6 +3537,8 @@ impl MainWindow {
                         ));
                         this.search.update(cx, |s, cx| s.set_value("", window, cx));
                     }
+                    // пока запись пишется, редактор не закрыть: иначе ответ придёт в никуда
+                    EditorEvent::Cancelled if this.saving(cx) => {}
                     EditorEvent::Cancelled => this.editor = None,
                     EditorEvent::ChangeKind(kind) => {
                         let Some(old) = this.editor.take() else {
@@ -6177,6 +6211,19 @@ impl MainWindow {
             .filter(|g| !in_bin(g))
             .cloned()
             .collect();
+        let hidden = self.closed_groups.hidden(&ordered);
+        let parents: std::collections::HashSet<String> = ordered
+            .iter()
+            .filter(|g| {
+                let inside = format!("{}/", g.path);
+                ordered.iter().any(|c| c.path.starts_with(&inside))
+            })
+            .map(|g| g.id.clone())
+            .collect();
+        let ordered: Vec<GroupView> = ordered
+            .into_iter()
+            .filter(|g| !hidden.contains(&g.id))
+            .collect();
         // копия перетаскиваемой папки в щели: перед папкой или после неё со всем поддеревом
         let dragged_group = dragging
             .then(dragged_id)
@@ -6202,6 +6249,19 @@ impl MainWindow {
                     col = col.child(self.render_group_ghost(dg, depth, &key, opening, &theme, cx));
                 }
             }
+            // у свёрнутой папки счётчик со всеми вложенными: видно, что внутри не пусто
+            let shown_count = if self.closed_groups.0.contains(&g.id) {
+                let inside = format!("{}/", g.path);
+                g.entries
+                    + self
+                        .groups
+                        .iter()
+                        .filter(|c| c.path.starts_with(&inside))
+                        .map(|c| c.entries)
+                        .sum::<usize>()
+            } else {
+                g.entries
+            };
             let nav = Nav::Group(g.id.clone());
             let (gid, gid2, gid3) = (g.id.clone(), g.id.clone(), g.id.clone());
             let drag = GroupDrag {
@@ -6239,7 +6299,7 @@ impl MainWindow {
                     format!("g-{}", g.id).into(),
                     IconName::Folder,
                     g.name.clone(),
-                    Some(g.entries),
+                    Some(shown_count),
                     g.depth - 1,
                     nav.clone(),
                     self.nav == nav,
@@ -6253,6 +6313,37 @@ impl MainWindow {
                     }),
                 )
                 .relative()
+                // стрелка в поле слева от значка: свернуть или развернуть вложенные папки
+                .when(parents.contains(&g.id), |d| {
+                    let closed = self.closed_groups.0.contains(&g.id);
+                    let tid = g.id.clone();
+                    d.child(
+                        div()
+                            .id(SharedString::from(format!("fold-{}", g.id)))
+                            .absolute()
+                            .top_0()
+                            .left(px((g.depth - 1) as f32 * 14. - 2.))
+                            .w(px(14.))
+                            .h_full()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .text_color(theme.muted_foreground)
+                            .hover(|d| d.text_color(theme.foreground))
+                            .child(
+                                Icon::new(if closed {
+                                    IconName::ChevronRight
+                                } else {
+                                    IconName::ChevronDown
+                                })
+                                .size_3(),
+                            )
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                cx.stop_propagation();
+                                this.toggle_group(tid.clone(), cx)
+                            })),
+                    )
+                })
                 .drag_over::<EntryDrag>(drop_style(&theme))
                 .when(zone != Some(-1) && zone != Some(1), |d| {
                     d.drag_over::<GroupDrag>(drop_style(&theme))
@@ -8325,6 +8416,46 @@ fn landed_flash(n: u64, color: Hsla) -> impl IntoElement {
     )
 }
 
+/// Свёрнутые папки боковой панели. В файле только id папок.
+#[derive(Default)]
+struct ClosedGroups(std::collections::HashSet<String>);
+
+impl ClosedGroups {
+    fn path() -> std::path::PathBuf {
+        keywarden_core::ipc::config_dir().join("folders-view.json")
+    }
+    fn load() -> Self {
+        Self(
+            std::fs::read(Self::path())
+                .ok()
+                .and_then(|b| serde_json::from_slice(&b).ok())
+                .unwrap_or_default(),
+        )
+    }
+    fn toggle(&mut self, id: &str) {
+        if !self.0.remove(id) {
+            self.0.insert(id.to_string());
+        }
+        if let Ok(b) = serde_json::to_vec(&self.0) {
+            let _ = std::fs::create_dir_all(keywarden_core::ipc::config_dir());
+            let _ = std::fs::write(Self::path(), b);
+        }
+    }
+    /// Папки, которых не видно: лежат внутри свёрнутой.
+    fn hidden(&self, groups: &[GroupView]) -> std::collections::HashSet<String> {
+        let closed: Vec<String> = groups
+            .iter()
+            .filter(|g| self.0.contains(&g.id))
+            .map(|g| format!("{}/", g.path))
+            .collect();
+        groups
+            .iter()
+            .filter(|g| closed.iter().any(|c| g.path.starts_with(c)))
+            .map(|g| g.id.clone())
+            .collect()
+    }
+}
+
 /// Вид страницы «Коды 2FA» на этом компьютере. В файле только id записей и флажок, без секретов.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
@@ -8587,6 +8718,39 @@ impl Render for MainWindow {
             .child(crate::smooth_scroll::listener())
             .children(toast)
             .children(self.render_ctx_menu(cx))
+            // запись пишется на диск: окно закрыто слоем, чтобы не уйти со страницы посреди сохранения
+            .when(self.saving(cx), |d| {
+                d.child(
+                    div()
+                        .id("saving")
+                        .absolute()
+                        .inset_0()
+                        .occlude()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .bg(theme.background.opacity(0.6))
+                        .child(
+                            h_flex()
+                                .gap_3()
+                                .px_5()
+                                .py_3()
+                                .rounded_xl()
+                                .border_1()
+                                .border_color(theme.border)
+                                .bg(theme.popover)
+                                .shadow_lg()
+                                .child(Spinner::new())
+                                .child(tr!("Сохраняю…")),
+                        )
+                        // быстрое сохранение не успевает мигнуть слоем
+                        .with_animation(
+                            "saving-in",
+                            Animation::new(Duration::from_millis(350)),
+                            |el, t| el.opacity(t * t),
+                        ),
+                )
+            })
     }
 }
 
@@ -8774,6 +8938,30 @@ fn new_vault_path() -> PathBuf {
 
 #[cfg(test)]
 mod sequence_tests {
+    #[test]
+    fn closed_folder_hides_everything_inside_it() {
+        let g = |id: &str, path: &str| super::GroupView {
+            id: id.into(),
+            name: path.rsplit('/').next().unwrap().into(),
+            path: path.into(),
+            parent: None,
+            depth: path.split('/').count(),
+            entries: 0,
+            is_recycle_bin: false,
+        };
+        let groups = [
+            g("a", "Работа"),
+            g("b", "Работа/prod"),
+            g("c", "Работа/prod/db"),
+            g("d", "Работа2"),
+        ];
+        let closed = super::ClosedGroups(["a".to_string()].into());
+        let hidden = closed.hidden(&groups);
+        assert!(hidden.contains("b") && hidden.contains("c"));
+        // сама свёрнутая папка и соседка с похожим именем остаются
+        assert!(!hidden.contains("a") && !hidden.contains("d"));
+    }
+
     #[test]
     fn sequence_reads_like_words() {
         assert_eq!(

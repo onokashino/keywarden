@@ -60,6 +60,10 @@ pub struct Host {
 
 impl Host {
     fn path(&self) -> String {
+        // серверы прямо из папки «SSH»: слева строки нет, в подписи называем папку как в базе
+        if self.folder.is_empty() {
+            return "SSH".into();
+        }
         self.folder.join(" / ")
     }
 }
@@ -103,16 +107,29 @@ fn addresses(field: &str) -> impl Iterator<Item = &str> {
         .filter(|s| !s.is_empty())
 }
 
+/// Папка хоста на экране. Корень «SSH» есть у всех серверов и ничего не сообщает: его не
+/// показываем, как и «Прочие» под ним (так раньше назывались серверы без своей папки).
+/// Серверы прямо из «SSH» видны в «Все хосты» без отдельной строки слева.
+fn screen_folder(group: &str) -> Vec<String> {
+    if group.is_empty() {
+        return vec![tr!("Без папки").to_string()];
+    }
+    let mut parts: Vec<String> = group.split('/').map(str::to_string).collect();
+    if parts[0] == "SSH" {
+        parts.remove(0);
+        if parts.first().is_some_and(|p| *p == tr!("Прочие")) {
+            parts.remove(0);
+        }
+    }
+    parts
+}
+
 /// Записи «Сервер SSH»: папка из группы базы, аргументы ssh от демона.
 pub fn from_servers(servers: &[SshHost]) -> Vec<Host> {
     servers
         .iter()
         .map(|h| Host {
-            folder: if h.group.is_empty() {
-                vec![tr!("Без папки").to_string()]
-            } else {
-                h.group.split('/').map(str::to_string).collect()
-            },
+            folder: screen_folder(&h.group),
             name: h.alias.clone(),
             target: h.address.clone(),
             args: h.args.clone(),
@@ -131,9 +148,9 @@ pub fn from_servers(servers: &[SshHost]) -> Vec<Host> {
 }
 
 /// Хосты из ~/.ssh/config: псевдонимы из строк Host без масок; для подписи HostName, User,
-/// Port, ProxyJump и имя файла IdentityFile. Разложены по папкам автоматически.
+/// Port, ProxyJump и имя файла IdentityFile. Все в одной папке «~/.ssh/config».
 pub fn from_ssh_config(text: &str) -> Vec<Host> {
-    let mut out: Vec<Host> = ssh_hosts::parse_config(text)
+    let out: Vec<Host> = ssh_hosts::parse_config(text)
         .into_iter()
         .map(|c| Host {
             folder: vec![SSH_CONFIG.into()],
@@ -157,36 +174,7 @@ pub fn from_ssh_config(text: &str) -> Vec<Host> {
             source: Source::Config,
         })
         .collect();
-    auto_group(&mut out);
     out
-}
-
-/// Папки ~/.ssh/config: по общему префиксу имени или домену (см. ssh_hosts::auto_groups);
-/// без единой группы хосты лежат прямо в ~/.ssh/config, без лишней папки «Прочие».
-pub fn auto_group(hosts: &mut [Host]) {
-    let pairs: Vec<(String, String)> = hosts
-        .iter()
-        .map(|h| {
-            let host = h.target.rsplit('@').next().unwrap_or_default();
-            (
-                h.name.clone(),
-                host.split(':').next().unwrap_or_default().to_string(),
-            )
-        })
-        .collect();
-    let refs: Vec<(&str, &str)> = pairs
-        .iter()
-        .map(|(a, b)| (a.as_str(), b.as_str()))
-        .collect();
-    let groups = ssh_hosts::auto_groups(&refs);
-    let any = groups.iter().any(Option::is_some);
-    for (h, g) in hosts.iter_mut().zip(groups) {
-        h.folder = vec![SSH_CONFIG.into()];
-        if any {
-            h.folder
-                .push(g.unwrap_or_else(|| tr!("Прочие").to_string()));
-        }
-    }
 }
 
 /// Все хосты экрана: серверы базы, адреса ключей, затем ~/.ssh/config без перенесённых в базу.
@@ -257,14 +245,14 @@ fn tree(hosts: &[Host], collapsed: &HashSet<Vec<String>>) -> Vec<Node> {
     out
 }
 
-/// Порядок папок: свои по алфавиту, «Без папки» и «Прочие» после них, ~/.ssh/config последним.
+/// Порядок папок: свои по алфавиту, «Без папки» после них, ~/.ssh/config последним.
 fn folder_order(path: &[String]) -> Vec<(u8, String)> {
-    let (no_folder, other) = (tr!("Без папки"), tr!("Прочие"));
+    let no_folder = tr!("Без папки");
     path.iter()
         .map(|s| {
             let rank = match s.as_str() {
                 SSH_CONFIG => 2,
-                s if s == no_folder || s == other => 1,
+                s if s == no_folder => 1,
                 _ => 0,
             };
             (rank, s.to_lowercase())
@@ -608,6 +596,11 @@ fn folders_key(app: &mut App, code: KeyCode) {
         }
         KeyCode::Right | KeyCode::Char('l') if app.collapsed.contains(&node.path) => {
             app.collapsed.remove(&node.path);
+        }
+        KeyCode::Char(' ') if node.has_children && !node.path.is_empty() => {
+            if !app.collapsed.remove(&node.path) {
+                app.collapsed.insert(node.path);
+            }
         }
         KeyCode::Right | KeyCode::Char('l') | KeyCode::Enter => {
             app.pane = Pane::Hosts;
@@ -1122,7 +1115,7 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
                 }
                 (_, Pane::Folders) => vec![
                     ("↑↓", tr!("папка")),
-                    ("←→", tr!("свернуть")),
+                    ("Space ←→", tr!("свернуть")),
                     ("Tab", tr!("к хостам")),
                     ("/", tr!("поиск")),
                     ("?", tr!("все клавиши")),
@@ -1154,7 +1147,7 @@ fn draw(f: &mut ratatui::Frame, app: &App) {
                 ("", tr!("всё остальное у сервера правится в Keywarden")),
                 ("n", tr!("новый адрес для ключа из базы")),
                 ("/", tr!("поиск по всем папкам")),
-                ("Tab ←→", tr!("папки и хосты, свернуть папку")),
+                ("Tab ←→ Space", tr!("папки и хосты, свернуть папку")),
                 ("q Esc", tr!("выход")),
             ];
             let lines: Vec<Line> = rows
@@ -1330,17 +1323,14 @@ mod tests {
     }
 
     #[test]
-    fn config_hosts_grouped_by_name_or_domain() {
-        let h = from_ssh_config(
-            "Host prod-api\nHost prod-db\nHost web1\nHost web2\nHost a\n HostName a.example.com\nHost b\n HostName b.example.com\nHost lonely\n HostName 10.0.0.1\n",
-        );
-        let group = |name: &str| h.iter().find(|x| x.name == name).unwrap().folder[1].clone();
-        assert_eq!(group("prod-api"), "prod");
-        assert_eq!(group("prod-db"), "prod");
-        assert_eq!(group("web1"), "web");
-        assert_eq!(group("a"), "example.com");
-        assert_eq!(group("lonely"), tr!("Прочие"));
-        assert!(h.iter().all(|x| x.folder[0] == SSH_CONFIG));
+    fn config_hosts_share_one_folder_and_the_ssh_root_is_hidden() {
+        let h = from_ssh_config("Host prod-api\nHost prod-db\nHost lonely\n HostName 10.0.0.1\n");
+        assert!(h.iter().all(|x| x.folder == [SSH_CONFIG]));
+        assert!(screen_folder("SSH").is_empty());
+        assert!(screen_folder(&format!("SSH/{}", tr!("Прочие"))).is_empty());
+        assert_eq!(screen_folder("SSH/prod"), ["prod"]);
+        assert_eq!(screen_folder("Работа/SSH"), ["Работа", "SSH"]);
+        assert_eq!(screen_folder(""), [tr!("Без папки").to_string()]);
     }
 
     #[test]
@@ -1353,7 +1343,6 @@ mod tests {
         hosts.extend(from_ssh_config("Host db-1\nHost db-2\n"));
         let t = tree(&hosts, &HashSet::new());
         let names: Vec<String> = t.iter().map(|n| n.path.join("/")).collect();
-        let x = format!("{SSH_CONFIG}/db");
         assert_eq!(
             names,
             [
@@ -1362,14 +1351,13 @@ mod tests {
                 "Работа/prod",
                 "Работа/stage",
                 "Серверы",
-                SSH_CONFIG,
-                x.as_str()
+                SSH_CONFIG
             ]
         );
         assert_eq!(t[0].count, 5);
         assert_eq!(t[1].count, 2);
         let closed: HashSet<Vec<String>> = [vec!["Работа".to_string()]].into();
-        assert_eq!(tree(&hosts, &closed).len(), 5);
+        assert_eq!(tree(&hosts, &closed).len(), 4);
         assert_eq!(visible(&hosts, &["Работа".into()], "").len(), 2);
         assert_eq!(visible(&hosts, &[], "stage").len(), 1);
     }
@@ -1402,7 +1390,7 @@ Host other
         );
         let names: Vec<_> = h.iter().map(|h| h.name.as_str()).collect();
         assert_eq!(names, ["prod", "other"]);
-        assert_eq!(h[0].folder, ["SSH", "prod"]);
+        assert_eq!(h[0].folder, ["prod"]);
         assert!(matches!(h[0].source, Source::Server { .. }));
     }
 

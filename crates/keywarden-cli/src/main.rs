@@ -1631,7 +1631,13 @@ fn run(cli: Cli) -> Result<()> {
                 hosts.retain(|h| ssh_tui::matches(h, &q));
                 if list {
                     for h in &hosts {
-                        println!("{}\t{}\t{}", h.folder.join("/"), h.name, h.target);
+                        // серверы прямо из папки «SSH» на экране идут без папки, в списке называем её как в базе
+                        let folder = if h.folder.is_empty() {
+                            "SSH".to_string()
+                        } else {
+                            h.folder.join("/")
+                        };
+                        println!("{folder}\t{}\t{}", h.name, h.target);
                     }
                     return Ok(());
                 }
