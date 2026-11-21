@@ -166,5 +166,6 @@ impl Render for ConfirmView {
 }
 
 pub fn window_options(cx: &App) -> WindowOptions {
-    crate::ui::overlay_options("keywarden-confirm", 680., 250., cx)
+    // то же имя слоя, что у лаунчера: правила композитора (тень, размытие) написаны для него
+    crate::ui::overlay_options("keywarden-launcher", 680., 250., cx)
 }
