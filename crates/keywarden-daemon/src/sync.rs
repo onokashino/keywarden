@@ -745,6 +745,9 @@ pub async fn watch(daemon: Arc<Daemon>) {
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<()>();
     let mut current: Option<PathBuf> = None;
     let mut watcher: Option<notify::RecommendedWatcher> = None;
+    // открытие и закрытие базы будят цикл сразу: иначе первые секунды после разблокировки
+    // за файлом никто не следил
+    let mut events = daemon.events.subscribe();
     loop {
         let path = daemon.with_vault(|v, _| v.reader().path().to_path_buf());
         if path != current {
@@ -812,6 +815,12 @@ pub async fn watch(daemon: Arc<Daemon>) {
             _ = tokio::time::sleep(poll) => {
                 if current.is_some() {
                     let _ = tx.send(());
+                }
+            }
+            // любое событие возвращает к началу цикла, там путь базы сверяется заново
+            ev = events.recv() => {
+                if matches!(ev, Err(tokio::sync::broadcast::error::RecvError::Closed)) {
+                    return;
                 }
             }
         }
