@@ -753,8 +753,8 @@
   :global(html),
   :global(body) {
     margin: 0;
-    background: #0b0b0d;
-    color: #ececef;
+    background: var(--kw-backdrop, #0b0b0d);
+    color: var(--kw-fg, #ececef);
     font: 13px/1.45 Inter, system-ui, sans-serif;
   }
   :global(*) {
@@ -768,12 +768,12 @@
     background: transparent;
   }
   :global(::-webkit-scrollbar-thumb) {
-    background: #2c2d33;
+    background: var(--kw-input-border, #2c2d33);
     border-radius: 6px;
-    border: 3px solid #141417;
+    border: 3px solid var(--kw-sunken, #141417);
   }
   :global(::-webkit-scrollbar-thumb:hover) {
-    background: #3a3b42;
+    background: var(--kw-thumb, #3a3b42);
   }
   :global(::-webkit-scrollbar-button) {
     display: none;
@@ -784,7 +784,7 @@
   /* панель на странице: рамку и скругление даёт контейнер на странице */
   :global(html.panel),
   :global(html.panel body) {
-    background: #141417;
+    background: var(--kw-sunken, #141417);
     padding: 0;
     overflow: hidden;
   }
@@ -803,8 +803,8 @@
     position: relative;
     overflow: hidden;
     border-radius: 14px;
-    border: 1px solid #26262b;
-    background: #141417;
+    border: 1px solid var(--kw-line, #26262b);
+    background: var(--kw-sunken, #141417);
     box-shadow: 0 0 0 1px #0006;
   }
   svg {
@@ -824,8 +824,8 @@
     align-items: center;
     gap: 8px;
     padding: 12px 12px 10px 14px;
-    background: #18181b;
-    border-bottom: 1px solid #26262b;
+    background: var(--kw-bg, #18181b);
+    border-bottom: 1px solid var(--kw-line, #26262b);
     min-height: 56px;
   }
   .title {
@@ -853,7 +853,7 @@
     display: flex;
     gap: 6px;
     padding: 10px 12px 4px;
-    background: #141417;
+    background: var(--kw-sunken, #141417);
   }
   .search {
     flex: 1;
@@ -863,22 +863,22 @@
     height: 36px;
     padding: 0 12px;
     border-radius: 10px;
-    border: 1px solid #2c2d33;
-    background: #1b1b1f;
-    color: #8e8e98;
+    border: 1px solid var(--kw-input-border, #2c2d33);
+    background: var(--kw-sunken, #1b1b1f);
+    color: var(--kw-muted, #8e8e98);
     transition: border-color 0.12s;
   }
   .search:focus-within {
-    border-color: #5d5f6a;
+    border-color: var(--kw-ring, #5d5f6a);
   }
   .search input {
     all: unset;
     flex: 1;
-    color: #ececef;
+    color: var(--kw-fg, #ececef);
     font-size: 13px;
   }
   .search input::placeholder {
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
   }
   .filters {
     display: grid;
@@ -910,17 +910,17 @@
     gap: 6px;
     font-size: 12px;
     font-weight: 600;
-    color: #c9c9d1;
+    color: var(--kw-fg-soft, #c9c9d1);
     margin: 14px 2px 7px;
   }
   .count {
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     font-weight: 500;
   }
   .card {
-    border: 1px solid #28292e;
+    border: 1px solid var(--kw-border, #28292e);
     border-radius: 12px;
-    background: #1b1b1f;
+    background: var(--kw-sunken, #1b1b1f);
   }
   .emptycard {
     display: flex;
@@ -941,7 +941,7 @@
   }
   .item + .item,
   .field + .field {
-    border-top: 1px solid #25252a;
+    border-top: 1px solid var(--kw-border, #25252a);
   }
   /* меню «⋯» выходит за карточку, поэтому скругляем крайние строки, а не обрезаем */
   .card > .item {
@@ -958,20 +958,20 @@
   }
   .item:hover,
   .item:focus-visible {
-    background: #222227;
+    background: var(--kw-surface, #222227);
   }
   .av {
     flex: none;
     width: 32px;
     height: 32px;
     border-radius: 9px;
-    background: #222227;
-    border: 1px solid #2c2d33;
+    background: var(--kw-surface, #222227);
+    border: 1px solid var(--kw-input-border, #2c2d33);
     display: grid;
     place-items: center;
     font-weight: 600;
     font-size: 13px;
-    color: #c9c9d1;
+    color: var(--kw-fg-soft, #c9c9d1);
     overflow: hidden;
   }
   .av img {
@@ -981,7 +981,7 @@
   .av svg {
     width: 15px;
     height: 15px;
-    color: #a18bff;
+    color: var(--kw-accent, #a18bff);
   }
   .av.big {
     width: 44px;
@@ -1008,7 +1008,7 @@
     font-weight: 500;
   }
   small {
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     font-size: 11px;
   }
   .morewrap {
@@ -1022,8 +1022,8 @@
     width: 210px;
     padding: 4px;
     border-radius: 12px;
-    background: #1f1f23;
-    border: 1px solid #2c2d33;
+    background: var(--kw-segment, #1f1f23);
+    border: 1px solid var(--kw-input-border, #2c2d33);
     box-shadow: 0 14px 32px #000a;
   }
   .pop button {
@@ -1040,16 +1040,16 @@
     justify-content: flex-start;
   }
   .pop button svg {
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     width: 15px;
     height: 15px;
   }
   .pop button.danger,
   .pop button.danger svg {
-    color: #f0707a;
+    color: var(--kw-danger-fg, #f0707a);
   }
   .pop button:hover {
-    background: #2a2a30;
+    background: var(--kw-surface-hover, #2a2a30);
   }
   .pop.up {
     top: auto;
@@ -1062,7 +1062,7 @@
   }
   .sk .av,
   .sk i {
-    background: linear-gradient(90deg, #222227 0%, #2a2a30 50%, #222227 100%);
+    background: linear-gradient(90deg, var(--kw-surface, #222227) 0%, var(--kw-surface-hover, #2a2a30) 50%, var(--kw-surface, #222227) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.2s linear infinite;
     border: 0;
@@ -1140,23 +1140,23 @@
     display: grid;
     place-items: center;
     font-size: 10px;
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     background:
-      radial-gradient(closest-side, #1b1b1f 78%, transparent 80%),
-      conic-gradient(#7c5cff var(--p), #2c2d33 0);
+      radial-gradient(closest-side, var(--kw-sunken, #1b1b1f) 78%, transparent 80%),
+      conic-gradient(var(--kw-primary, #7c5cff) var(--p), var(--kw-input-border, #2c2d33) 0);
   }
   .ring.urgent {
-    color: #ff8a8f;
+    color: var(--kw-danger-fg, #ff8a8f);
     background:
-      radial-gradient(closest-side, #1b1b1f 78%, transparent 80%),
-      conic-gradient(#e5484d var(--p), #2c2d33 0);
+      radial-gradient(closest-side, var(--kw-sunken, #1b1b1f) 78%, transparent 80%),
+      conic-gradient(var(--kw-danger, #e5484d) var(--p), var(--kw-input-border, #2c2d33) 0);
   }
   .actions {
     display: flex;
     gap: 8px;
     padding: 10px 12px;
-    border-top: 1px solid #26262b;
-    background: #18181b;
+    border-top: 1px solid var(--kw-line, #26262b);
+    background: var(--kw-bg, #18181b);
   }
 
   /* форма */
@@ -1165,17 +1165,17 @@
     padding: 8px 12px 9px;
   }
   .form .input + .input {
-    border-top: 1px solid #25252a;
+    border-top: 1px solid var(--kw-border, #25252a);
   }
   .form input {
     all: unset;
     display: block;
     width: 100%;
     padding-top: 2px;
-    color: #ececef;
+    color: var(--kw-fg, #ececef);
   }
   .form input::placeholder {
-    color: #5f5f68;
+    color: var(--kw-fg-dim, #5f5f68);
   }
   .with {
     display: flex;
@@ -1201,9 +1201,9 @@
     width: 48px;
     height: 48px;
     border-radius: 14px;
-    background: #1b1b1f;
-    border: 1px solid #2c2d33;
-    color: #a18bff;
+    background: var(--kw-sunken, #1b1b1f);
+    border: 1px solid var(--kw-input-border, #2c2d33);
+    color: var(--kw-accent, #a18bff);
     display: grid;
     place-items: center;
     font-weight: 700;
@@ -1215,7 +1215,7 @@
     height: 20px;
   }
   .hint {
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     font-size: 12px;
     margin: 6px 2px;
   }
@@ -1224,10 +1224,10 @@
     margin: 0;
   }
   .muted {
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
   }
   .err {
-    color: #ff8a8f;
+    color: var(--kw-danger-fg, #ff8a8f);
     font-size: 12px;
   }
 
@@ -1243,10 +1243,10 @@
     min-height: 52px;
   }
   .pw .d {
-    color: #8fb0ff;
+    color: var(--kw-info-fg, #8fb0ff);
   }
   .pw .s {
-    color: #c2b4ff;
+    color: var(--kw-accent-hover, #c2b4ff);
   }
   .meter {
     display: flex;
@@ -1258,22 +1258,22 @@
     width: 28px;
     height: 4px;
     border-radius: 2px;
-    background: #2c2d33;
+    background: var(--kw-input-border, #2c2d33);
   }
   .meter i.on[data-l='1'] {
-    background: #e5484d;
+    background: var(--kw-danger, #e5484d);
   }
   .meter i.on[data-l='2'] {
-    background: #d6a23a;
+    background: var(--kw-warning, #d6a23a);
   }
   .meter i.on[data-l='3'],
   .meter i.on[data-l='4'] {
-    background: #2f9e6e;
+    background: var(--kw-success, #2f9e6e);
   }
   .meter span {
     margin-left: 6px;
     font-size: 11px;
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
   }
   .hidden {
     visibility: hidden;
@@ -1283,22 +1283,22 @@
     gap: 2px;
     padding: 3px;
     margin: 12px 0 8px;
-    border: 1px solid #28292e;
+    border: 1px solid var(--kw-border, #28292e);
     border-radius: 11px;
-    background: #1b1b1f;
+    background: var(--kw-sunken, #1b1b1f);
   }
   .seg button,
   .chips button {
     flex: 1;
     border-color: transparent;
     background: transparent;
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
   }
   .seg button.active,
   .chips button.active {
-    background: #2c2d33;
-    border-color: #34353c;
-    color: #ececef;
+    background: var(--kw-input-border, #2c2d33);
+    border-color: var(--kw-border-strong, #34353c);
+    color: var(--kw-fg, #ececef);
   }
   .chips {
     display: flex;
@@ -1311,7 +1311,7 @@
   }
   .range input {
     flex: 1;
-    accent-color: #7c5cff;
+    accent-color: var(--kw-primary, #7c5cff);
     min-width: 0;
   }
   .range > span:first-child {
@@ -1334,21 +1334,21 @@
   .set {
     height: 34px;
     border-radius: 10px;
-    background: #1f1f23;
-    border-color: #2c2d33;
-    color: #8e8e98;
+    background: var(--kw-segment, #1f1f23);
+    border-color: var(--kw-input-border, #2c2d33);
+    color: var(--kw-muted, #8e8e98);
     font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 12px;
   }
   .set.on {
-    background: #2a2440;
-    border-color: #5b4bb0;
-    color: #ececef;
+    background: var(--kw-chip, #2a2440);
+    border-color: var(--kw-chip-border, #5b4bb0);
+    color: var(--kw-fg, #ececef);
   }
   .set.on svg {
     width: 12px;
     height: 12px;
-    color: #b8a6ff;
+    color: var(--kw-accent-hover, #b8a6ff);
     stroke-width: 2.4;
   }
   .set:disabled {
@@ -1369,8 +1369,8 @@
     gap: 6px;
     align-items: center;
     padding: 8px 10px;
-    border-top: 1px solid #26262b;
-    background: #18181b;
+    border-top: 1px solid var(--kw-line, #26262b);
+    background: var(--kw-bg, #18181b);
     border-radius: 0 0 12px 12px;
   }
   .sp {
@@ -1383,9 +1383,9 @@
   /* кнопки */
   button {
     font: 500 12px Inter, system-ui, sans-serif;
-    color: #ececef;
-    background: #222227;
-    border: 1px solid #2c2d33;
+    color: var(--kw-fg, #ececef);
+    background: var(--kw-surface, #222227);
+    border: 1px solid var(--kw-input-border, #2c2d33);
     border-radius: 9px;
     padding: 6px 12px;
     cursor: pointer;
@@ -1397,26 +1397,26 @@
     transition: background 0.12s, border-color 0.12s, transform 0.08s;
   }
   button:hover {
-    background: #2a2a30;
+    background: var(--kw-surface-hover, #2a2a30);
   }
   button svg {
     width: 14px;
     height: 14px;
   }
   button.primary {
-    background: #7c5cff;
-    border-color: #7c5cff;
-    color: #fff;
+    background: var(--kw-primary, #7c5cff);
+    border-color: var(--kw-primary, #7c5cff);
+    color: var(--kw-on-primary, #fff);
   }
   button.primary:hover {
-    background: #8a6dff;
+    background: var(--kw-primary-hover, #8a6dff);
   }
   button.outline {
     background: transparent;
-    border-color: #34353c;
+    border-color: var(--kw-border-strong, #34353c);
   }
   button.outline:hover {
-    background: #26272d;
+    background: var(--kw-active, #26272d);
   }
   button.small {
     padding: 4px 10px;
@@ -1430,21 +1430,21 @@
   button.ghost {
     background: transparent;
     border-color: transparent;
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
   }
   button.ghost:hover {
-    background: #222227;
-    color: #ececef;
+    background: var(--kw-surface, #222227);
+    color: var(--kw-fg, #ececef);
   }
   button.icon {
     background: transparent;
     border-color: transparent;
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     padding: 6px;
   }
   button.icon:hover {
-    background: #26272d;
-    color: #ececef;
+    background: var(--kw-active, #26272d);
+    color: var(--kw-fg, #ececef);
   }
   button.icon svg {
     width: 16px;
@@ -1456,7 +1456,7 @@
   }
   button:focus-visible,
   .switch:focus-visible {
-    outline: 2px solid #5d5f6a;
+    outline: 2px solid var(--kw-ring, #5d5f6a);
     outline-offset: 1px;
   }
   .switch {
@@ -1465,7 +1465,7 @@
     width: 32px;
     height: 19px;
     border-radius: 10px;
-    background: #303036;
+    background: var(--kw-switch, #303036);
     position: relative;
     cursor: pointer;
     transition: background 0.15s;
@@ -1483,7 +1483,7 @@
     transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .switch:checked {
-    background: #7c5cff;
+    background: var(--kw-primary, #7c5cff);
   }
   .switch:checked::after {
     transform: translateX(13px);
@@ -1497,8 +1497,8 @@
     display: flex;
     gap: 4px;
     padding: 6px;
-    border-top: 1px solid #26262b;
-    background: #18181b;
+    border-top: 1px solid var(--kw-line, #26262b);
+    background: var(--kw-bg, #18181b);
   }
   .tabs button {
     flex: 1;
@@ -1509,7 +1509,7 @@
     border: 0;
     border-radius: 11px;
     background: transparent;
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     font-size: 11px;
     outline: none;
   }
@@ -1518,18 +1518,18 @@
     height: 18px;
   }
   .tabs button:hover {
-    color: #ececef;
-    background: #1f1f23;
+    color: var(--kw-fg, #ececef);
+    background: var(--kw-segment, #1f1f23);
   }
   .tabs button.active {
-    color: #ececef;
-    background: #26272d;
+    color: var(--kw-fg, #ececef);
+    background: var(--kw-active, #26272d);
   }
   .tabs button.active svg {
-    color: #a18bff;
+    color: var(--kw-accent, #a18bff);
   }
   .tabs button:focus-visible {
-    box-shadow: inset 0 0 0 1px #5d5f6a;
+    box-shadow: inset 0 0 0 1px var(--kw-ring, #5d5f6a);
   }
   .screen {
     display: flex;
@@ -1540,7 +1540,7 @@
   .ok {
     display: grid;
     place-items: center;
-    color: #5fd4a0;
+    color: var(--kw-success-fg, #5fd4a0);
   }
   .ok svg {
     width: 16px;
@@ -1572,8 +1572,8 @@
     bottom: 70px;
     padding: 10px 12px;
     border-radius: 11px;
-    background: #26272d;
-    border: 1px solid #34353c;
+    background: var(--kw-active, #26272d);
+    border: 1px solid var(--kw-border-strong, #34353c);
     box-shadow: 0 10px 28px #000a;
     font-size: 12px;
     animation: up 0.16s cubic-bezier(0.22, 1, 0.36, 1);
@@ -1589,9 +1589,9 @@
     font: 10px Inter, system-ui, sans-serif;
     padding: 2px 5px;
     border-radius: 5px;
-    border: 1px solid #2c2d33;
-    background: #222227;
-    color: #ececef;
+    border: 1px solid var(--kw-input-border, #2c2d33);
+    background: var(--kw-surface, #222227);
+    color: var(--kw-fg, #ececef);
   }
   /* заметка: переносы строк как в записи, длинная прокручивается */
   .field.notes { align-items: flex-start; }

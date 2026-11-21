@@ -85,6 +85,11 @@ impl Daemon {
                 }
                 OuterReply::Ok
             }
+            Ok(Outer::Theme) => {
+                let (mode, colors) = keywarden_core::theme::active_colors()
+                    .unwrap_or_else(|| ("dark".into(), Default::default()));
+                OuterReply::Theme { mode, colors }
+            }
             Err(e) => err("invalid", tr!("неверное сообщение: {e}", e = e)),
         };
         serde_json::to_value(reply).expect("сериализуется")

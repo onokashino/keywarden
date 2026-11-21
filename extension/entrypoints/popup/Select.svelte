@@ -94,21 +94,21 @@
     gap: 6px;
     padding: 0 8px 0 9px;
     border-radius: 9px;
-    border: 1px solid #2c2d33;
-    background: #1b1b1f;
-    color: #8e8e98;
+    border: 1px solid var(--kw-input-border, #2c2d33);
+    background: var(--kw-sunken, #1b1b1f);
+    color: var(--kw-muted, #8e8e98);
     font: 500 12px Inter, system-ui, sans-serif;
     cursor: pointer;
     transition: border-color 0.12s, background 0.12s;
   }
   .trigger:hover {
-    background: #222227;
+    background: var(--kw-surface, #222227);
   }
   .trigger.on {
-    color: #ececef;
+    color: var(--kw-fg, #ececef);
   }
   .trigger:focus-visible {
-    border-color: #5d5f6a;
+    border-color: var(--kw-ring, #5d5f6a);
   }
   .trigger :global(svg) {
     width: 13px;
@@ -128,7 +128,7 @@
     white-space: nowrap;
   }
   .chev {
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .chev.up {
@@ -146,8 +146,8 @@
     z-index: 30;
     padding: 4px;
     border-radius: 12px;
-    border: 1px solid #2c2d33;
-    background: #1f1f23;
+    border: 1px solid var(--kw-input-border, #2c2d33);
+    background: var(--kw-segment, #1f1f23);
     box-shadow: 0 14px 32px #000a;
   }
   .opt {
@@ -159,12 +159,12 @@
     gap: 8px;
     padding: 7px 10px;
     border-radius: 8px;
-    color: #ececef;
+    color: var(--kw-fg, #ececef);
     font: 400 12px Inter, system-ui, sans-serif;
     cursor: pointer;
   }
   .opt.act {
-    background: #2a2a30;
+    background: var(--kw-surface-hover, #2a2a30);
   }
   .lbl {
     flex: 1;
@@ -173,14 +173,14 @@
     white-space: nowrap;
   }
   .cnt {
-    color: #8e8e98;
+    color: var(--kw-muted, #8e8e98);
     font-size: 11px;
   }
   .tick {
     width: 13px;
     height: 13px;
     fill: none;
-    stroke: #a18bff;
+    stroke: var(--kw-accent, #a18bff);
     stroke-width: 2.4;
     stroke-linecap: round;
     stroke-linejoin: round;

@@ -5,6 +5,7 @@ import initWasm, { classifyData, classifyFields, generateKeypair, open, seal } f
 import type { ContentMsg, FieldInfo, Login, Msg, PendingSave, Reply, Status } from '../utils/messages';
 import { loadPrefs, savePrefs } from '../utils/prefs';
 import { t } from '../utils/i18n';
+import { cachedTheme, type Theme } from '../utils/theme';
 
 const HOST = 'dev.keywarden.host';
 
@@ -150,6 +151,19 @@ export default defineBackground(() => {
     await browser.action.setBadgeText({ tabId, text }).catch(() => {});
   }
   browser.action.setBadgeBackgroundColor({ color: '#7c5cff' }).catch(() => {});
+
+  // тема приложения: спрашиваем у демона и кладём в хранилище, откуда её берут popup и страницы
+  async function theme(): Promise<Theme | null> {
+    const r = await send({ type: 'theme' }).catch(() => null);
+    // демон не ответил: остаётся то, что запомнили в прошлый раз
+    if (!r) return cachedTheme();
+    const next: Theme | null = r.type === 'theme' && Object.keys(r.colors ?? {}).length ? { mode: r.mode, colors: r.colors } : null;
+    if (JSON.stringify(next) !== JSON.stringify(await cachedTheme())) await browser.storage.local.set({ theme: next });
+    const accent = next?.colors['primary.background']?.slice(0, 7) ?? '#7c5cff';
+    browser.action.setBadgeBackgroundColor({ color: accent }).catch(() => {});
+    return next;
+  }
+  theme();
   browser.tabs.onActivated.addListener(({ tabId }) => browser.tabs.get(tabId).then((t) => badge(tabId, t.url)).catch(() => {}));
   browser.tabs.onUpdated.addListener((tabId, info, t) => {
     if (info.status === 'complete') badge(tabId, t.url);
@@ -325,6 +339,8 @@ export default defineBackground(() => {
         return (await call({ action: 'passkey_list', url: await pageUrl(sender), options: msg.options })).candidates as Login[];
       case 'passkeyGet':
         return (await call({ action: 'passkey_get', url: await pageUrl(sender), options: msg.options, id: msg.id })).credential;
+      case 'theme':
+        return theme();
       case 'openUnlock':
         await send({ type: 'open_unlock' });
         return null;

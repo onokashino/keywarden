@@ -23,6 +23,7 @@ pub mod settings;
 pub mod ssh_hosts;
 pub mod ssh_setup;
 pub mod sync;
+pub mod theme;
 pub mod totp;
 pub mod transfer;
 pub mod twofas;

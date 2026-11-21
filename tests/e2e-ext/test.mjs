@@ -543,6 +543,36 @@ const lockedUser = await pk.evaluate(() => Promise.race([window.lockedGet, new P
 assert(lockedUser === 'user-1', `после разблокировки вход ключом доступа продолжился: ${lockedUser}`);
 if (SHOTS) await lk.screenshot({ path: `${SHOTS}/ext-locked-save-after.png`, clip: { x: 880, y: 0, width: 400, height: 240 } });
 
+// тема приложения: демон отдаёт цвета из каталога тем, popup и окна на страницах их перенимают
+const themeDir = path.join(process.env.XDG_CONFIG_HOME, 'keywarden/themes');
+fs.mkdirSync(themeDir, { recursive: true });
+fs.writeFileSync(
+  path.join(themeDir, 'noctalia.json'),
+  fs.readFileSync(new URL('../../dist/noctalia/keywarden.json', import.meta.url), 'utf8')
+    .replace('{{ mode }}', 'light')
+    .replace(/\{\{colors\.([a-z_]+)\.default\.hex\}\}/g, (_, k) =>
+      k.startsWith('on_primary') ? '#ffffff' : k.startsWith('on_') ? '#1c2024' : k === 'primary' ? '#0b7a53' : k === 'outline' ? '#8b9198' : k === 'error' ? '#c62828' : k.startsWith('surface_c') || k === 'surface_variant' ? '#e9ecef' : k === 'surface' ? '#f6f7f8' : '#2f7f9e'),
+);
+await popup.reload();
+await popup.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--kw-bg') === '#f6f7f8', null, { timeout: 5000 });
+const appBg = await popup.evaluate(() => getComputedStyle(document.querySelector('.app')).backgroundColor);
+assert(appBg === 'rgb(233, 236, 239)', `popup взял фон темы приложения: ${appBg}`);
+await popup.waitForTimeout(500);
+if (SHOTS) await popup.screenshot({ path: `${SHOTS}/ext-theme-popup.png` });
+const th = await ctx.newPage();
+await th.setViewportSize({ width: 1280, height: 720 });
+await th.goto('http://localhost:8765/login');
+await th.waitForTimeout(1500);
+await th.focus('#user');
+await th.waitForSelector('keywarden-menu');
+const menuBg = await th.evaluate(() => document.querySelector('keywarden-menu').style.getPropertyValue('--kw-bg'));
+assert(menuBg === '#f6f7f8', `меню на странице взяло фон темы: ${menuBg}`);
+await th.waitForTimeout(500);
+if (SHOTS) await th.screenshot({ path: `${SHOTS}/ext-theme-menu.png`, clip: { x: 0, y: 0, width: 700, height: 420 } });
+fs.rmSync(path.join(themeDir, 'noctalia.json'));
+await popup.reload();
+await popup.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue('--kw-bg') === '', null, { timeout: 5000 });
+
 await ctx.close();
 server.close();
 server2.close();

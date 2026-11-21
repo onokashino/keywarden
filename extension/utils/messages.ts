@@ -74,6 +74,7 @@ export type Msg =
   | { type: 'create'; title: string; username: string; password: string; url: string }
   | { type: 'item'; id: string }
   | { type: 'copy'; id: string; field: 'username' | 'password' | 'totp' | 'notes' }
+  | { type: 'theme' }
   | { type: 'openUnlock' }
   | { type: 'passkeyCreate'; options: unknown }
   | { type: 'passkeyList'; options: unknown }

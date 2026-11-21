@@ -3,20 +3,21 @@
 import type { Classified, ContentMsg, DataField, FieldInfo, Login, LoginForm, Msg, Reply } from '../utils/messages';
 import { DEFAULT_PREFS, loadPrefs } from '../utils/prefs';
 import { t } from '../utils/i18n';
+import { applyTheme, cachedTheme, type Theme } from '../utils/theme';
 
 // общий вид всех элементов на странице: нейтральная палитра Keywarden (как в приложении)
 const CSS_BASE = `:host{all:initial}
-  .card{font:13px/1.45 Inter,system-ui,sans-serif;background:#18181b;color:#ececef;border:1px solid #2a2a2f;border-radius:14px;
+  .card{font:13px/1.45 Inter,system-ui,sans-serif;background:var(--kw-bg, #18181b);color:var(--kw-fg, #ececef);border:1px solid var(--kw-border, #2a2a2f);border-radius:14px;
     box-shadow:0 12px 32px #0009,0 0 0 1px #0004}
-  .muted{color:#8e8e98}
+  .muted{color:var(--kw-muted, #8e8e98)}
   button{all:unset;box-sizing:border-box;cursor:pointer;font:500 12px Inter,system-ui,sans-serif;padding:6px 12px;border-radius:8px;
-    border:1px solid #2c2d33;color:#ececef;background:#222227;transition:background .12s;white-space:nowrap}
-  button:hover{background:#2a2a30}
-  button:focus-visible{outline:2px solid #7c5cff;outline-offset:1px}
-  button.primary{background:#7c5cff;border-color:#7c5cff;color:#fff}
-  button.primary:hover{background:#8a6dff}
-  button.ghost{background:transparent;border-color:transparent;color:#8e8e98}
-  button.ghost:hover{color:#ececef;background:#222227}
+    border:1px solid var(--kw-input-border, #2c2d33);color:var(--kw-fg, #ececef);background:var(--kw-surface, #222227);transition:background .12s;white-space:nowrap}
+  button:hover{background:var(--kw-surface-hover, #2a2a30)}
+  button:focus-visible{outline:2px solid var(--kw-primary, #7c5cff);outline-offset:1px}
+  button.primary{background:var(--kw-primary, #7c5cff);border-color:var(--kw-primary, #7c5cff);color:var(--kw-on-primary, #fff)}
+  button.primary:hover{background:var(--kw-primary-hover, #8a6dff)}
+  button.ghost{background:transparent;border-color:transparent;color:var(--kw-muted, #8e8e98)}
+  button.ghost:hover{color:var(--kw-fg, #ececef);background:var(--kw-surface, #222227)}
   @keyframes kw-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
   .anim{animation:kw-in .16s cubic-bezier(.22,1,.36,1)}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}`;
@@ -43,6 +44,9 @@ export default defineContentScript({
     let data: DataField[] = [];
     const decorated = new WeakSet<HTMLInputElement>();
     let prefs = DEFAULT_PREFS;
+    // цвета темы приложения: их получает фоновая часть, здесь только читаем
+    let theme: Theme | null = null;
+    cachedTheme().then((v) => (theme = v));
     let otpDone = false;
 
     // --- сбор полей ---
@@ -341,24 +345,25 @@ export default defineContentScript({
     function showMenu(anchor: HTMLElement, title: string, items: MenuItem[], empty?: string) {
       closeMenu();
       const host = document.createElement('keywarden-menu');
+      applyTheme(host, theme);
       const root = host.attachShadow({ mode: 'closed' });
       root.innerHTML = `<style>${CSS_BASE}
         .m{padding:6px;max-height:320px;overflow:auto;border-radius:14px}
-        .t{display:flex;align-items:center;gap:7px;font:600 11px Inter,system-ui,sans-serif;color:#8e8e98;padding:4px 8px 7px}
+        .t{display:flex;align-items:center;gap:7px;font:600 11px Inter,system-ui,sans-serif;color:var(--kw-muted, #8e8e98);padding:4px 8px 7px}
         .t i{flex:none;width:16px;height:16px}
         .t i svg{display:block;width:16px;height:16px}
         .it{display:flex;align-items:center;gap:10px;width:100%;padding:7px 8px;border:0;border-radius:9px;background:transparent;text-align:left}
         .it{transition:background .1s}
-        .it.sel,.it:hover{background:#26272d}
+        .it.sel,.it:hover{background:var(--kw-active, #26272d)}
         .it:active{transform:scale(.985)}
-        .av{flex:none;width:28px;height:28px;border-radius:8px;background:#222227;border:1px solid #2c2d33;display:grid;place-items:center;
-          font:600 12px Inter,system-ui,sans-serif;color:#c9c9d1}
+        .av{flex:none;width:28px;height:28px;border-radius:8px;background:var(--kw-surface, #222227);border:1px solid var(--kw-input-border, #2c2d33);display:grid;place-items:center;
+          font:600 12px Inter,system-ui,sans-serif;color:var(--kw-fg-soft, #c9c9d1)}
         .tx{min-width:0;flex:1}
         .tx b,.tx small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .tx b{font-weight:500;color:#ececef}
-        .tx small{color:#8e8e98;font-size:11px;font-weight:400}
+        .tx b{font-weight:500;color:var(--kw-fg, #ececef)}
+        .tx small{color:var(--kw-muted, #8e8e98);font-size:11px;font-weight:400}
         .mono b{font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:.5px}
-        .e{padding:6px 8px 8px;color:#8e8e98;font-size:12px}</style>
+        .e{padding:6px 8px 8px;color:var(--kw-muted, #8e8e98);font-size:12px}</style>
         <div class="m card anim"><div class="t"><i>${LOGO}</i><span></span></div><div class="l"></div></div>`;
       root.querySelector('.t span')!.textContent = title;
       const list = root.querySelector('.l')!;
@@ -628,6 +633,7 @@ export default defineContentScript({
 
     function toast(text: string) {
       const host = document.createElement('keywarden-toast');
+      applyTheme(host, theme);
       const root = host.attachShadow({ mode: 'closed' });
       root.innerHTML = `<style>${CSS_BASE}
         .card{position:fixed;top:16px;right:16px;z-index:2147483647;padding:10px 14px;max-width:360px;display:flex;gap:8px;align-items:center}
@@ -653,27 +659,28 @@ export default defineContentScript({
       const p = await ask<{ site: string; username: string; password: string; state: string } | null>({ type: 'pendingSave' }).catch(() => null);
       if (!p || document.querySelector('keywarden-save')) return;
       const host = document.createElement('keywarden-save');
+      applyTheme(host, theme);
       const root = host.attachShadow({ mode: 'closed' });
       root.innerHTML = `<style>${CSS_BASE}
         .b{position:fixed;top:16px;right:16px;z-index:2147483647;width:340px;overflow:hidden}
-        .h{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid #26262b}
+        .h{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--kw-line, #26262b)}
         .logo{flex:none;width:28px;height:28px}
         .logo svg{display:block;width:28px;height:28px}
         .title{font-weight:600}
         .site{font-size:12px}
         .who{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:40px;box-sizing:border-box}
-        .who + .who{border-top:1px solid #25252a}
+        .who + .who{border-top:1px solid var(--kw-border, #25252a)}
         .who b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .pw{display:flex;align-items:center;gap:6px;min-width:0}
         .pw b{font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:.5px}
-        .pw b.dots{letter-spacing:2px;color:#c9c9d1}
+        .pw b.dots{letter-spacing:2px;color:var(--kw-fg-soft, #c9c9d1)}
         .eye{padding:4px;display:grid;place-items:center;border-radius:6px}
         .eye svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-        .r{display:flex;gap:6px;align-items:center;padding:10px 14px;border-top:1px solid #26262b;background:#141417}
-        .uin{all:unset;box-sizing:border-box;min-width:0;flex:1;text-align:right;font:500 13px Inter,system-ui,sans-serif;color:#ececef;
+        .r{display:flex;gap:6px;align-items:center;padding:10px 14px;border-top:1px solid var(--kw-line, #26262b);background:var(--kw-sunken, #141417)}
+        .uin{all:unset;box-sizing:border-box;min-width:0;flex:1;text-align:right;font:500 13px Inter,system-ui,sans-serif;color:var(--kw-fg, #ececef);
           height:20px;line-height:18px;padding:0 8px;border-radius:6px;border:1px solid transparent}
-        .uin:hover{border-color:#2c2d33}
-        .uin:focus{border-color:#7c5cff;background:#141417}
+        .uin:hover{border-color:var(--kw-input-border, #2c2d33)}
+        .uin:focus{border-color:var(--kw-primary, #7c5cff);background:var(--kw-sunken, #141417)}
         .sp{flex:1}</style>
         <div class="b card anim">
           <div class="h"><div class="logo">${LOGO}</div><div><div class="title"></div><div class="site muted"></div></div></div>
@@ -787,10 +794,11 @@ export default defineContentScript({
       if (panel) return panel.close();
       closeMenu();
       const host = document.createElement('keywarden-panel');
+      applyTheme(host, theme);
       const root = host.attachShadow({ mode: 'closed' });
       root.innerHTML = `<style>
         .p{position:fixed;top:10px;right:12px;z-index:2147483647;width:460px;max-width:calc(100vw - 24px);height:640px;max-height:calc(100vh - 20px);
-          border-radius:16px;overflow:hidden;background:#141417;border:1px solid #2a2a2f;
+          border-radius:16px;overflow:hidden;background:var(--kw-sunken, #141417);border:1px solid var(--kw-border, #2a2a2f);
           box-shadow:0 24px 64px #000a,0 0 0 1px #0006;animation:kw-p .18s cubic-bezier(.22,1,.36,1);transform-origin:top right}
         .p.out{animation:kw-out .12s ease-in forwards}
         iframe{border:0;width:100%;height:100%;display:block;color-scheme:dark}
@@ -899,6 +907,7 @@ export default defineContentScript({
       .finally(() => scan().then(showSave));
     browser.storage.onChanged.addListener((c) => {
       if (c.prefs) loadPrefs().then((p) => (prefs = p));
+      if (c.theme) theme = (c.theme.newValue as Theme | undefined) ?? null;
     });
     let timer: number | undefined;
     new MutationObserver(() => {

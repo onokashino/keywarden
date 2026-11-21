@@ -28,15 +28,31 @@ pub enum Outer {
     },
     /// база заблокирована: показать лаунчер с полем пароля (без шифрования, секретов тут нет)
     OpenUnlock,
+    /// цвета темы приложения, чтобы расширение выглядело так же (без шифрования: это не секрет,
+    /// и нужно до подключения и при заблокированной базе)
+    Theme,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum OuterReply {
     Ok,
-    Associated { server_public: String },
-    Encrypted { nonce: String, message: String },
-    Error { code: String, message: String },
+    Associated {
+        server_public: String,
+    },
+    Encrypted {
+        nonce: String,
+        message: String,
+    },
+    /// `colors` пуст: у приложения встроенная тема
+    Theme {
+        mode: String,
+        colors: std::collections::BTreeMap<String, String>,
+    },
+    Error {
+        code: String,
+        message: String,
+    },
 }
 
 /// Запрос внутри шифрованного конверта.

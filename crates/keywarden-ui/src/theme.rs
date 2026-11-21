@@ -5,18 +5,9 @@
 
 use gpui_kit::component::{Theme, ThemeMode, ThemeRegistry};
 use gpui_kit::{App, SharedString};
-use std::path::PathBuf;
 
-pub const NOCTALIA: &str = "Noctalia";
+pub use keywarden_core::theme::themes_dir;
 const BUILTIN: &str = "Keywarden";
-
-pub fn themes_dir() -> PathBuf {
-    std::env::var_os("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("keywarden/themes")
-}
 
 pub fn init(cx: &mut App) {
     Theme::change(ThemeMode::Dark, None, cx);
@@ -32,9 +23,7 @@ pub fn init(cx: &mut App) {
     }
     let dir = themes_dir();
     let _ = std::fs::create_dir_all(&dir);
-    let wanted: SharedString = std::env::var("KEYWARDEN_THEME")
-        .unwrap_or_else(|_| NOCTALIA.into())
-        .into();
+    let wanted: SharedString = keywarden_core::theme::wanted().into();
     let res = ThemeRegistry::watch_dir(dir, cx, move |cx| {
         let cfg = ThemeRegistry::global(cx)
             .themes()
