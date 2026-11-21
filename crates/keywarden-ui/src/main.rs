@@ -66,7 +66,7 @@ fn main() {
             })
             .expect("не удалось открыть окно подтверждения");
         } else if let Some(reason) = unlock_reason {
-            cx.open_window(launcher::window_options(cx), |window, cx| {
+            cx.open_window(launcher::unlock_window_options(cx), |window, cx| {
                 cx.new(|cx| launcher::Launcher::unlock_only(reason, window, cx))
             })
             .expect("не удалось открыть окно разблокировки");

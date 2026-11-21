@@ -74,11 +74,14 @@ impl Daemon {
             }) => self.encrypted(client_id, nonce, message).await,
             Ok(Outer::OpenUnlock) => {
                 if !self.is_unlocked()
+                    // маленькое окно только для пароля: открыло базу и закрылось, лаунчер тут не нужен
                     && let Err(e) = confirm::spawn_detached(
-                        std::process::Command::new(confirm::ui_binary()).arg("--launcher"),
+                        std::process::Command::new(confirm::ui_binary())
+                            .arg("--unlock")
+                            .arg(tr!("Браузер просит открыть хранилище")),
                     )
                 {
-                    tracing::warn!("лаунчер не запустился: {e}");
+                    tracing::warn!("окно разблокировки не запустилось: {e}");
                 }
                 OuterReply::Ok
             }

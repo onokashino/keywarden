@@ -113,9 +113,12 @@ impl Shared {
             return Ok(());
         }
         let mut rx = self.daemon.events.subscribe();
-        let _ = crate::confirm::spawn_detached(&mut std::process::Command::new(
-            crate::confirm::ui_binary(),
-        ));
+        // не главное окно целиком, а окно пароля: программа ждёт только разблокировки
+        let _ = crate::confirm::spawn_detached(
+            std::process::Command::new(crate::confirm::ui_binary())
+                .arg("--unlock")
+                .arg(tr!("Программа просит пароль из связки ключей")),
+        );
         let wait = async {
             loop {
                 match rx.recv().await {

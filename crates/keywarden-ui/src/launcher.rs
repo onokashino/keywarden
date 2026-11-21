@@ -736,7 +736,7 @@ impl Render for Launcher {
                 .gap_3()
                 .child(crate::ui::icon_tile(
                     gpui_kit_assets::IconName::LockKeyhole,
-                    52.,
+                    if self.unlock_only.is_some() { 40. } else { 52. },
                     &theme,
                 ))
                 .child(
@@ -745,9 +745,19 @@ impl Render for Launcher {
                         .font_weight(FontWeight::SEMIBOLD)
                         .child(tr!("Хранилище заблокировано")),
                 )
-                .when_some(self.unlock_only.clone(), |d, reason| {
-                    d.child(div().max_w(px(520.)).text_center().text_sm().child(reason))
-                })
+                .when_some(
+                    self.unlock_only.clone().filter(|r| !r.is_empty()),
+                    |d, reason| {
+                        d.child(
+                            div()
+                                .max_w(px(420.))
+                                .px_4()
+                                .text_center()
+                                .text_sm()
+                                .child(reason),
+                        )
+                    },
+                )
                 .child(div().text_sm().text_color(theme.muted_foreground).child(
                     match &self.db_path {
                         // только имя файла: полный путь здесь ничего не говорит
@@ -865,6 +875,12 @@ fn host(url: &str) -> String {
         .ok()
         .and_then(|u| u.host_str().map(str::to_string))
         .unwrap_or_else(|| url.to_string())
+}
+
+/// Окно только для пароля (`--unlock`): списка в нём нет, поэтому оно небольшое.
+pub fn unlock_window_options(cx: &App) -> WindowOptions {
+    // то же имя слоя, что у лаунчера: правила оконного менеджера (тень в niri) уже на него настроены
+    crate::ui::overlay_options("keywarden-launcher", 480., 300., cx)
 }
 
 pub fn window_options(cx: &App) -> WindowOptions {
