@@ -541,7 +541,6 @@ pub struct MainWindow {
     kind_drop: Option<(EntryKind, bool)>,
     /// щели под бросок: новая раскрывается, прежняя схлопывается одновременно
     entry_gaps: Gaps<usize>,
-    group_gaps: Gaps<String>,
     kind_gaps: Gaps<usize>,
     loading_list: bool,
     loading_detail: bool,
@@ -708,7 +707,6 @@ impl MainWindow {
             kind_order: EntryKind::ALL.to_vec(),
             kind_drop: None,
             entry_gaps: Gaps::default(),
-            group_gaps: Gaps::default(),
             kind_gaps: Gaps::default(),
             loading_list: false,
             loading_detail: false,
@@ -4574,8 +4572,36 @@ impl MainWindow {
                 .entrance(gpui_kit::component::dialog::DialogEntrance::FadeSlide);
             let theme = cx.theme().clone();
             let (this, name, parent) = (this.clone(), name.clone(), parent.clone());
+            let submit = std::rc::Rc::new({
+                let name = name.clone();
+                move |window: &mut Window, cx: &mut App| {
+                    let n = name.read(cx).value().trim().to_string();
+                    if !n.is_empty() {
+                        let parent = parent.clone();
+                        this.update(cx, |this, cx| {
+                            this.tasks.push(client::call(
+                                cx,
+                                Request::AddGroup { parent, name: n },
+                                |this, res, cx| match res {
+                                    Ok(_) => this.flash(tr!("Папка создана"), false, cx),
+                                    Err(e) => this.flash(e.message(), true, cx),
+                                },
+                            ));
+                        });
+                    }
+                    window.close_dialog(cx);
+                }
+            });
             dialog
                 .p_0()
+                // Enter в поле делает то же, что главная кнопка (без этого окно просто закрывалось)
+                .on_ok({
+                    let submit = submit.clone();
+                    move |_, window, cx| {
+                        submit(window, cx);
+                        false
+                    }
+                })
                 .w(px(440.))
                 .child(crate::ui::sheet_header(tr!("Новая папка"), None, &theme))
                 .child(crate::ui::sheet_body().child(Input::new(&name)))
@@ -4588,27 +4614,10 @@ impl MainWindow {
                                 .label(tr!("Отмена"))
                                 .on_click(|_, w, cx| w.close_dialog(cx)),
                         )
-                        .child(Button::new("ok").primary().label(tr!("Создать")).on_click(
-                            move |_, window, cx| {
-                                let n = name.read(cx).value().trim().to_string();
-                                if !n.is_empty() {
-                                    let parent = parent.clone();
-                                    this.update(cx, |this, cx| {
-                                        this.tasks.push(client::call(
-                                            cx,
-                                            Request::AddGroup { parent, name: n },
-                                            |this, res, cx| match res {
-                                                Ok(_) => {
-                                                    this.flash(tr!("Папка создана"), false, cx)
-                                                }
-                                                Err(e) => this.flash(e.message(), true, cx),
-                                            },
-                                        ));
-                                    });
-                                }
-                                window.close_dialog(cx);
-                            },
-                        )),
+                        .child(Button::new("ok").primary().label(tr!("Создать")).on_click({
+                            let submit = submit.clone();
+                            move |_, window, cx| submit(window, cx)
+                        })),
                 )
         });
         window.focus(&focus, cx);
@@ -4624,8 +4633,45 @@ impl MainWindow {
                 .entrance(gpui_kit::component::dialog::DialogEntrance::FadeSlide);
             let theme = cx.theme().clone();
             let (this, name) = (this.clone(), name.clone());
+            let submit = std::rc::Rc::new({
+                let name = name.clone();
+                move |window: &mut Window, cx: &mut App| {
+                    // без # и запятых: один тег
+                    let n = name
+                        .read(cx)
+                        .value()
+                        .trim()
+                        .trim_start_matches('#')
+                        .replace([',', ';'], " ")
+                        .trim()
+                        .to_string();
+                    if !n.is_empty() {
+                        this.update(cx, |this, cx| {
+                            if !this.tags.iter().any(|(t, _)| *t == n)
+                                && !this.pending_tags.contains(&n)
+                            {
+                                this.pending_tags.push(n.clone());
+                            }
+                            this.flash(
+                                tr!("Тег #{n}: перетащите на него записи", n = n),
+                                false,
+                                cx,
+                            );
+                        });
+                    }
+                    window.close_dialog(cx);
+                }
+            });
             dialog
                 .p_0()
+                // Enter в поле делает то же, что главная кнопка (без этого окно просто закрывалось)
+                .on_ok({
+                    let submit = submit.clone();
+                    move |_, window, cx| {
+                        submit(window, cx);
+                        false
+                    }
+                })
                 .w(px(440.))
                 .child(crate::ui::sheet_header(
                     tr!("Новый тег"),
@@ -4642,34 +4688,10 @@ impl MainWindow {
                                 .label(tr!("Отмена"))
                                 .on_click(|_, w, cx| w.close_dialog(cx)),
                         )
-                        .child(Button::new("ok").primary().label(tr!("Создать")).on_click(
-                            move |_, window, cx| {
-                                // без # и запятых: один тег
-                                let n = name
-                                    .read(cx)
-                                    .value()
-                                    .trim()
-                                    .trim_start_matches('#')
-                                    .replace([',', ';'], " ")
-                                    .trim()
-                                    .to_string();
-                                if !n.is_empty() {
-                                    this.update(cx, |this, cx| {
-                                        if !this.tags.iter().any(|(t, _)| *t == n)
-                                            && !this.pending_tags.contains(&n)
-                                        {
-                                            this.pending_tags.push(n.clone());
-                                        }
-                                        this.flash(
-                                            tr!("Тег #{n}: перетащите на него записи", n = n),
-                                            false,
-                                            cx,
-                                        );
-                                    });
-                                }
-                                window.close_dialog(cx);
-                            },
-                        )),
+                        .child(Button::new("ok").primary().label(tr!("Создать")).on_click({
+                            let submit = submit.clone();
+                            move |_, window, cx| submit(window, cx)
+                        })),
                 )
         });
         window.focus(&focus, cx);
@@ -4941,10 +4963,38 @@ impl MainWindow {
         window.open_dialog(cx, move |dialog, _, cx| {
             let theme = cx.theme().clone();
             let (this, input, make) = (this.clone(), input.clone(), make.clone());
+            let submit = std::rc::Rc::new({
+                let input = input.clone();
+                move |window: &mut Window, cx: &mut App| {
+                    let v = input.read(cx).value().trim().to_string();
+                    if !v.is_empty() {
+                        let req = make(v);
+                        this.update(cx, |this, cx| {
+                            this.tasks.push(client::call(
+                                cx,
+                                req,
+                                move |this, res, cx| match res {
+                                    Ok(_) => this.flash(done, false, cx),
+                                    Err(e) => this.flash(e.message(), true, cx),
+                                },
+                            ));
+                        });
+                    }
+                    window.close_dialog(cx);
+                }
+            });
             dialog
                 .centered()
                 .entrance(gpui_kit::component::dialog::DialogEntrance::FadeSlide)
                 .p_0()
+                // Enter в поле делает то же, что главная кнопка (без этого окно просто закрывалось)
+                .on_ok({
+                    let submit = submit.clone();
+                    move |_, window, cx| {
+                        submit(window, cx);
+                        false
+                    }
+                })
                 .w(px(440.))
                 .child(crate::ui::sheet_header(title, None, &theme))
                 .child(crate::ui::sheet_body().child(Input::new(&input)))
@@ -4957,25 +5007,10 @@ impl MainWindow {
                                 .label(tr!("Отмена"))
                                 .on_click(|_, w, cx| w.close_dialog(cx)),
                         )
-                        .child(Button::new("ok").primary().label(ok).on_click(
-                            move |_, window, cx| {
-                                let v = input.read(cx).value().trim().to_string();
-                                if !v.is_empty() {
-                                    let req = make(v);
-                                    this.update(cx, |this, cx| {
-                                        this.tasks.push(client::call(
-                                            cx,
-                                            req,
-                                            move |this, res, cx| match res {
-                                                Ok(_) => this.flash(done, false, cx),
-                                                Err(e) => this.flash(e.message(), true, cx),
-                                            },
-                                        ));
-                                    });
-                                }
-                                window.close_dialog(cx);
-                            },
-                        )),
+                        .child(Button::new("ok").primary().label(ok).on_click({
+                            let submit = submit.clone();
+                            move |_, window, cx| submit(window, cx)
+                        })),
                 )
         });
         window.focus(&focus, cx);
@@ -6212,51 +6247,20 @@ impl MainWindow {
             .cloned()
             .collect();
         let hidden = self.closed_groups.hidden(&ordered);
-        let parents: std::collections::HashSet<String> = ordered
-            .iter()
-            .filter(|g| {
-                let inside = format!("{}/", g.path);
-                ordered.iter().any(|c| c.path.starts_with(&inside))
-            })
-            .map(|g| g.id.clone())
-            .collect();
+        let parents: std::collections::HashSet<String> =
+            ordered.iter().filter_map(|g| g.parent.clone()).collect();
         let ordered: Vec<GroupView> = ordered
             .into_iter()
             .filter(|g| !hidden.contains(&g.id))
             .collect();
-        // копия перетаскиваемой папки в щели: перед папкой или после неё со всем поддеревом
-        let dragged_group = dragging
-            .then(dragged_id)
-            .flatten()
-            .and_then(|id| self.groups.iter().find(|g| g.id == id).cloned());
-        // щель: «id:-1» перед папкой, «id:1» после неё со всем поддеревом
-        let slot = self
-            .group_drop
-            .as_ref()
-            .filter(|(id, z)| {
-                dragging && *z != 0 && dragged_group.as_ref().is_some_and(|d| &d.id != id)
-            })
-            .map(|(id, z)| format!("{id}:{z}"));
-        self.group_gaps.observe(slot);
-        // щели «после», которые ждут конца поддерева (вложенные лежат сверху)
-        let mut pending: Vec<(String, usize, String, bool)> = vec![];
         for g in ordered {
-            while let Some((path, ..)) = pending.last()
-                && !g.path.starts_with(&format!("{path}/"))
-            {
-                let (_, depth, key, opening) = pending.pop().expect("есть");
-                if let Some(dg) = &dragged_group {
-                    col = col.child(self.render_group_ghost(dg, depth, &key, opening, &theme, cx));
-                }
-            }
             // у свёрнутой папки счётчик со всеми вложенными: видно, что внутри не пусто
             let shown_count = if self.closed_groups.0.contains(&g.id) {
-                let inside = format!("{}/", g.path);
                 g.entries
                     + self
                         .groups
                         .iter()
-                        .filter(|c| c.path.starts_with(&inside))
+                        .filter(|c| inside(&self.groups, c, &g.id))
                         .map(|c| c.entries)
                         .sum::<usize>()
             } else {
@@ -6274,21 +6278,6 @@ impl MainWindow {
                 .as_ref()
                 .filter(|(id, _)| id == &g.id && dragging)
                 .map(|(_, z)| *z);
-            let before = format!("{}:-1", g.id);
-            if let (Some(opening), Some(dg)) = (self.group_gaps.at(&before), &dragged_group) {
-                col = col.child(self.render_group_ghost(
-                    dg,
-                    g.depth - 1,
-                    &before,
-                    opening,
-                    &theme,
-                    cx,
-                ));
-            }
-            let after = format!("{}:1", g.id);
-            if let Some(opening) = self.group_gaps.at(&after) {
-                pending.push((g.path.clone(), g.depth - 1, after, opening));
-            }
             let ctx = CtxTarget::Group {
                 id: g.id.clone(),
                 name: g.name.clone(),
@@ -6313,42 +6302,43 @@ impl MainWindow {
                     }),
                 )
                 .relative()
-                // стрелка в поле слева от значка: свернуть или развернуть вложенные папки
-                .when(parents.contains(&g.id), |d| {
+                // справа у каждой папки место под стрелку: счётчики стоят в один столбец,
+                // а стрелка есть только там, где есть что сворачивать
+                .child(if parents.contains(&g.id) {
                     let closed = self.closed_groups.0.contains(&g.id);
                     let tid = g.id.clone();
-                    d.child(
-                        div()
-                            .id(SharedString::from(format!("fold-{}", g.id)))
-                            .absolute()
-                            .top_0()
-                            .left(px((g.depth - 1) as f32 * 14. - 2.))
-                            .w(px(14.))
-                            .h_full()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .text_color(theme.muted_foreground)
-                            .hover(|d| d.text_color(theme.foreground))
-                            .child(
-                                Icon::new(if closed {
-                                    IconName::ChevronRight
-                                } else {
-                                    IconName::ChevronDown
-                                })
-                                .size_3(),
-                            )
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                cx.stop_propagation();
-                                this.toggle_group(tid.clone(), cx)
-                            })),
-                    )
+                    div()
+                        .id(SharedString::from(format!("fold-{}", g.id)))
+                        .flex_shrink_0()
+                        .size(px(20.))
+                        .mr(px(-6.))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded_md()
+                        .text_color(theme.muted_foreground)
+                        .hover(|d| d.bg(theme.border).text_color(theme.foreground))
+                        .child(
+                            Icon::new(if closed {
+                                IconName::ChevronRight
+                            } else {
+                                IconName::ChevronDown
+                            })
+                            .small(),
+                        )
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            cx.stop_propagation();
+                            this.toggle_group(tid.clone(), cx)
+                        }))
+                        .into_any_element()
+                } else {
+                    div().flex_shrink_0().w(px(14.)).into_any_element()
                 })
                 .drag_over::<EntryDrag>(drop_style(&theme))
                 .when(zone != Some(-1) && zone != Some(1), |d| {
                     d.drag_over::<GroupDrag>(drop_style(&theme))
                 })
-                // верхняя четверть строки: поставить перед, нижняя: после, середина: внутрь
+                // верхний край строки: поставить перед, нижний: после, середина: внутрь
                 .on_drag_move(
                     cx.listener(move |this, ev: &DragMoveEvent<GroupDrag>, _, cx| {
                         if !ev.bounds.contains(&ev.event.position) {
@@ -6356,9 +6346,18 @@ impl MainWindow {
                         }
                         let h = ev.bounds.size.height;
                         let y = ev.event.position.y - ev.bounds.origin.y;
-                        let z = if y < h * 0.25 {
+                        // папка уже лежит в этой: «внутрь» ничего бы не сделало, поэтому вся
+                        // строка ставит рядом (так вложенную папку вынимают наружу)
+                        let dragged = ev.drag(cx).id.clone();
+                        let already_inside = this
+                            .groups
+                            .iter()
+                            .any(|g| g.id == dragged && g.parent.as_deref() == Some(gid3.as_str()));
+                        // края узкие: попасть «внутрь» проще, чем между строками
+                        let edge = if already_inside { 0.5 } else { 0.2 };
+                        let z = if y < h * edge {
                             -1
-                        } else if y > h * 0.75 {
+                        } else if y >= h * (1. - edge) {
                             1
                         } else {
                             0
@@ -6381,6 +6380,21 @@ impl MainWindow {
                         this.reorder_group(d.id.clone(), gid2.clone(), z > 0, cx)
                     }
                 }))
+                // «перед» и «после» показывает черта на краю строки. Строки при этом не
+                // сдвигаются: раньше щель отодвигала папку из-под курсора, и бросок шёл мимо
+                .when_some(zone.filter(|z| *z != 0 && !is_dragged(&g.id)), |d, z| {
+                    d.child(
+                        div()
+                            .absolute()
+                            .left(px(8.))
+                            .right(px(8.))
+                            .h(px(2.))
+                            .rounded_full()
+                            .bg(theme.primary)
+                            .when(z < 0, |l| l.top(px(-2.)))
+                            .when(z > 0, |l| l.bottom(px(-2.))),
+                    )
+                })
                 .when(dragging && is_dragged(&g.id), |d| d.opacity(0.4))
                 .when_some(
                     self.landed
@@ -6398,11 +6412,6 @@ impl MainWindow {
                     })
                 }),
             );
-        }
-        while let Some((_, depth, key, opening)) = pending.pop() {
-            if let Some(dg) = &dragged_group {
-                col = col.child(self.render_group_ghost(dg, depth, &key, opening, &theme, cx));
-            }
         }
         // заметная строка в конце списка папок (значок в заголовке легко не увидеть)
         if !dragging && !kind_drag {
@@ -6428,7 +6437,8 @@ impl MainWindow {
         // тег, получивший записи, уже в общем списке
         let known: Vec<String> = self.tags.iter().map(|(t, _)| t.clone()).collect();
         self.pending_tags.retain(|t| !known.contains(t));
-        let entry_drag = dragging && dragged_group.is_none();
+        let entry_drag =
+            dragging && !dragged_id().is_some_and(|id| self.groups.iter().any(|g| g.id == id));
         {
             col = col.child(section(tr!("ТЕГИ")));
             let all: Vec<(String, usize)> = self
@@ -6760,44 +6770,6 @@ impl MainWindow {
                 }
             }
         }
-    }
-
-    /// Копия перетаскиваемой папки в щели боковой панели. Бросок на неё равен броску на ту
-    /// половину строки, что её открыла (`group_drop` хранит цель и сторону).
-    fn render_group_ghost(
-        &self,
-        g: &GroupView,
-        depth: usize,
-        key: &str,
-        opening: bool,
-        theme: &gpui_kit::component::Theme,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let el = h_flex()
-            .id(SharedString::from(format!("gghost-{key}")))
-            .gap_3()
-            .px_3()
-            .pl(px(12. + depth as f32 * 14.))
-            .rounded_lg()
-            .border_1()
-            .border_dashed()
-            .border_color(theme.primary.opacity(0.5))
-            .bg(theme.primary.opacity(0.06))
-            .text_sm()
-            .text_color(theme.sidebar_foreground)
-            .overflow_hidden()
-            .on_drop(cx.listener(|this, d: &GroupDrag, _, cx| {
-                if let Some((target, z)) = this.group_drop.take() {
-                    this.reorder_group(d.id.clone(), target, z > 0, cx)
-                }
-            }))
-            .child(
-                Icon::new(IconName::Folder)
-                    .small()
-                    .text_color(theme.primary),
-            )
-            .child(div().flex_1().truncate().child(g.name.clone()));
-        gap_anim(el, "ggap", opening, self.group_gaps.generation, 34.)
     }
 
     /// Копия перетаскиваемой записи в раздвинутой щели: так видно, куда она встанет.
@@ -8443,17 +8415,32 @@ impl ClosedGroups {
     }
     /// Папки, которых не видно: лежат внутри свёрнутой.
     fn hidden(&self, groups: &[GroupView]) -> std::collections::HashSet<String> {
-        let closed: Vec<String> = groups
-            .iter()
-            .filter(|g| self.0.contains(&g.id))
-            .map(|g| format!("{}/", g.path))
-            .collect();
         groups
             .iter()
-            .filter(|g| closed.iter().any(|c| g.path.starts_with(c)))
+            .filter(|g| self.0.iter().any(|c| inside(groups, g, c)))
             .map(|g| g.id.clone())
             .collect()
     }
+}
+
+/// Лежит ли папка внутри `ancestor` на любой глубине. Идём по родителям, а не по пути:
+/// две папки с одним именем на одном уровне дают одинаковый путь.
+fn inside(groups: &[GroupView], g: &GroupView, ancestor: &str) -> bool {
+    let mut cur = g.parent.as_deref();
+    // глубина дерева ограничена числом папок: защита от зацикленных ссылок
+    for _ in 0..groups.len() {
+        match cur {
+            Some(p) if p == ancestor => return true,
+            Some(p) => {
+                cur = groups
+                    .iter()
+                    .find(|x| x.id == p)
+                    .and_then(|x| x.parent.as_deref())
+            }
+            None => return false,
+        }
+    }
+    false
 }
 
 /// Вид страницы «Коды 2FA» на этом компьютере. В файле только id записей и флажок, без секретов.
@@ -8940,26 +8927,29 @@ fn new_vault_path() -> PathBuf {
 mod sequence_tests {
     #[test]
     fn closed_folder_hides_everything_inside_it() {
-        let g = |id: &str, path: &str| super::GroupView {
+        let g = |id: &str, path: &str, parent: Option<&str>| super::GroupView {
             id: id.into(),
             name: path.rsplit('/').next().unwrap().into(),
             path: path.into(),
-            parent: None,
+            parent: parent.map(str::to_string),
             depth: path.split('/').count(),
             entries: 0,
             is_recycle_bin: false,
         };
         let groups = [
-            g("a", "Работа"),
-            g("b", "Работа/prod"),
-            g("c", "Работа/prod/db"),
-            g("d", "Работа2"),
+            g("a", "Работа", None),
+            g("b", "Работа/prod", Some("a")),
+            g("c", "Работа/prod/db", Some("b")),
+            g("d", "Работа2", None),
+            // вторая папка с тем же именем и путём, что «a»: своих вложенных у неё нет
+            g("e", "Работа", None),
         ];
         let closed = super::ClosedGroups(["a".to_string()].into());
         let hidden = closed.hidden(&groups);
         assert!(hidden.contains("b") && hidden.contains("c"));
         // сама свёрнутая папка и соседка с похожим именем остаются
-        assert!(!hidden.contains("a") && !hidden.contains("d"));
+        assert!(!hidden.contains("a") && !hidden.contains("d") && !hidden.contains("e"));
+        assert!(!super::inside(&groups, &groups[1], "e"));
     }
 
     #[test]
