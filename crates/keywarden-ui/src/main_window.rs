@@ -492,6 +492,9 @@ pub struct MainWindow {
     code: Option<Code>,
     /// живые коды на странице «Коды 2FA», по id записи
     otp_codes: HashMap<String, Code>,
+    /// когда код перестаёт действовать (unix-секунды): отсчёт идёт по часам, а не вычитанием
+    otp_until: HashMap<String, u64>,
+    code_until: Option<u64>,
     editor: Option<Entity<EntryEditor>>,
     settings: Option<Entity<crate::settings_page::SettingsPage>>,
     list_scroll: ScrollHandle,
@@ -689,6 +692,8 @@ impl MainWindow {
             shown: HashSet::new(),
             code: None,
             otp_codes: HashMap::new(),
+            otp_until: HashMap::new(),
+            code_until: None,
             editor: None,
             settings: None,
             list_scroll: ScrollHandle::new(),
@@ -3193,6 +3198,7 @@ impl MainWindow {
                 if let Ok(Response::Totp { code }) = res
                     && this.selected_id().as_deref() == Some(want.as_str())
                 {
+                    this.code_until = Some(unix_now() + code.remaining);
                     this.code = Some(code);
                     cx.notify();
                 }
@@ -3207,6 +3213,8 @@ impl MainWindow {
             Request::Totp { id },
             move |this, res, cx| {
                 if let Ok(Response::Totp { code }) = res {
+                    this.otp_until
+                        .insert(key.clone(), unix_now() + code.remaining);
                     this.otp_codes.insert(key, code);
                     cx.notify();
                 }
@@ -3217,7 +3225,13 @@ impl MainWindow {
     fn ticker(cx: &mut Context<Self>) -> Task<()> {
         cx.spawn(async move |this, cx| {
             loop {
-                cx.background_executor().timer(Duration::from_secs(1)).await;
+                // просыпаемся на границе секунды: отсчёт кодов 2FA идёт вровень с часами
+                let ms = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.subsec_millis() as u64);
+                cx.background_executor()
+                    .timer(Duration::from_millis(1010 - ms))
+                    .await;
                 let alive = this.update(cx, |this, cx| {
                     this.tasks.retain(|t| !t.is_ready());
                     let now = Instant::now();
@@ -3232,11 +3246,12 @@ impl MainWindow {
                         this.shown.clear();
                         cx.notify();
                     }
+                    let unix = unix_now();
                     if this.nav == Nav::Otp && !this.otp_codes.is_empty() {
                         let mut stale = vec![];
                         for (id, c) in this.otp_codes.iter_mut() {
-                            c.remaining = c.remaining.saturating_sub(1);
-                            if c.remaining == 0 {
+                            let until = this.otp_until.entry(id.clone()).or_insert(unix);
+                            if roll(c, until, unix) {
                                 stale.push(id.clone());
                             }
                         }
@@ -3246,8 +3261,8 @@ impl MainWindow {
                         cx.notify();
                     }
                     if let Some(c) = this.code.as_mut() {
-                        c.remaining = c.remaining.saturating_sub(1);
-                        if c.remaining == 0
+                        let until = this.code_until.get_or_insert(unix);
+                        if roll(c, until, unix)
                             && let Some(d) = &this.detail
                         {
                             let id = d.summary.id.clone();
@@ -3487,6 +3502,27 @@ impl MainWindow {
                     this.mark_copied(key, cx);
                     this.flash(
                         tr!("{label} скопирован, буфер очистится сам", label = label),
+                        false,
+                        cx,
+                    )
+                }
+                Err(e) => this.flash(e.message(), true, cx),
+            },
+        ));
+    }
+
+    /// Скопировать следующий код 2FA (метка «далее» на плитке).
+    fn copy_next_code(&mut self, value: String, cx: &mut Context<Self>) {
+        self.tasks.push(client::call(
+            cx,
+            Request::CopyText {
+                value: value.into(),
+            },
+            |this, res, cx| match res {
+                Ok(_) => {
+                    this.mark_copied("totp-next".into(), cx);
+                    this.flash(
+                        tr!("Следующий код скопирован, буфер очистится сам"),
                         false,
                         cx,
                     )
@@ -7383,6 +7419,13 @@ impl MainWindow {
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .font_family(theme.mono_font_family.clone())
                                 .child(format!("{a} {b}"))
+                                // новый код проявляется, а не подменяется рывком
+                                .with_animation(
+                                    SharedString::from(format!("code-{}", c.code)),
+                                    Animation::new(Duration::from_millis(260))
+                                        .with_easing(ease_out_quint()),
+                                    |el, t| el.opacity(0.25 + 0.75 * t),
+                                )
                                 .into_any_element()
                         }
                         None => late(Skeleton::new().h_8().w(px(170.)).rounded_md(), "late-a"),
@@ -7403,16 +7446,47 @@ impl MainWindow {
                                         } else {
                                             theme.muted_foreground
                                         })
-                                        .child(if c.remaining <= 7 && !c.next.is_empty() {
-                                            tr!(
-                                                "{s} с · далее {next}",
-                                                s = c.remaining,
-                                                next = c.next
-                                            )
-                                        } else {
-                                            tr!("{s} с", s = c.remaining)
-                                        }),
+                                        .child(tr!("{s} с", s = c.remaining)),
                                 )
+                                // под конец срока виден следующий код: щелчок копирует его,
+                                // чтобы не ждать смены
+                                .when(c.remaining <= 10 && !c.next.is_empty(), |d| {
+                                    let next = c.next.clone();
+                                    d.child(
+                                        div()
+                                            .id(("otp-next", ix))
+                                            .px_1p5()
+                                            .rounded_md()
+                                            .border_1()
+                                            .border_color(theme.border)
+                                            .text_xs()
+                                            .font_family(theme.mono_font_family.clone())
+                                            .text_color(theme.muted_foreground)
+                                            .hover(|d| {
+                                                d.bg(theme.secondary).text_color(theme.foreground)
+                                            })
+                                            .child(
+                                                if active
+                                                    && self.copied.as_deref() == Some("totp-next")
+                                                {
+                                                    h_flex()
+                                                        .gap_1()
+                                                        .text_color(theme.success_foreground)
+                                                        .child(Icon::new(IconName::Check).xsmall())
+                                                        .child(c.next.clone())
+                                                        .into_any_element()
+                                                } else {
+                                                    tr!("далее {next}", next = c.next)
+                                                        .into_any_element()
+                                                },
+                                            )
+                                            .on_click(cx.listener(move |this, _, _, cx| {
+                                                cx.stop_propagation();
+                                                this.select(Some(ix), cx);
+                                                this.copy_next_code(next.clone(), cx);
+                                            })),
+                                    )
+                                })
                                 .into_any_element()
                         }
                         None => late(Skeleton::new().secondary().h_1().rounded_full(), "late-b"),
@@ -8567,6 +8641,28 @@ fn landed_flash(n: u64, color: Hsla) -> impl IntoElement {
     )
 }
 
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+/// Пересчитать остаток кода 2FA по часам. Срок вышел: следующий код уже известен, он сразу
+/// становится текущим (без секунды со старым кодом и нулём), `true` просит свежие данные у демона.
+fn roll(c: &mut Code, until: &mut u64, unix: u64) -> bool {
+    let period = c.period.max(1);
+    let mut stale = false;
+    if unix >= *until {
+        stale = true;
+        if !c.next.is_empty() {
+            c.code = std::mem::take(&mut c.next);
+        }
+        *until += period * ((unix - *until) / period + 1);
+    }
+    c.remaining = (*until - unix).min(period);
+    stale
+}
+
 /// Вид проблемы для меток-фильтров на странице проверки паролей.
 fn issue_kind(x: &keywarden_core::health::Issue) -> &'static str {
     use keywarden_core::health::Issue;
@@ -9139,6 +9235,28 @@ fn new_vault_path() -> PathBuf {
 
 #[cfg(test)]
 mod sequence_tests {
+    #[test]
+    fn code_countdown_follows_the_clock() {
+        let mut c = super::Code {
+            code: "111111".into(),
+            remaining: 30,
+            period: 30,
+            next: "222222".into(),
+        };
+        let mut until = 1030;
+        // получили код в момент 1000: сколько бы ни прошло до первого тика, остаток по часам
+        assert!(!super::roll(&mut c, &mut until, 1001));
+        assert_eq!(c.remaining, 29);
+        assert!(!super::roll(&mut c, &mut until, 1029));
+        assert_eq!((c.remaining, c.code.as_str()), (1, "111111"));
+        // срок вышел: следующий код сразу текущий, отсчёт с полного периода, без нуля
+        assert!(super::roll(&mut c, &mut until, 1030));
+        assert_eq!((c.remaining, c.code.as_str(), until), (30, "222222", 1060));
+        // окно спало несколько периодов: остаток всё равно внутри периода
+        assert!(super::roll(&mut c, &mut until, 1135));
+        assert_eq!((c.remaining, until), (15, 1150));
+    }
+
     #[test]
     fn closed_folder_hides_everything_inside_it() {
         let g = |id: &str, path: &str, parent: Option<&str>| super::GroupView {

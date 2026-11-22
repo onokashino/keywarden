@@ -63,7 +63,8 @@ gpui_kit_assets::icon_assets!(
         Server,
         ShieldKeyhole,
         ArrowLeft,
-        FilePlus
+        FilePlus,
+        List
     ]
 );
 

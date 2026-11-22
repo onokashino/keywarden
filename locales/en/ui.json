@@ -225,7 +225,6 @@
   "Ничего не найдено": "Nothing found",
   "Загружаю…": "Loading…",
   "Кодов 2FA пока нет": "No 2FA codes yet",
-  "{s} с · далее {next}": "{s} s · next {next}",
   "{s} с": "{s} s",
   "Добавить 2FA": "Add 2FA",
   "Из 2FAS": "From 2FAS",
@@ -369,5 +368,6 @@
   "повторы": "reused",
   "слабые": "weak",
   "старше года": "older than a year",
-  "утечки": "breaches"
+  "утечки": "breaches",
+  "Следующий код скопирован, буфер очистится сам": "Next code copied, the clipboard clears itself"
 }
