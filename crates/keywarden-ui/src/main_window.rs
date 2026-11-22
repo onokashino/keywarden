@@ -546,6 +546,15 @@ pub struct MainWindow {
     kind_gaps: Gaps<usize>,
     loading_list: bool,
     loading_detail: bool,
+    /// загрузка идёт дольше SLOW: только тогда показываем скелетон и спиннер. Локальный демон
+    /// отвечает за миллисекунды, и скелетон на один кадр выглядел как мигание
+    list_slow: bool,
+    detail_slow: bool,
+    /// номера последних запросов: таймер старого запроса новый не трогает
+    list_gen: u64,
+    detail_gen: u64,
+    /// первый список уже приходил: до этого пустое место, а не «здесь пусто»
+    list_ready: bool,
     detail_tab: usize,
     /// раздел «История» в карточке раскрыт
     history_open: bool,
@@ -713,6 +722,11 @@ impl MainWindow {
             kind_gaps: Gaps::default(),
             loading_list: false,
             loading_detail: false,
+            list_slow: false,
+            detail_slow: false,
+            list_gen: 0,
+            detail_gen: 0,
+            list_ready: false,
             detail_tab: 0,
             history_open: false,
             total: 0,
@@ -2931,6 +2945,18 @@ impl MainWindow {
     /// `reset`: выделить первую запись (новый запрос), иначе сохранить выбранную.
     fn reload_list(&mut self, reset: bool, cx: &mut Context<Self>) {
         self.loading_list = true;
+        self.list_gen += 1;
+        let n = self.list_gen;
+        cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(SLOW).await;
+            let _ = this.update(cx, |this, cx| {
+                if this.loading_list && this.list_gen == n {
+                    this.list_slow = true;
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
         let query = self.search.read(cx).value().to_string();
         let keep = if reset { None } else { self.selected_id() };
         let plain = query.trim().is_empty();
@@ -2941,6 +2967,8 @@ impl MainWindow {
         };
         self.search_task = Some(client::call(cx, req, move |this, res, cx| {
             this.loading_list = false;
+            this.list_slow = false;
+            this.list_ready = true;
             match res {
                 Ok(Response::Entries { mut entries }) => {
                     match this.sort {
@@ -3012,6 +3040,7 @@ impl MainWindow {
         let Some(id) = self.selected_id() else {
             self.detail = None;
             self.loading_detail = false;
+            self.detail_slow = false;
             cx.notify();
             return;
         };
@@ -3029,11 +3058,27 @@ impl MainWindow {
         }
         // старая карточка остаётся на месте, пока не придёт новая: без пустого кадра
         self.loading_detail = changed;
+        self.detail_slow = false;
+        self.detail_gen += 1;
+        let n = self.detail_gen;
+        if changed {
+            cx.spawn(async move |this, cx| {
+                cx.background_executor().timer(SLOW).await;
+                let _ = this.update(cx, |this, cx| {
+                    if this.loading_detail && this.detail_gen == n {
+                        this.detail_slow = true;
+                        cx.notify();
+                    }
+                });
+            })
+            .detach();
+        }
         self.detail_task = Some(client::call(
             cx,
             Request::Get { id, reveal: false },
             |this, res, cx| {
                 this.loading_detail = false;
+                this.detail_slow = false;
                 if let Ok(Response::Entry { entry }) = res {
                     this.detail = Some(*entry);
                 }
@@ -6798,7 +6843,7 @@ impl MainWindow {
                                 },
                             ),
                     )
-                    .when(self.loading_list, |d| {
+                    .when(self.list_slow, |d| {
                         d.child(Spinner::new().small().color(theme.muted_foreground))
                     }),
             )
@@ -7036,8 +7081,11 @@ impl MainWindow {
         if let (Some(g), Some(opening)) = (&dragged, self.entry_gaps.at(&end)) {
             rows.push(self.render_ghost(g, end, opening, &theme, cx));
         }
-        let body = if rows.is_empty() && self.loading_list {
-            // скелетон только при первой загрузке, дальше старый список держится до ответа
+        let body = if rows.is_empty() && self.loading_list && !self.list_ready && !self.list_slow {
+            // самый первый ответ ещё в пути: пустое место, без скелетона на один кадр
+            div().into_any_element()
+        } else if rows.is_empty() && self.list_slow {
+            // скелетон только если ответа нет дольше SLOW; иначе старый список держится до ответа
             v_flex()
                 .py_2()
                 .children((0..7).map(|i| {
@@ -7266,11 +7314,7 @@ impl MainWindow {
                                 .child(format!("{a} {b}"))
                                 .into_any_element()
                         }
-                        None => Skeleton::new()
-                            .h_8()
-                            .w(px(170.))
-                            .rounded_md()
-                            .into_any_element(),
+                        None => late(Skeleton::new().h_8().w(px(170.)).rounded_md(), "late-a"),
                     })
                     .child(match &code {
                         Some(c) => {
@@ -7300,11 +7344,7 @@ impl MainWindow {
                                 )
                                 .into_any_element()
                         }
-                        None => Skeleton::new()
-                            .secondary()
-                            .h_1()
-                            .rounded_full()
-                            .into_any_element(),
+                        None => late(Skeleton::new().secondary().h_1().rounded_full(), "late-b"),
                     })
                     .with_animation(
                         ("otp-in", ix),
@@ -7396,11 +7436,7 @@ impl MainWindow {
                                 .child(format!("{a} {b}"))
                                 .into_any_element()
                         }
-                        None => Skeleton::new()
-                            .h_5()
-                            .w(px(110.))
-                            .rounded_md()
-                            .into_any_element(),
+                        None => late(Skeleton::new().h_5().w(px(110.)).rounded_md(), "late-c"),
                     })
                     .child(match &code {
                         Some(c) => h_flex()
@@ -7533,7 +7569,10 @@ impl MainWindow {
     fn render_detail(&mut self, cx: &mut Context<Self>) -> AnyElement {
         let theme = cx.theme().clone();
         let Some(d) = self.detail.clone() else {
-            if self.loading_detail || (self.loading_list && self.entries.is_empty()) {
+            if !self.list_ready && !self.list_slow {
+                return div().into_any_element();
+            }
+            if self.detail_slow || (self.list_slow && self.entries.is_empty()) {
                 return v_flex()
                     .p_6()
                     .gap_4()
@@ -8238,9 +8277,27 @@ fn code_placeholder(theme: &gpui_kit::component::Theme) -> impl IntoElement {
         .border_1()
         .border_color(theme.border)
         .bg(theme.list_even)
-        .child(Skeleton::new().h_3().w(px(70.)).rounded_md())
-        .child(Skeleton::new().h_8().w(px(180.)).rounded_md())
-        .child(Skeleton::new().secondary().h_1().w(px(120.)).rounded_full())
+        .child(late(
+            Skeleton::new().h_3().w(px(70.)).rounded_md(),
+            "late-1",
+        ))
+        .child(late(
+            Skeleton::new().h_8().w(px(180.)).rounded_md(),
+            "late-2",
+        ))
+        .child(late(
+            Skeleton::new().secondary().h_1().w(px(120.)).rounded_full(),
+            "late-3",
+        ))
+}
+
+/// Заглушка, которую видно только если ответа нет дольше SLOW: код 2FA приходит за миллисекунды,
+/// и заглушка на один кадр выглядела как мигание.
+fn late(s: Skeleton, key: &'static str) -> AnyElement {
+    s.with_animation(key, Animation::new(SLOW * 2), |s, t| {
+        s.opacity(((t - 0.5) * 2.).max(0.))
+    })
+    .into_any_element()
 }
 
 /// Подсветка папки, над которой держат запись или папку.
@@ -8438,6 +8495,9 @@ fn landed_flash(n: u64, color: Hsla) -> impl IntoElement {
         move |el, t| el.bg(color.opacity(0.22 * (1. - t))),
     )
 }
+
+/// Столько ждём ответа, прежде чем показать скелетон или спиннер.
+const SLOW: Duration = Duration::from_millis(200);
 
 /// Сколько длится сворачивание папки.
 const FOLD_TIME: Duration = Duration::from_millis(200);
