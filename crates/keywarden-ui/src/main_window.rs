@@ -446,6 +446,8 @@ pub struct MainWindow {
     otp_view: OtpView,
     /// свёрнутые папки боковой панели (id), помнятся на этом компьютере
     closed_groups: ClosedGroups,
+    /// папка, которая сейчас сворачивается или разворачивается: (id, разворачивается, номер)
+    fold: Option<(String, bool, u64)>,
     /// в поле поиска сейчас подсказка про коды
     search_hint_otp: bool,
     /// экран «Получить базу с другого компьютера»
@@ -644,6 +646,7 @@ impl MainWindow {
             refocus: false,
             otp_view: OtpView::load(),
             closed_groups: ClosedGroups::load(),
+            fold: None,
             search_hint_otp: false,
             receiving: false,
             recv_code,
@@ -3087,6 +3090,21 @@ impl MainWindow {
     /// Свернуть или развернуть папку. Открытая папка внутри свёрнутой: переходим на свёрнутую.
     fn toggle_group(&mut self, id: String, cx: &mut Context<Self>) {
         self.closed_groups.toggle(&id);
+        // вложенные строки плавно сжимаются или раскрываются; после анимации свёрнутые убираем
+        let n = self.fold.as_ref().map_or(1, |f| f.2 + 1);
+        self.fold = Some((id.clone(), !self.closed_groups.0.contains(&id), n));
+        cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(FOLD_TIME + Duration::from_millis(30))
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if this.fold.as_ref().is_some_and(|f| f.2 == n) {
+                    this.fold = None;
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
         if let Nav::Group(cur) = &self.nav
             && self.closed_groups.hidden(&self.groups).contains(cur)
         {
@@ -6246,7 +6264,10 @@ impl MainWindow {
             .filter(|g| !in_bin(g))
             .cloned()
             .collect();
-        let hidden = self.closed_groups.hidden(&ordered);
+        let closing = self.fold.as_ref().filter(|f| !f.1).map(|f| f.0.clone());
+        let hidden = self
+            .closed_groups
+            .hidden_except(&ordered, closing.as_deref());
         let parents: std::collections::HashSet<String> =
             ordered.iter().filter_map(|g| g.parent.clone()).collect();
         let ordered: Vec<GroupView> = ordered
@@ -6283,135 +6304,165 @@ impl MainWindow {
                 name: g.name.clone(),
                 entries: g.entries,
             };
-            col = col.child(
-                target(item(
-                    format!("g-{}", g.id).into(),
-                    IconName::Folder,
-                    g.name.clone(),
-                    Some(shown_count),
-                    g.depth - 1,
-                    nav.clone(),
-                    self.nav == nav,
-                    cx,
-                ))
-                .on_mouse_down(
-                    MouseButton::Right,
-                    cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
-                        this.ctx_menu = Some((ctx.clone(), ev.position));
-                        cx.notify();
-                    }),
-                )
-                .relative()
-                // справа у каждой папки место под стрелку: счётчики стоят в один столбец,
-                // а стрелка есть только там, где есть что сворачивать
-                .child(if parents.contains(&g.id) {
-                    let closed = self.closed_groups.0.contains(&g.id);
-                    let tid = g.id.clone();
-                    div()
-                        .id(SharedString::from(format!("fold-{}", g.id)))
-                        .flex_shrink_0()
-                        .size(px(20.))
-                        .mr(px(-6.))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded_md()
-                        .text_color(theme.muted_foreground)
-                        .hover(|d| d.bg(theme.border).text_color(theme.foreground))
-                        .child(
-                            Icon::new(if closed {
-                                IconName::ChevronRight
-                            } else {
-                                IconName::ChevronDown
-                            })
-                            .small(),
-                        )
-                        .on_click(cx.listener(move |this, _, _, cx| {
-                            cx.stop_propagation();
-                            this.toggle_group(tid.clone(), cx)
-                        }))
-                        .into_any_element()
-                } else {
-                    div().flex_shrink_0().w(px(14.)).into_any_element()
-                })
-                .drag_over::<EntryDrag>(drop_style(&theme))
-                .when(zone != Some(-1) && zone != Some(1), |d| {
-                    d.drag_over::<GroupDrag>(drop_style(&theme))
-                })
-                // верхний край строки: поставить перед, нижний: после, середина: внутрь
-                .on_drag_move(
-                    cx.listener(move |this, ev: &DragMoveEvent<GroupDrag>, _, cx| {
-                        if !ev.bounds.contains(&ev.event.position) {
-                            return;
-                        }
-                        let h = ev.bounds.size.height;
-                        let y = ev.event.position.y - ev.bounds.origin.y;
-                        // папка уже лежит в этой: «внутрь» ничего бы не сделало, поэтому вся
-                        // строка ставит рядом (так вложенную папку вынимают наружу)
-                        let dragged = ev.drag(cx).id.clone();
-                        let already_inside = this
-                            .groups
-                            .iter()
-                            .any(|g| g.id == dragged && g.parent.as_deref() == Some(gid3.as_str()));
-                        // края узкие: попасть «внутрь» проще, чем между строками
-                        let edge = if already_inside { 0.5 } else { 0.2 };
-                        let z = if y < h * edge {
-                            -1
-                        } else if y >= h * (1. - edge) {
-                            1
-                        } else {
-                            0
-                        };
-                        let hint = Some((gid3.clone(), z));
-                        if this.group_drop != hint {
-                            this.group_drop = hint;
-                            cx.notify();
-                        }
-                    }),
-                )
-                .on_drop(cx.listener(move |this, d: &EntryDrag, _, cx| {
-                    this.move_entry(d.id.clone(), gid.clone(), cx)
-                }))
-                .on_drop(cx.listener(move |this, d: &GroupDrag, _, cx| {
-                    let z = this.group_drop.take().map(|(_, z)| z).unwrap_or(0);
-                    if z == 0 {
-                        this.move_group(d.id.clone(), gid2.clone(), cx)
-                    } else {
-                        this.reorder_group(d.id.clone(), gid2.clone(), z > 0, cx)
-                    }
-                }))
-                // «перед» и «после» показывает черта на краю строки. Строки при этом не
-                // сдвигаются: раньше щель отодвигала папку из-под курсора, и бросок шёл мимо
-                .when_some(zone.filter(|z| *z != 0 && !is_dragged(&g.id)), |d, z| {
-                    d.child(
-                        div()
-                            .absolute()
-                            .left(px(8.))
-                            .right(px(8.))
-                            .h(px(2.))
-                            .rounded_full()
-                            .bg(theme.primary)
-                            .when(z < 0, |l| l.top(px(-2.)))
-                            .when(z > 0, |l| l.bottom(px(-2.))),
-                    )
-                })
-                .when(dragging && is_dragged(&g.id), |d| d.opacity(0.4))
-                .when_some(
-                    self.landed
-                        .as_ref()
-                        .filter(|(id, _)| id == &g.id)
-                        .map(|l| l.1),
-                    |d, n| d.child(landed_flash(n, theme.primary)),
-                )
-                .on_drag(drag, |d, grab, _, cx| {
-                    drag_started(&d.id);
-                    cx.new(|_| DragChip {
-                        icon: IconName::Folder,
-                        label: d.name.clone(),
-                        grab,
-                    })
+            let row = target(item(
+                format!("g-{}", g.id).into(),
+                IconName::Folder,
+                g.name.clone(),
+                Some(shown_count),
+                g.depth - 1,
+                nav.clone(),
+                self.nav == nav,
+                cx,
+            ))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                    this.ctx_menu = Some((ctx.clone(), ev.position));
+                    cx.notify();
                 }),
-            );
+            )
+            .relative()
+            // справа у каждой папки место под стрелку: счётчики стоят в один столбец,
+            // а стрелка есть только там, где есть что сворачивать
+            .child(if parents.contains(&g.id) {
+                let closed = self.closed_groups.0.contains(&g.id);
+                let tid = g.id.clone();
+                div()
+                    .id(SharedString::from(format!("fold-{}", g.id)))
+                    .flex_shrink_0()
+                    .size(px(20.))
+                    .mr(px(-6.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded_md()
+                    .text_color(theme.muted_foreground)
+                    .hover(|d| d.bg(theme.border).text_color(theme.foreground))
+                    // одна стрелка: у свёрнутой папки повёрнута вправо, поворот плавный
+                    .child({
+                        let side = -std::f32::consts::FRAC_PI_2;
+                        let icon = Icon::new(IconName::ChevronDown).small();
+                        match self.fold.as_ref().filter(|f| f.0 == g.id) {
+                            Some((_, opening, n)) => {
+                                let opening = *opening;
+                                icon.with_animation(
+                                    SharedString::from(format!("chev-{}-{n}", g.id)),
+                                    Animation::new(FOLD_TIME).with_easing(ease_out_quint()),
+                                    move |icon, t| {
+                                        let k = if opening { 1. - t } else { t };
+                                        icon.rotate(gpui_kit::radians(side * k))
+                                    },
+                                )
+                                .into_any_element()
+                            }
+                            None if closed => {
+                                icon.rotate(gpui_kit::radians(side)).into_any_element()
+                            }
+                            None => icon.into_any_element(),
+                        }
+                    })
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        cx.stop_propagation();
+                        this.toggle_group(tid.clone(), cx)
+                    }))
+                    .into_any_element()
+            } else {
+                div().flex_shrink_0().w(px(14.)).into_any_element()
+            })
+            .drag_over::<EntryDrag>(drop_style(&theme))
+            .when(zone != Some(-1) && zone != Some(1), |d| {
+                d.drag_over::<GroupDrag>(drop_style(&theme))
+            })
+            // верхний край строки: поставить перед, нижний: после, середина: внутрь
+            .on_drag_move(
+                cx.listener(move |this, ev: &DragMoveEvent<GroupDrag>, _, cx| {
+                    if !ev.bounds.contains(&ev.event.position) {
+                        return;
+                    }
+                    let h = ev.bounds.size.height;
+                    let y = ev.event.position.y - ev.bounds.origin.y;
+                    // папка уже лежит в этой: «внутрь» ничего бы не сделало, поэтому вся
+                    // строка ставит рядом (так вложенную папку вынимают наружу)
+                    let dragged = ev.drag(cx).id.clone();
+                    let already_inside = this
+                        .groups
+                        .iter()
+                        .any(|g| g.id == dragged && g.parent.as_deref() == Some(gid3.as_str()));
+                    // края узкие: попасть «внутрь» проще, чем между строками
+                    let edge = if already_inside { 0.5 } else { 0.2 };
+                    let z = if y < h * edge {
+                        -1
+                    } else if y >= h * (1. - edge) {
+                        1
+                    } else {
+                        0
+                    };
+                    let hint = Some((gid3.clone(), z));
+                    if this.group_drop != hint {
+                        this.group_drop = hint;
+                        cx.notify();
+                    }
+                }),
+            )
+            .on_drop(cx.listener(move |this, d: &EntryDrag, _, cx| {
+                this.move_entry(d.id.clone(), gid.clone(), cx)
+            }))
+            .on_drop(cx.listener(move |this, d: &GroupDrag, _, cx| {
+                let z = this.group_drop.take().map(|(_, z)| z).unwrap_or(0);
+                if z == 0 {
+                    this.move_group(d.id.clone(), gid2.clone(), cx)
+                } else {
+                    this.reorder_group(d.id.clone(), gid2.clone(), z > 0, cx)
+                }
+            }))
+            // «перед» и «после» показывает черта на краю строки. Строки при этом не
+            // сдвигаются: раньше щель отодвигала папку из-под курсора, и бросок шёл мимо
+            .when_some(zone.filter(|z| *z != 0 && !is_dragged(&g.id)), |d, z| {
+                d.child(
+                    div()
+                        .absolute()
+                        .left(px(8.))
+                        .right(px(8.))
+                        .h(px(2.))
+                        .rounded_full()
+                        .bg(theme.primary)
+                        .when(z < 0, |l| l.top(px(-2.)))
+                        .when(z > 0, |l| l.bottom(px(-2.))),
+                )
+            })
+            .when(dragging && is_dragged(&g.id), |d| d.opacity(0.4))
+            .when_some(
+                self.landed
+                    .as_ref()
+                    .filter(|(id, _)| id == &g.id)
+                    .map(|l| l.1),
+                |d, n| d.child(landed_flash(n, theme.primary)),
+            )
+            .on_drag(drag, |d, grab, _, cx| {
+                drag_started(&d.id);
+                cx.new(|_| DragChip {
+                    icon: IconName::Folder,
+                    label: d.name.clone(),
+                    grab,
+                })
+            });
+            // строки внутри папки, которую сворачивают или разворачивают, меняют высоту плавно
+            let folding = self
+                .fold
+                .as_ref()
+                .filter(|f| inside(&self.groups, &g, &f.0))
+                .map(|f| (f.1, f.2));
+            col = match folding {
+                Some((opening, n)) => col.child(row.overflow_hidden().with_animation(
+                    SharedString::from(format!("fold-{}-{n}", g.id)),
+                    Animation::new(FOLD_TIME).with_easing(ease_out_quint()),
+                    move |el, t| {
+                        let k = if opening { t } else { 1. - t };
+                        el.h(px(34. * k)).opacity(k)
+                    },
+                )),
+                None => col.child(row),
+            };
         }
         // заметная строка в конце списка папок (значок в заголовке легко не увидеть)
         if !dragging && !kind_drag {
@@ -8388,6 +8439,9 @@ fn landed_flash(n: u64, color: Hsla) -> impl IntoElement {
     )
 }
 
+/// Сколько длится сворачивание папки.
+const FOLD_TIME: Duration = Duration::from_millis(200);
+
 /// Свёрнутые папки боковой панели. В файле только id папок.
 #[derive(Default)]
 struct ClosedGroups(std::collections::HashSet<String>);
@@ -8415,9 +8469,22 @@ impl ClosedGroups {
     }
     /// Папки, которых не видно: лежат внутри свёрнутой.
     fn hidden(&self, groups: &[GroupView]) -> std::collections::HashSet<String> {
+        self.hidden_except(groups, None)
+    }
+
+    /// То же, но папка `still_open` пока считается открытой: её строки ещё сжимаются на экране.
+    fn hidden_except(
+        &self,
+        groups: &[GroupView],
+        still_open: Option<&str>,
+    ) -> std::collections::HashSet<String> {
         groups
             .iter()
-            .filter(|g| self.0.iter().any(|c| inside(groups, g, c)))
+            .filter(|g| {
+                self.0
+                    .iter()
+                    .any(|c| Some(c.as_str()) != still_open && inside(groups, g, c))
+            })
             .map(|g| g.id.clone())
             .collect()
     }
