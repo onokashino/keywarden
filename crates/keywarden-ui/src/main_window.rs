@@ -546,6 +546,8 @@ pub struct MainWindow {
     kind_gaps: Gaps<usize>,
     loading_list: bool,
     loading_detail: bool,
+    /// метка-фильтр на странице проверки паролей: вид проблемы (см. `issue_kind`)
+    health_filter: Option<&'static str>,
     /// загрузка идёт дольше SLOW: только тогда показываем скелетон и спиннер. Локальный демон
     /// отвечает за миллисекунды, и скелетон на один кадр выглядел как мигание
     list_slow: bool,
@@ -722,6 +724,7 @@ impl MainWindow {
             kind_gaps: Gaps::default(),
             loading_list: false,
             loading_detail: false,
+            health_filter: None,
             list_slow: false,
             detail_slow: false,
             list_gen: 0,
@@ -3933,45 +3936,112 @@ impl MainWindow {
                 .child(Skeleton::new().h(px(160.)).rounded_lg())
                 .into_any_element();
         };
-        let stat = |label: &'static str, value: String, bad: bool, last: bool| {
-            v_flex()
-                .flex_1()
-                .min_w(px(110.))
-                .px_4()
-                .py_3()
-                .gap_1()
-                .when(!last, |d| d.border_r_1().border_color(theme.border))
-                .child(
-                    h_flex()
-                        .gap_1p5()
-                        .text_xs()
-                        .text_color(theme.muted_foreground)
-                        .when(bad, |d| {
-                            d.child(div().size(px(6.)).rounded_full().bg(theme.danger))
-                        })
-                        .child(label),
-                )
+        // метки: сколько записей с каждой проблемой; показываем только найденное
+        let count = |kind: &str| {
+            r.items
+                .iter()
+                .filter(|i| i.issues.iter().any(|x| issue_kind(x) == kind))
+                .count()
+        };
+        // (вид, подпись метки, как назвать в строке «не найдено», красная ли, проверялось ли)
+        let kinds: [(&'static str, &'static str, &'static str, bool, bool); 9] = [
+            (
+                "breached",
+                tr!("В утечках"),
+                tr!("утечки"),
+                true,
+                r.breaches_checked,
+            ),
+            ("weak", tr!("Слабые"), tr!("слабые"), true, true),
+            ("reused", tr!("Повторяются"), tr!("повторы"), true, true),
+            (
+                "expired",
+                tr!("Срок истёк"),
+                tr!("истёкший срок"),
+                true,
+                true,
+            ),
+            ("wallet", tr!("Кошельки"), "", true, true),
+            ("insecure", tr!("Без https"), tr!("без https"), true, true),
+            ("old", tr!("Старше года"), tr!("старше года"), false, true),
+            (
+                "2fa",
+                tr!("Можно 2FA"),
+                tr!("без 2FA"),
+                false,
+                r.sites_checked,
+            ),
+            (
+                "passkey",
+                tr!("Можно ключ доступа"),
+                "",
+                false,
+                r.sites_checked,
+            ),
+        ];
+        let found: Vec<(&'static str, &'static str, usize, bool)> = kinds
+            .iter()
+            .map(|k| (k.0, k.1, count(k.0), k.3))
+            .filter(|k| k.2 > 0)
+            .collect();
+        let clean: Vec<&str> = kinds
+            .iter()
+            .filter(|k| k.4 && !k.2.is_empty() && count(k.0) == 0)
+            .map(|k| k.2)
+            .collect();
+        // проблему уже исправили, а метка была выбрана: показываем всё
+        let filter = self
+            .health_filter
+            .filter(|f| found.iter().any(|k| k.0 == *f));
+        let total = r.items.len();
+        let chip = |id: &'static str,
+                    label: &'static str,
+                    n: usize,
+                    bad: bool,
+                    key: Option<&'static str>,
+                    cx: &mut Context<Self>| {
+            let on = filter == key;
+            h_flex()
+                .id(id)
+                .h(px(30.))
+                .px_3()
+                .gap_2()
+                .rounded_full()
+                .border_1()
+                .border_color(if on { theme.primary } else { theme.border })
+                .when(on, |d| d.bg(theme.list_active))
+                .when(!on, |d| d.hover(|d| d.bg(theme.secondary)))
+                .cursor_pointer()
+                .text_sm()
+                .when(bad, |d| {
+                    d.child(div().size(px(6.)).rounded_full().bg(theme.danger))
+                })
+                .child(label)
                 .child(
                     div()
-                        .text_2xl()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(if bad {
-                            theme.danger_foreground
-                        } else {
-                            theme.foreground
-                        })
-                        .child(value),
+                        .text_xs()
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(theme.muted_foreground)
+                        .child(n.to_string()),
                 )
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.health_filter = key;
+                    cx.notify();
+                }))
         };
-        let breached = if r.breaches_checked {
-            r.breached.to_string()
-        } else {
-            "?".to_string()
-        };
+        let chips: Vec<AnyElement> =
+            std::iter::once(chip("hk-all", tr!("Все"), total, false, None, cx).into_any_element())
+                .chain(
+                    found
+                        .iter()
+                        .map(|k| chip(k.0, k.1, k.2, k.3, Some(k.0), cx).into_any_element()),
+                )
+                .collect();
         let rows: Vec<AnyElement> = r
             .items
             .iter()
             .enumerate()
+            .filter(|(_, i)| filter.is_none_or(|f| i.issues.iter().any(|x| issue_kind(x) == f)))
             .map(|(ix, i)| {
                 let (open_id, skip_id) = (i.id.clone(), i.id.clone());
                 h_flex()
@@ -4118,35 +4188,24 @@ impl MainWindow {
             .p_6()
             .gap_5()
             .child(
-                h_flex()
-                    .flex_wrap()
-                    .rounded_lg()
-                    .border_1()
-                    .border_color(theme.border)
-                    .child(stat(tr!("Слабые"), r.weak.to_string(), r.weak > 0, false))
-                    .child(stat(tr!("Повторяются"), r.reused.to_string(), r.reused > 0, false))
-                    .child(stat(tr!("Старше года"), r.old.to_string(), false, false))
-                    .child(stat(tr!("Срок истёк"), r.expired.to_string(), r.expired > 0, false))
-                    .child(stat(tr!("В утечках"), breached, r.breached > 0, false))
-                    .child(stat(tr!("Без https"), r.insecure.to_string(), r.insecure > 0, false))
-                    .when(r.wallets > 0, |d| {
-                        d.child(stat(tr!("Кошельки"), r.wallets.to_string(), true, false))
-                    })
-                    .child(stat(
-                        tr!("Можно 2FA"),
-                        if r.sites_checked { r.no_2fa.to_string() } else { "?".into() },
-                        false,
-                        true,
-                    )),
-            )
-            .child(
                 v_flex()
-                    .child(section_head(
-                        tr!("Требуют внимания"),
-                        Some(rows.len()),
-                        Some(
-                            Button::new("hibp")
-                                .ghost()
+                    .gap_3()
+                    .child(
+                        h_flex()
+                            .gap_3()
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .text_lg()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .child(if total > 0 {
+                                        tr!("Требуют внимания: {n}", n = total)
+                                    } else {
+                                        tr!("Проверено {n}: проблем не найдено", n = r.checked)
+                                    }),
+                            )
+                            .child(Button::new("hibp")
+                                .outline()
                                 .small()
                                 .icon(IconName::Search)
                                 .label(if r.breaches_checked {
@@ -4156,26 +4215,38 @@ impl MainWindow {
                                 })
                                 .tooltip(tr!("Утечки в Have I Been Pwned и поддержка 2FA и ключей доступа по 2fa.directory"))
                                 .loading(self.health_busy)
-                                .on_click(cx.listener(|this, _, _, cx| this.load_health(true, cx)))
-                                .into_any_element(),
-                        ),
-                        &theme,
-                    ))
-                    .child(if rows.is_empty() {
-                        h_flex()
-                            .gap_2()
-                            .py_4()
-                            .text_sm()
-                            .child(
-                                Icon::new(IconName::CircleCheck)
-                                    .small()
-                                    .text_color(theme.success_foreground),
-                            )
-                            .child(tr!("Проверено {n}: проблем не найдено", n = r.checked))
-                            .into_any_element()
-                    } else {
-                        v_flex().children(rows).into_any_element()
-                    }),
+                                .on_click(cx.listener(|this, _, _, cx| this.load_health(true, cx)))),
+                    )
+                    .when(total > 0, |d| d.child(h_flex().flex_wrap().gap_2().children(chips)))
+                    .child(
+                        v_flex()
+                            .gap_1()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .when(!clean.is_empty() && total > 0, |d| {
+                                d.child(
+                                    h_flex()
+                                        .gap_1p5()
+                                        .child(
+                                            Icon::new(IconName::Check)
+                                                .xsmall()
+                                                .text_color(theme.success_foreground),
+                                        )
+                                        .child(tr!("Не найдено: {list}", list = clean.join(", "))),
+                                )
+                            })
+                            .when(!r.breaches_checked || !r.sites_checked, |d| {
+                                d.child(tr!(
+                                    "Утечки и поддержка 2FA проверяются онлайн: нажмите «Проверить онлайн»"
+                                ))
+                            }),
+                    ),
+            )
+            .child(
+                v_flex()
+                    .border_t_1()
+                    .border_color(theme.table_row_border)
+                    .children(rows),
             )
             .child(
                 div()
@@ -8494,6 +8565,22 @@ fn landed_flash(n: u64, color: Hsla) -> impl IntoElement {
         Animation::new(Duration::from_millis(700)).with_easing(ease_out_quint()),
         move |el, t| el.bg(color.opacity(0.22 * (1. - t))),
     )
+}
+
+/// Вид проблемы для меток-фильтров на странице проверки паролей.
+fn issue_kind(x: &keywarden_core::health::Issue) -> &'static str {
+    use keywarden_core::health::Issue;
+    match x {
+        Issue::Breached { .. } => "breached",
+        Issue::Weak { .. } => "weak",
+        Issue::Reused { .. } => "reused",
+        Issue::Old { .. } => "old",
+        Issue::Expired => "expired",
+        Issue::Insecure => "insecure",
+        Issue::NoTwoFactor { .. } => "2fa",
+        Issue::PasskeyReady { .. } => "passkey",
+        Issue::BadSeed { .. } | Issue::AddressMismatch { .. } => "wallet",
+    }
 }
 
 /// Столько ждём ответа, прежде чем показать скелетон или спиннер.

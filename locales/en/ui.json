@@ -134,7 +134,6 @@
   "Без https": "No https",
   "Кошельки": "Wallets",
   "Можно 2FA": "2FA available",
-  "Требуют внимания": "Need attention",
   "Проверить онлайн ещё раз": "Check online again",
   "Проверить онлайн": "Check online",
   "Утечки в Have I Been Pwned и поддержка 2FA и ключей доступа по 2fa.directory": "Breaches from Have I Been Pwned, 2FA and passkey support from 2fa.directory",
@@ -359,5 +358,16 @@
   "Найти код: название или логин": "Find a code: title or username",
   "Плитки": "Tiles",
   "Список": "List",
-  "Плотный список: больше кодов на экране": "Compact list: more codes on screen"
+  "Плотный список: больше кодов на экране": "Compact list: more codes on screen",
+  "Можно ключ доступа": "Passkey available",
+  "Не найдено: {list}": "Not found: {list}",
+  "Требуют внимания: {n}": "Need attention: {n}",
+  "Утечки и поддержка 2FA проверяются онлайн: нажмите «Проверить онлайн»": "Breaches and 2FA support are checked online: press \"Check online\"",
+  "без 2FA": "missing 2FA",
+  "без https": "no https",
+  "истёкший срок": "expired",
+  "повторы": "reused",
+  "слабые": "weak",
+  "старше года": "older than a year",
+  "утечки": "breaches"
 }
