@@ -4962,8 +4962,18 @@ impl MainWindow {
             );
         match target {
             CtxTarget::Group { id, name, entries } => {
+                let i0 = id.clone();
                 let (i1, i2, i3, n1, n2) = (id.clone(), id.clone(), id, name.clone(), name);
                 menu = menu
+                    // запись сразу в этой папке: открываем папку и редактор новой записи в ней
+                    .child(row("ctx-new", IconName::Plus, tr!("Новая запись"), false).on_click(
+                        cx.listener(move |this, _, w, cx| {
+                            close(this, cx);
+                            this.set_nav(Nav::Group(i0.clone()), cx);
+                            this.new_entry(this.default_kind(), w, cx);
+                        }),
+                    ))
+                    .child(div().h(px(1.)).my_1().bg(theme.border))
                     .child(row("ctx-rename", IconName::Pencil, tr!("Переименовать"), false).on_click(
                         cx.listener(move |this, _, w, cx| {
                             close(this, cx);
