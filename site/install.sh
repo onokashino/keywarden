@@ -3,6 +3,8 @@
 #   curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh
 # Downloads the release archive from GitHub, checks it against SHA256SUMS and installs
 # into ~/.local/bin without root. A specific version: ... | KEYWARDEN_VERSION=v0.1.0 sh
+# When a release signing key is set below, SHA256SUMS must also carry a valid signature
+# (SHA256SUMS.sig, checked with ssh-keygen); KEYWARDEN_UNSIGNED=1 skips that for old releases.
 # NO_COLOR=1: plain output. KEYWARDEN_NO_LAUNCH=1: do not open the app at the end.
 # Everything is inside main() so a download cut off halfway runs nothing.
 set -eu
@@ -12,6 +14,8 @@ main() {
   base=${KEYWARDEN_MIRROR:-https://github.com/$repo/releases/download}
   bin=${BIN:-$HOME/.local/bin}
   amo=https://addons.mozilla.org/firefox/addon/keywarden/
+  # public half of the release signing key (packaging/release-key.pub); empty: checksum only
+  signer=''
 
   printf '\n  %s◆ Keywarden%s %sinstaller%s\n\n' "$V$B" "$N" "$D" "$N"
   case "$(uname -s)-$(uname -m)" in
@@ -46,6 +50,17 @@ main() {
   [ -n "$want" ] || die "$file is not listed in SHA256SUMS"
   [ "$want" = "$got" ] || die "checksum mismatch for $file, nothing installed"
   ok "checksum matches SHA256SUMS"
+  # the checksum file sits next to the archive, so on its own it only catches a broken download;
+  # the signature proves the list was made by the holder of the release key
+  if [ -n "$signer" ] && [ -z "${KEYWARDEN_UNSIGNED:-}" ]; then
+    command -v ssh-keygen >/dev/null 2>&1 || die "ssh-keygen is needed to check the release signature (package: openssh)"
+    fetch "$base/$tag/SHA256SUMS.sig" "$tmp/SHA256SUMS.sig" || die "this release has no signature (SHA256SUMS.sig), nothing installed"
+    printf 'release@keywarden %s\n' "$signer" > "$tmp/signers"
+    ssh-keygen -Y verify -f "$tmp/signers" -I release@keywarden -n keywarden-release \
+      -s "$tmp/SHA256SUMS.sig" < "$tmp/SHA256SUMS" >/dev/null 2>&1 \
+      || die "release signature does not match, nothing installed"
+    ok "release signature is valid"
+  fi
   tar xzf "$tmp/$file" -C "$tmp"
   dir=$tmp/keywarden-$tag-$target
 

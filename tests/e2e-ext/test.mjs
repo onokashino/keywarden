@@ -269,7 +269,7 @@ await site.waitForTimeout(800);
 assert((await site.inputValue('#user')) === 'tester' && (await site.inputValue('#pass')) === 'S3cret-from-db', 'первым в меню последний использованный аккаунт (tester), форма заполнена');
 assert((await site.locator('keywarden-menu').count()) === 0, 'меню закрылось после выбора');
 
-// третье поле формы входа берётся из своего поля записи с тем же названием («Last Name» → last_name)
+// третье поле формы входа берётся из своего поля записи с приставкой KPH: («KPH: Last Name» → last_name)
 await site.goto('http://127.0.0.1:8765/login-extra');
 await site.waitForTimeout(1500);
 await site.click('#user');

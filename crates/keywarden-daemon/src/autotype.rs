@@ -463,7 +463,9 @@ impl Daemon {
                 .ok_or_else(|| invalid(tr!("нет активного окна")))?,
         };
         let title = target.title.clone();
-        let candidates = self.read(|db| Ok(autotype::candidates(db, &title)))?;
+        let (mut candidates, loose) = self.read(|db| Ok(autotype::candidates_split(db, &title)))?;
+        let exact = candidates.len();
+        candidates.extend(loose);
         let (id, seq) = match id {
             Some(id) => {
                 let seq = match candidates.iter().find(|(c, _)| *c == id) {
@@ -479,7 +481,9 @@ impl Daemon {
                         tr!("нет записи для окна «{title}»", title = title),
                     ));
                 }
-                1 => candidates[0].clone(),
+                // печатаем сразу только в окно, заданное в самой записи; совпадение по слову
+                // в заголовке человек подтверждает выбором, даже если запись одна
+                1 if exact == 1 => candidates[0].clone(),
                 _ => {
                     let entries = self.read(|db| {
                         candidates

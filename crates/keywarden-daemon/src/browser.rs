@@ -861,8 +861,9 @@ fn own_field(name: &str) -> bool {
         && !name.starts_with(model::PASSKEY_PREFIX)
 }
 
-/// Свои поля записи для полей формы: имя сравнивается без регистра, пробелов и знаков.
-/// Приставка `KPH:` (так такие поля называет KeePassXC) не мешает. Скрытые поля сюда не попадают.
+/// Свои поля записи для полей формы: только с приставкой `KPH:` (как в KeePassXC), имя после неё
+/// сравнивается без регистра, пробелов и знаков. Без приставки сайт мог бы перебором имён
+/// вытянуть любое открытое поле записи. Скрытые поля сюда не попадают.
 fn pick_extra(own: &[(String, String)], wanted: &[String]) -> Vec<(String, String)> {
     let norm = |s: &str| -> String {
         s.chars()
@@ -879,7 +880,9 @@ fn pick_extra(own: &[(String, String)], wanted: &[String]) -> Vec<(String, Strin
                 return None;
             }
             own.iter()
-                .find(|(k, v)| !v.is_empty() && norm(k.trim_start_matches("KPH:")) == key)
+                .find(|(k, v)| {
+                    !v.is_empty() && k.strip_prefix("KPH:").is_some_and(|n| norm(n) == key)
+                })
                 .map(|(_, v)| (w.clone(), v.clone()))
         })
         .collect()
@@ -1061,7 +1064,8 @@ mod tests {
     #[test]
     fn own_fields_match_form_labels_by_name() {
         let own = vec![
-            ("Last Name".to_string(), "Ivanov".to_string()),
+            ("Last Name".to_string(), "Petrov".to_string()),
+            ("KPH: Last Name".to_string(), "Ivanov".to_string()),
             ("KPH: account".to_string(), "42".to_string()),
             ("Empty".to_string(), String::new()),
         ];

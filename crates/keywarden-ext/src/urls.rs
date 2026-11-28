@@ -117,9 +117,16 @@ pub fn registrable(host: &str) -> Option<String> {
     psl::domain_str(host).map(str::to_string)
 }
 
-/// Хост страницы для разрешений сайта ("accounts.google.com").
+/// Сайт для разрешений: хост ("accounts.google.com"), с портом, если он не обычный
+/// ("localhost:3000"). Запись без порта подходит к любому порту, но разрешение даётся
+/// на каждый отдельно: соседняя служба на том же хосте не получит пароль молча.
 pub fn site_of(page_url: &str) -> Option<String> {
-    parse(page_url).and_then(|u| u.host_str().map(str::to_string))
+    let u = parse(page_url)?;
+    let host = u.host_str()?;
+    Some(match u.port() {
+        Some(p) => format!("{host}:{p}"),
+        None => host.to_string(),
+    })
 }
 
 /// В KeePass адрес часто хранят без схемы ("github.com").
@@ -225,5 +232,18 @@ mod tests {
         assert!(!m("http://localhost:9090/", "http://localhost:8080"));
         assert!(m("https://192.168.1.1/", "https://192.168.1.1"));
         assert!(!m("https://192.168.1.2/", "https://192.168.1.1"));
+        // разрешение сайта привязано к порту, если он не обычный для схемы
+        assert_eq!(
+            super::site_of("http://localhost:3000/x").as_deref(),
+            Some("localhost:3000")
+        );
+        assert_eq!(
+            super::site_of("https://example.com:443/").as_deref(),
+            Some("example.com")
+        );
+        assert_eq!(
+            super::site_of("https://accounts.example.com/").as_deref(),
+            Some("accounts.example.com")
+        );
     }
 }

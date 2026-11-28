@@ -1777,6 +1777,20 @@ mod tests {
             [(id.clone(), "{PASSWORD}{ENTER}".to_string())],
             "пустая последовательность привязки берёт свою последовательность записи"
         );
+        // окно задано в записи: печатать можно сразу; слово из названия в чужом заголовке
+        // даёт только кандидата на подтверждение
+        let (exact, loose) = crate::autotype::candidates_split(&db, "Мой Банк - Firefox");
+        assert_eq!((exact.len(), loose.len()), (1, 0));
+        create_entry(
+            &mut db,
+            &EntryPatch {
+                set: vec![FieldSet::new("Title", "Почта")],
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let (exact, loose) = crate::autotype::candidates_split(&db, "Почта | чужая страница");
+        assert_eq!((exact.len(), loose.len()), (0, 1));
     }
 
     #[test]

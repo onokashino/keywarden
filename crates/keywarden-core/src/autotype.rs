@@ -68,9 +68,20 @@ fn site_word(url: &str) -> Option<String> {
         .filter(|w| w.len() >= 3)
 }
 
+/// Пары (запись, последовательность автоввода).
+pub type Candidates = Vec<(String, String)>;
+
 /// Записи для окна и последовательность каждой: сначала совпавшие ассоциации, потом совпадение
 /// названия записи или домена её адреса с заголовком окна.
 pub fn candidates(db: &Database, window: &str) -> Vec<(String, String)> {
+    let (mut exact, loose) = candidates_split(db, window);
+    exact.extend(loose);
+    exact
+}
+
+/// То же двумя списками: (заданные в записи окна, совпадения по названию или домену).
+/// Вторым верить без вопроса нельзя: слово в заголовке окна может поставить любой сайт.
+pub fn candidates_split(db: &Database, window: &str) -> (Candidates, Candidates) {
     let w = window.to_lowercase();
     let mut by_assoc = vec![];
     let mut by_title = vec![];
@@ -103,8 +114,7 @@ pub fn candidates(db: &Database, window: &str) -> Vec<(String, String)> {
             by_title.push((id, default));
         }
     }
-    by_assoc.extend(by_title);
-    by_assoc
+    (by_assoc, by_title)
 }
 
 fn default_sequence(e: &EntryRef<'_>) -> String {

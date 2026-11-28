@@ -14,7 +14,7 @@ DPID=$!
 trap 'kill $DPID 2>/dev/null || true' EXIT
 for i in $(seq 50); do [ -S $XDG_RUNTIME_DIR/keywarden/daemon.sock ] && break; sleep 0.1; done
 echo t | $B/kw unlock --password-stdin
-$B/kw add --title "Test site" -u tester --url http://127.0.0.1:8765 --field "Password=S3cret-from-db" --field "Last Name=Ivanov" >/dev/null
+$B/kw add --title "Test site" -u tester --url http://127.0.0.1:8765 --field "Password=S3cret-from-db" --field "KPH: Last Name=Ivanov" --field "City=Kazan" >/dev/null
 $B/kw add --title "OTP site" -u otpuser --url http://127.0.0.2:8765 --field "Password=Otp-site-pass" --field "otp=otpauth://totp/OTP:otpuser?secret=JBSWY3DPEHPK3PXP&issuer=OTP" >/dev/null
 $B/kw add --type wallet --title "Cold wallet" --field "Seed=abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --field "Addresses=основной: bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu" >/dev/null
 $B/kw add --type identity --title "Me" --field "First Name=Ivan" --field "Last Name=Petrov" --field "Email=ivan@example.com" --field "City=Kazan" --field "Country=Russia" >/dev/null
