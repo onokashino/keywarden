@@ -602,8 +602,8 @@
               <code class="cmd">kw browser-setup</code>
               <p class="muted">{t('no_host_check')}</p>
               <code class="cmd">kw browser-setup --check</code>
+              {#if status.error}<p class="err">{status.error}</p>{/if}
             {/if}
-            {#if status.error}<p class="err">{status.error}</p>{/if}
           </div>
         {:else if !status.associated}
           <div class="empty">
