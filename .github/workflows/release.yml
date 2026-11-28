@@ -1,5 +1,5 @@
 # Release on a vX.Y.Z tag: builds on three systems, archives, extension, checksums.
-# The release is published at once (text from .github/release-notes.md), then packages and extension-stores run.
+# The release is published at once (text from .github/release-notes.md), then extension-stores runs.
 name: release
 
 on:
@@ -135,12 +135,11 @@ jobs:
           pre=; case "$TAG" in *-*) pre=--prerelease;; esac
           gh release create "$TAG" ./* --repo "$GITHUB_REPOSITORY" $pre \
             --title "Keywarden $TAG" --notes-file ../notes.md --generate-notes
-      # a release made with GITHUB_TOKEN does not fire release: published, so start them here
-      - name: packages and stores
-        # a prerelease (v0.2.0-rc.1) is for testing only: no package managers, no stores
+      # a release made with GITHUB_TOKEN does not fire release: published, so start it here
+      - name: extension stores
+        # a prerelease (v0.2.0-rc.1) is for testing only: no stores
         if: ${{ !contains(env.TAG, '-') }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run packages.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG"
           gh workflow run extension-stores.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG" -f dry_run=false

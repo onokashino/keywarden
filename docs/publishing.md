@@ -23,8 +23,7 @@
    the source archive for AMO and `SHA256SUMS`, and publishes the release at once. The release text
    comes from `.github/release-notes.md` (`{TAG}` is replaced with the tag); GitHub appends the
    list of changes below it.
-4. After publishing, `release.yml` starts `packages.yml` (AUR, Homebrew, winget) and
-   `extension-stores.yml`: the extension goes to review in every store that has its secrets set.
+4. After publishing, `release.yml` starts `extension-stores.yml`: the extension goes to review in every store that has its secrets set.
    The others are skipped with a warning.
 
 Test a build before releasing it: tag with a hyphen, for example `v0.2.0-rc.1`, while `Cargo.toml`
@@ -100,43 +99,12 @@ Secrets go into the `stores` environment (Settings, Environments, stores, Add se
 - AMO also lists it for Firefox for Android, but without the app on the phone the extension has
   nothing to talk to: on the AMO listing tick desktop Firefox only.
 
-## 6. App updates: AUR, Homebrew, winget
+## 6. App updates
 
-When a release is published, `packages.yml` updates the packages in three channels. A channel
-without its secret is skipped. Secrets go into the `packages` environment (Settings, Environments).
-Prereleases (a tag with a hyphen, for example `v0.2.0-rc.1`) never reach the packages.
-
-### AUR (`keywarden-bin`)
-
-1. An account on https://aur.archlinux.org with a public SSH key in the profile
-   (a separate one, for AUR only: `ssh-keygen -t ed25519 -f aur -C aur`).
-2. The package is created by the first push, nothing to register in advance.
-3. Secret `AUR_SSH_PRIVATE_KEY`: the contents of the `aur` file (the private key).
-4. Template: `packaging/aur/PKGBUILD`. CI fills in the version and the archive sha256.
-
-Install: `paru -S keywarden-bin`, updates come with the system.
-
-### Homebrew (macOS)
-
-1. Create a public repository `onokashino/homebrew-tap` (empty).
-2. A fine-grained token with Contents: Read and write on `homebrew-tap` only,
-   secret `HOMEBREW_TAP_TOKEN`.
-3. Template: `packaging/homebrew/keywarden.rb`.
-
-Install: `brew install onokashino/tap/keywarden`, update: `brew upgrade`. Homebrew downloads the
-archive itself, so macOS sets no quarantine and `xattr` is not needed.
-
-### winget (Windows)
-
-1. Submit the first version by hand:
-   `wingetcreate new https://github.com/onokashino/keywarden/releases/download/v0.1.0/keywarden-v0.1.0-windows-x86_64.zip`
-   (installer type zip, nested portable, identifier `onokashino.Keywarden`), then wait for the PR
-   to microsoft/winget-pkgs to be merged.
-2. Fork `microsoft/winget-pkgs` into your account.
-3. A classic token with the `public_repo` scope, secret `WINGET_TOKEN`.
-
-From then on every version reaches winget by itself: `winget install onokashino.Keywarden`,
-update `winget upgrade`.
+There are no package manager channels: one installer script and the release archives are the only
+sources, so there is one thing to sign and one thing to check. Users update by running the
+install command again (Linux, macOS) or by unpacking the new archive (Windows). The app can tell
+them a new version is out: Settings, This computer, Updates (off by default).
 
 ## 7. Community translations: Weblate
 
