@@ -652,7 +652,15 @@ export default defineContentScript({
       if (pwIdx === null) return;
       const password = inputs[pwIdx]?.value;
       const username = f.username !== null ? inputs[f.username].value : '';
-      if (password) ask({ type: 'submitted', username, password }).then((r) => r && showSave()).catch(() => {});
+      if (!password) return;
+      ask({ type: 'submitted', username, password })
+        .then((r) => {
+          if (!r) return;
+          // форму отправили повторно (сайт отклонил первый пароль): окно с прежними данными заменяем
+          document.querySelector('keywarden-save')?.remove();
+          showSave();
+        })
+        .catch(() => {});
     }
 
     async function showSave() {
