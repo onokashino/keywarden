@@ -212,7 +212,8 @@ async function otpFlow() {
   assert((await send({ type: 'fill', id: l.value[0].id, tabId: tab })).ok, 'логин с 2FA заполнен');
   await Promise.all([p.waitForURL('**/otp**'), p.click('button[type=submit]')]);
   await p.waitForTimeout(2500);
-  const code = await p.inputValue('#code');
+  // с настройкой «отправлять форму» страница кода уже ушла дальше
+  const code = p.url().includes('/welcome') ? 'submitted' : await p.inputValue('#code');
   await p.close();
   return code;
 }
@@ -220,6 +221,8 @@ const code = await otpFlow();
 assert(/^\d{6}$/.test(code), `код 2FA вставлен сам: ${code}`);
 await popup.evaluate(() => chrome.storage.local.set({ prefs: { icons: true, offerSave: true, autoOtp: false, neverSites: [] } }));
 assert((await otpFlow()) === '', 'с выключенной настройкой код не вставляется');
+await popup.evaluate(() => chrome.storage.local.set({ prefs: { otpSubmit: true } }));
+assert((await otpFlow()) === 'submitted', 'с настройкой «отправлять форму» после кода вход завершается сам');
 await popup.evaluate(() => chrome.storage.local.remove('prefs'));
 
 // меню аккаунтов на сайте: фокус в поле → список, стрелка и Enter заполняют выбранный

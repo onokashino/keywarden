@@ -9,6 +9,8 @@ export type Prefs = {
   offerSave: boolean;
   /// после заполнения логина Keywarden сам вставит код 2FA на следующем шаге того же сайта
   autoOtp: boolean;
+  /// после автоматической вставки кода 2FA сразу отправить форму
+  otpSubmit: boolean;
   /// после заполнения логина и пароля код 2FA этой записи кладётся в буфер обмена
   otpClipboard: boolean;
   /// заполнять логин и пароль сразу при открытии страницы (только уже разрешённые сайты с одной записью)
@@ -17,7 +19,7 @@ export type Prefs = {
   neverSites: string[];
 };
 
-export const DEFAULT_PREFS: Prefs = { icons: true, menuOnFocus: true, offerSave: true, autoOtp: true, otpClipboard: true, fillOnLoad: false, neverSites: [] };
+export const DEFAULT_PREFS: Prefs = { icons: true, menuOnFocus: true, offerSave: true, autoOtp: true, otpSubmit: false, otpClipboard: true, fillOnLoad: false, neverSites: [] };
 
 export async function loadPrefs(): Promise<Prefs> {
   const { prefs } = await browser.storage.local.get('prefs');

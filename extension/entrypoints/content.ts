@@ -160,6 +160,8 @@ export default defineContentScript({
       if (code && !el.value) {
         setValue(el, code);
         toast(t('toast_otp_inserted'));
+        // по желанию: код вставлен, ждать нечего
+        if (prefs.otpSubmit) el.form?.requestSubmit();
       }
     }
 

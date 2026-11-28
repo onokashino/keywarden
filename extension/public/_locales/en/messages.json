@@ -523,6 +523,12 @@
   "pref_otp_hint": {
     "message": "After a login is filled, the code on the next step of the same site is inserted right away"
   },
+  "pref_otp_submit": {
+    "message": "Submit the form after the 2FA code"
+  },
+  "pref_otp_submit_hint": {
+    "message": "When Keywarden has filled the code itself, the sign-in form is submitted without a click"
+  },
   "never_sites": {
     "message": "Never offer to save"
   },

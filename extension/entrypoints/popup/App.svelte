@@ -724,6 +724,7 @@
           <label class="field toggle"><span><b>{t('pref_menu')}</b><small>{t('pref_menu_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.menuOnFocus} onchange={(e) => setPref('menuOnFocus', e.currentTarget.checked)} /></label>
           <label class="field toggle"><span><b>{t('pref_offer')}</b><small>{t('pref_offer_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.offerSave} onchange={(e) => setPref('offerSave', e.currentTarget.checked)} /></label>
           <label class="field toggle"><span><b>{t('pref_otp')}</b><small>{t('pref_otp_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.autoOtp} onchange={(e) => setPref('autoOtp', e.currentTarget.checked)} /></label>
+          <label class="field toggle"><span><b>{t('pref_otp_submit')}</b><small>{t('pref_otp_submit_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.otpSubmit} onchange={(e) => setPref('otpSubmit', e.currentTarget.checked)} /></label>
           <label class="field toggle"><span><b>{t('pref_otp_clip')}</b><small>{t('pref_otp_clip_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.otpClipboard} onchange={(e) => setPref('otpClipboard', e.currentTarget.checked)} /></label>
           <label class="field toggle"><span><b>{t('pref_fill_load')}</b><small>{t('pref_fill_load_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.fillOnLoad} onchange={(e) => setPref('fillOnLoad', e.currentTarget.checked)} /></label>
         </section>
