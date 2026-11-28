@@ -77,14 +77,15 @@
       </div>
     </div>
     <div class="os-panel" id="os-windows" role="tabpanel">
-      <pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip из Releases</span>
-<span class="c"># распакуйте в постоянную папку и там:</span>
-<span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span>
-<span class="p">&gt; </span><span data-type>.\kw.exe browser-setup</span></pre>
+      <pre class="term" data-copy="irm https://onokashino.github.io/keywarden/install.ps1 | iex"><span class="c"># PowerShell, x86_64</span>
+<span class="p">&gt; </span><span data-type>irm https://onokashino.github.io/keywarden/install.ps1 | iex</span></pre>
       <div>
         <h3>Windows<span class="badge">бета</span></h3>
-        <p>Установщика пока нет: zip с четырьмя программами. SmartScreen один раз спросит, потому что файлы пока не подписаны: «Подробнее», затем «Выполнить в любом случае».</p>
-        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases/latest" target="_blank" rel="noopener">Файлы релиза</a>
+        <p>Проверяет загрузку и ставит в <code>%LOCALAPPDATA%\Programs\Keywarden</code> без прав администратора: программы, ярлык в меню «Пуск», <code>kw</code> в PATH и связь с браузером. <a href="../../install.ps1" target="_blank" rel="noopener">Прочитать скрипт</a>. Программы пока не подписаны, поэтому SmartScreen при первом запуске может переспросить: «Подробнее», затем «Выполнить в любом случае».</p>
+        <details class="hand"><summary>Вручную из архива</summary><pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip из Releases</span>
+<span class="c"># распакуйте в постоянную папку и там:</span>
+<span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span>
+<span class="p">&gt; </span><span data-type>.\kw.exe browser-setup</span></pre></details>
       </div>
     </div>
     <div class="os-panel" id="os-macos" role="tabpanel">

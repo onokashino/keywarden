@@ -101,9 +101,9 @@ Secrets go into the `stores` environment (Settings, Environments, stores, Add se
 
 ## 6. App updates
 
-There are no package manager channels: one installer script and the release archives are the only
+There are no package manager channels: the installer scripts (`install.sh`, `install.ps1`) and the release archives are the only
 sources, so there is one thing to sign and one thing to check. Users update by running the
-install command again (Linux, macOS) or by unpacking the new archive (Windows). The app can tell
+install command again. The app can tell
 them a new version is out: Settings, This computer, Updates (off by default).
 
 ## 7. Community translations: Weblate

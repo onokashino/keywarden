@@ -77,14 +77,15 @@
       </div>
     </div>
     <div class="os-panel" id="os-windows" role="tabpanel">
-      <pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip from Releases</span>
-<span class="c"># unpack it to a folder you keep, then there:</span>
-<span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span>
-<span class="p">&gt; </span><span data-type>.\kw.exe browser-setup</span></pre>
+      <pre class="term" data-copy="irm https://onokashino.github.io/keywarden/install.ps1 | iex"><span class="c"># PowerShell, x86_64</span>
+<span class="p">&gt; </span><span data-type>irm https://onokashino.github.io/keywarden/install.ps1 | iex</span></pre>
       <div>
         <h3>Windows<span class="badge">beta</span></h3>
-        <p>No installer yet: a zip with four programs. SmartScreen asks once because the files are not signed yet: "More info", then "Run anyway".</p>
-        <a class="btn ghost" href="https://github.com/onokashino/keywarden/releases/latest" target="_blank" rel="noopener">Release files</a>
+        <p>Checks the download and installs into <code>%LOCALAPPDATA%\Programs\Keywarden</code> without administrator rights: programs, Start menu shortcut, <code>kw</code> in PATH and the browser link. <a href="../install.ps1" target="_blank" rel="noopener">Read the script</a>. The programs are not code-signed yet, so SmartScreen may ask once on first start: "More info", then "Run anyway".</p>
+        <details class="hand"><summary>By hand from the archive</summary><pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip from Releases</span>
+<span class="c"># unpack it to a folder you keep, then there:</span>
+<span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span>
+<span class="p">&gt; </span><span data-type>.\kw.exe browser-setup</span></pre></details>
       </div>
     </div>
     <div class="os-panel" id="os-macos" role="tabpanel">

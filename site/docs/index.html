@@ -103,6 +103,9 @@ cd keywarden-*-linux-x86_64
     <p>Optional packages: <code>wtype</code> (autotype on Wayland) or <code>xdotool</code> (autotype on X11).</p>
   </div>
   <div class="panel" id="inst-win" role="tabpanel" aria-labelledby="t-inst-win" hidden>
+    <p>In PowerShell:</p>
+<pre><code>irm https://onokashino.github.io/keywarden/install.ps1 | iex</code></pre>
+    <p>The command downloads the latest release archive, checks it against <code>SHA256SUMS</code> and installs into <code>%LOCALAPPDATA%\Programs\Keywarden</code> without administrator rights: programs, Start menu shortcut, <code>kw</code> in PATH and the browser link. A specific version: <code>$env:KEYWARDEN_VERSION='v0.1.0'</code> before the command. The same by hand:</p>
     <p>Unpack <code>keywarden-*-windows-x86_64.zip</code> to a folder you keep, for example <code>%LOCALAPPDATA%\Programs\Keywarden</code>, and run <code>keywarden-ui.exe</code>. It starts the daemon on demand.</p>
     <p>The binaries are not signed yet, so SmartScreen asks once: choose "More info", then "Run anyway".</p>
     <p>Register the browser host from that folder:</p>
@@ -126,8 +129,7 @@ cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p 
 
 <h3>Updates</h3>
 <ul>
-  <li><b>Linux and macOS</b>: run the install command again. It downloads the latest release, checks it and replaces the programs; your vault and settings stay as they are.</li>
-  <li><b>Windows</b>: download the new archive from the latest release and unpack it over the old files.</li>
+  <li>Run the install command again, on any system. It downloads the latest release, checks it and replaces the programs; your vault and settings stay as they are.</li>
   <li>To hear about new versions: turn on <b>Settings, This computer, Updates</b>. Once a day Keywarden asks GitHub for the latest release (nothing else is sent) and tells you when a new version is out. It is off by default.</li>
 </ul>
 <p>The browser extension from a store updates itself.</p>
