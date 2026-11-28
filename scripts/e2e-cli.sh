@@ -132,6 +132,16 @@ grep -q "^work  заблокирована" <<EOT
 $($B/kw profiles)
 EOT
 kill $WPID; wait $WPID 2>/dev/null || true
+step "PIN: попытки списываются сразу, пачка запросов не обходит счётчик"
+printf 't\n4821\n' | $B/kw pin --stdin
+$B/kw lock
+PINS=""
+for i in 1 2 3 4 5 6; do (echo 0000 | $B/kw unlock --pin --password-stdin >/dev/null 2>&1 || true) & PINS="$PINS $!"; done
+sleep 0.3
+! echo 4821 | $B/kw unlock --pin --password-stdin
+wait $PINS
+echo t | $B/kw unlock --db $W/db.kdbx --password-stdin
+$B/kw pin --remove
 step "lock"; $B/kw lock; ! $B/kw search git
 step "конфиг запомнил базу"; cat $XDG_CONFIG_HOME/keywarden/config.toml | grep database
 step "бэкапы"; ls $XDG_STATE_HOME/keywarden/backups/*/ | head

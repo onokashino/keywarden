@@ -14,8 +14,6 @@ pub use unix::Listener;
 #[cfg(windows)]
 pub use windows::Listener;
 
-#[cfg(windows)]
-pub use windows::same_user_pid;
 
 #[cfg(unix)]
 mod unix {
@@ -65,14 +63,9 @@ mod windows {
     use std::os::windows::io::AsRawHandle;
     use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
     use tokio::sync::Mutex;
-    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
-    use windows_sys::Win32::Security::{
-        EqualSid, GetTokenInformation, TOKEN_QUERY, TOKEN_USER, TokenUser,
-    };
+    use keywarden_core::platform::same_user_pid;
+    use windows_sys::Win32::Foundation::HANDLE;
     use windows_sys::Win32::System::Pipes::GetNamedPipeClientProcessId;
-    use windows_sys::Win32::System::Threading::{
-        GetCurrentProcess, OpenProcess, OpenProcessToken, PROCESS_QUERY_LIMITED_INFORMATION,
-    };
 
     pub struct Listener {
         name: PathBuf,
@@ -111,41 +104,6 @@ mod windows {
                 }
                 tracing::warn!(pid, "отклонён клиент другого пользователя");
             }
-        }
-    }
-
-    /// SID пользователя, которому принадлежит токен процесса.
-    unsafe fn token_user(process: HANDLE) -> Option<Vec<u8>> {
-        unsafe {
-            let mut token: HANDLE = std::ptr::null_mut();
-            if OpenProcessToken(process, TOKEN_QUERY, &mut token) == 0 {
-                return None;
-            }
-            let mut len = 0u32;
-            GetTokenInformation(token, TokenUser, std::ptr::null_mut(), 0, &mut len);
-            let mut buf = vec![0u8; len as usize];
-            let ok = GetTokenInformation(token, TokenUser, buf.as_mut_ptr().cast(), len, &mut len);
-            CloseHandle(token);
-            (ok != 0).then_some(buf)
-        }
-    }
-
-    /// Процесс `pid` запущен тем же пользователем, что и демон.
-    pub fn same_user_pid(pid: u32) -> bool {
-        unsafe {
-            let Some(mine) = token_user(GetCurrentProcess()) else {
-                return false;
-            };
-            let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
-            if h.is_null() {
-                return false;
-            }
-            let theirs = token_user(h);
-            CloseHandle(h);
-            let Some(theirs) = theirs else { return false };
-            let a = (*(mine.as_ptr() as *const TOKEN_USER)).User.Sid;
-            let b = (*(theirs.as_ptr() as *const TOKEN_USER)).User.Sid;
-            EqualSid(a, b) != 0
         }
     }
 }

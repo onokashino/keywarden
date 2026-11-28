@@ -126,7 +126,7 @@ impl Agent<NamedPipeListener> for KeyAgent {
             )
         } != 0;
         // чужой пользователь получит пустой список ключей и отказ в подписи
-        let trusted = ok && crate::local::same_user_pid(pid);
+        let trusted = ok && keywarden_core::platform::same_user_pid(pid);
         KeySession {
             agent: self.clone(),
             trusted,

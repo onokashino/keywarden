@@ -59,23 +59,22 @@ impl Daemon {
         if self.is_unlocked() {
             return Ok(Response::Ok);
         }
+        // попытка списывается до долгой проверки: иначе пачка запросов разом проходит счётчик
         let (lock, sealed, until) = {
-            let g = self.inner();
-            let q = g.quick.as_ref().filter(|q| q.usable()).ok_or_else(|| {
+            let mut g = self.inner();
+            let q = g.quick.as_mut().filter(|q| q.usable()).ok_or_else(|| {
                 Response::error(
                     ErrorCode::WrongKey,
                     tr!("PIN сейчас не действует: введите мастер-пароль"),
                 )
             })?;
+            q.attempts -= 1;
             (q.lock.clone(), q.sealed.clone(), q.until)
         };
         let opened = blocking(move || Ok::<_, String>(lock.open(pin.expose(), &sealed))).await?;
         let Some(c) = opened else {
             let mut g = self.inner();
-            let left = g.quick.as_mut().map(|q| {
-                q.attempts = q.attempts.saturating_sub(1);
-                q.attempts
-            });
+            let left = g.quick.as_ref().map(|q| q.attempts);
             let msg = match left {
                 Some(n) if n > 0 => tr!("Неверный PIN, осталось попыток: {n}", n = n),
                 _ => {
@@ -125,11 +124,16 @@ impl Daemon {
             .with_vault(|v, _| v.path().to_path_buf())
             .ok_or_else(locked)?;
         if let Some(pin) = pin {
-            let (lock, fails) = {
-                let g = self.inner();
-                (g.config.pin.clone(), g.elevate_fails)
+            // попытка списывается до долгой проверки, верный PIN обнуляет счёт ниже
+            let lock = {
+                let mut g = self.inner();
+                let ok = g.elevate_fails < ELEVATE_PIN_ATTEMPTS;
+                if ok {
+                    g.elevate_fails += 1;
+                }
+                g.config.pin.clone().filter(|_| ok)
             };
-            let Some(lock) = lock.filter(|_| fails < ELEVATE_PIN_ATTEMPTS) else {
+            let Some(lock) = lock else {
                 return Err(Response::error(
                     ErrorCode::WrongKey,
                     tr!("PIN не принимается: введите мастер-пароль"),
@@ -138,7 +142,6 @@ impl Daemon {
             let ok = blocking(move || Ok::<_, String>(lock.verify(pin.expose()))).await?;
             let mut g = self.inner();
             if !ok {
-                g.elevate_fails += 1;
                 let left = ELEVATE_PIN_ATTEMPTS.saturating_sub(g.elevate_fails);
                 return Err(Response::error(
                     ErrorCode::WrongKey,

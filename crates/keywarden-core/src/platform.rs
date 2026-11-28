@@ -154,16 +154,36 @@ pub fn connect(path: &Path) -> io::Result<Conn> {
 
 #[cfg(windows)]
 pub fn connect(path: &Path) -> io::Result<Conn> {
+    use std::os::windows::fs::OpenOptionsExt;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::System::Pipes::GetNamedPipeServerProcessId;
+    // SECURITY_IDENTIFICATION: тот, кто держит канал, не сможет действовать от нашего имени
+    const SECURITY_IDENTIFICATION: u32 = 0x0001_0000;
     // все экземпляры канала заняты (ERROR_PIPE_BUSY = 231): демон заводит новый сразу после
     // подключения, подождать немного
     for _ in 0..50 {
         match std::fs::OpenOptions::new()
             .read(true)
             .write(true)
+            .security_qos_flags(SECURITY_IDENTIFICATION)
             .open(path)
         {
             Err(e) if e.raw_os_error() == Some(231) => {
                 std::thread::sleep(Duration::from_millis(20))
+            }
+            Ok(conn) => {
+                // имя канала мог занять другой пользователь раньше демона и ждать мастер-пароль:
+                // пишем только процессу под нашей учётной записью
+                let mut pid = 0u32;
+                let ok = unsafe { GetNamedPipeServerProcessId(conn.as_raw_handle() as _, &mut pid) }
+                    != 0;
+                if ok && same_user_pid(pid) {
+                    return Ok(conn);
+                }
+                return Err(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    crate::tr!("канал демона держит другой пользователь"),
+                ));
             }
             r => return r,
         }
@@ -172,6 +192,51 @@ pub fn connect(path: &Path) -> io::Result<Conn> {
         io::ErrorKind::TimedOut,
         crate::tr!("канал демона занят"),
     ))
+}
+
+#[cfg(windows)]
+/// SID пользователя, которому принадлежит токен процесса.
+unsafe fn token_user(process: windows_sys::Win32::Foundation::HANDLE) -> Option<Vec<u8>> {
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows_sys::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TokenUser};
+    use windows_sys::Win32::System::Threading::OpenProcessToken;
+    unsafe {
+        let mut token: HANDLE = std::ptr::null_mut();
+        if OpenProcessToken(process, TOKEN_QUERY, &mut token) == 0 {
+            return None;
+        }
+        let mut len = 0u32;
+        GetTokenInformation(token, TokenUser, std::ptr::null_mut(), 0, &mut len);
+        let mut buf = vec![0u8; len as usize];
+        let ok = GetTokenInformation(token, TokenUser, buf.as_mut_ptr().cast(), len, &mut len);
+        CloseHandle(token);
+        (ok != 0).then_some(buf)
+    }
+}
+
+/// Процесс `pid` запущен тем же пользователем, что и мы.
+#[cfg(windows)]
+pub fn same_user_pid(pid: u32) -> bool {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::Security::{EqualSid, TOKEN_USER};
+    use windows_sys::Win32::System::Threading::{
+        GetCurrentProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    unsafe {
+        let Some(mine) = token_user(GetCurrentProcess()) else {
+            return false;
+        };
+        let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if h.is_null() {
+            return false;
+        }
+        let theirs = token_user(h);
+        CloseHandle(h);
+        let Some(theirs) = theirs else { return false };
+        let a = (*(mine.as_ptr() as *const TOKEN_USER)).User.Sid;
+        let b = (*(theirs.as_ptr() as *const TOKEN_USER)).User.Sid;
+        EqualSid(a, b) != 0
+    }
 }
 
 /// Тайм-аут чтения ответа; у каналов Windows его нет, там вызов ничего не делает.

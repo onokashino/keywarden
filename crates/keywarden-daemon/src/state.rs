@@ -123,7 +123,12 @@ impl Daemon {
     }
 
     pub async fn handle(self: &Arc<Self>, req: Request) -> Response {
-        if !matches!(req, Request::Ping | Request::Status | Request::Subscribe) {
+        // код 2FA окно запрашивает само каждые 30 секунд: это не действие человека,
+        // иначе открытое окно с кодом не даёт базе закрыться по простою
+        if !matches!(
+            req,
+            Request::Ping | Request::Status | Request::Subscribe | Request::Totp { .. }
+        ) {
             self.inner().last_activity = Instant::now();
         }
         self.dispatch(req).await.unwrap_or_else(|e| e)
