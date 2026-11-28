@@ -29,6 +29,8 @@ install -m 0755 "$R/keywardend" "$R/kw" "$R/keywarden-ui" "$R/keywarden-host" "$
 install -m 0644 dist/systemd/keywardend.service dist/systemd/keywardend@.service "$CONF/systemd/user/"
 install -m 0644 dist/keywarden.desktop "$HOME/.local/share/applications/"
 install -Dm644 dist/icons/keywarden.svg "$HOME/.local/share/icons/hicolor/scalable/apps/keywarden.svg"
+# a cache older than the theme folder is ignored; without this a stale one hides the new icon
+touch "$HOME/.local/share/icons/hicolor"
 ok "programs in $(home "$BIN")"
 
 systemctl --user daemon-reload
