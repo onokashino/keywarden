@@ -104,7 +104,26 @@ export default defineBackground(() => {
   }
 
   // popup и другие страницы самого расширения (их адрес chrome-extension:// или moz-extension://)
-  const fromExtension = (sender: Browser.runtime.MessageSender) => !!sender.url?.startsWith(browser.runtime.getURL('/'));
+  // Окно расширения во фрейме страницы доверенное, только если его открыли мы сами по щелчку на значке:
+  // popup.html доступен страницам, и сайт мог бы вставить его к себе невидимым и подставить под щелчки.
+  const armed = new Map<number, string>();
+  const panels = new Map<number, number>();
+  const hydrated = browser.storage.session
+    .get('panels')
+    .then((s) => Object.entries((s.panels ?? {}) as Record<string, number>).forEach(([tab, frame]) => panels.set(+tab, frame)))
+    .catch(() => {});
+  const keepPanels = () => browser.storage.session.set({ panels: Object.fromEntries(panels) }).catch(() => {});
+  browser.tabs.onRemoved.addListener((tabId) => {
+    armed.delete(tabId);
+    if (panels.delete(tabId)) keepPanels();
+    // перехваченный пароль и прочее по вкладке не живут дольше самой вкладки
+    pending.delete(tabId);
+    stepUser.delete(tabId);
+    lastFill.delete(tabId);
+  });
+  const fromExtension = (sender: Browser.runtime.MessageSender) =>
+    !!sender.url?.startsWith(browser.runtime.getURL('/')) &&
+    (!sender.tab || sender.frameId === 0 || (sender.tab.id !== undefined && panels.get(sender.tab.id) === sender.frameId));
 
   // --- вход в окне браузера (HTTP Basic), только с выданным в настройках разрешением ---
   const authTried = new Set<string>();
@@ -116,7 +135,8 @@ export default defineBackground(() => {
     setTimeout(() => authTried.delete(d.requestId), 60_000);
     try {
       const logins = await withLastFirst(d.url, (await call({ action: 'get_logins', url: d.url })).logins as Login[]);
-      if (!logins.length) return {};
+      // несколько учёток: выбирать молча нельзя, пусть спросит браузер
+      if (logins.length !== 1) return {};
       const r = await call({ action: 'fill', id: logins[0].id, url: d.url, quiet: false });
       rememberUsed(d.url, logins[0].id);
       return { authCredentials: { username: r.username as string, password: r.password as string } };
@@ -144,6 +164,9 @@ export default defineBackground(() => {
   // адрес берём у браузера (sender / вкладка), а не из сообщения страницы
   async function pageUrl(sender: Browser.runtime.MessageSender, tabId?: number): Promise<string> {
     if (!fromExtension(sender) && sender.tab && sender.url) {
+      // документ в песочнице (заголовок CSP sandbox, чужие загрузки на том же адресе) сайтом не считается
+      const origin = (sender as { origin?: string }).origin;
+      if (origin && origin !== new URL(sender.url).origin) throw new DaemonError('frame', t('err_frames'));
       // фрейм допускаем только с того же адреса, что сама вкладка (страница проверяет ещё и рамки между ними)
       if (sender.frameId !== 0 && (!sender.tab.url || new URL(sender.url).origin !== new URL(sender.tab.url).origin)) throw new DaemonError('frame', t('err_frames'));
       return sender.url;
@@ -151,6 +174,12 @@ export default defineBackground(() => {
     const tab = tabId !== undefined ? await browser.tabs.get(tabId) : (await browser.tabs.query({ active: true, currentWindow: true }))[0];
     if (!tab?.url) throw new DaemonError('no_tab', t('err_no_tab'));
     return tab.url;
+  }
+
+  /// вкладка за время ожидания не ушла на другой сайт: секрет одного сайта не попадёт в форму другого
+  async function stillAt(tabId: number, url: string) {
+    const now = (await browser.tabs.get(tabId)).url;
+    if (!now || new URL(now).origin !== new URL(url).origin) throw new DaemonError('no_tab', t('err_no_tab'));
   }
 
   function tabOf(sender: Browser.runtime.MessageSender, tabId?: number): Promise<number> {
@@ -212,7 +241,16 @@ export default defineBackground(() => {
   const stepUser = new Map<number, { site: string; username: string; at: number }>();
 
   async function handle(msg: Msg, sender: Browser.runtime.MessageSender): Promise<unknown> {
+    await hydrated;
     switch (msg.type) {
+      case 'panelAuth': {
+        const tab = sender.tab?.id;
+        if (tab === undefined || sender.frameId === undefined || !sender.url?.startsWith(browser.runtime.getURL('/')) || armed.get(tab) !== msg.token) return false;
+        armed.delete(tab);
+        panels.set(tab, sender.frameId);
+        await keepPanels();
+        return true;
+      }
       case 'status':
         return status();
       case 'associate':
@@ -228,15 +266,18 @@ export default defineBackground(() => {
         return withLastFirst(url, r.logins as Login[]);
       }
       case 'fill': {
-        const url = await pageUrl(sender, msg.tabId);
+        // вкладка выбирается один раз: пока висит вопрос в Keywarden, активной могла стать другая
+        const tabId = await tabOf(sender, msg.tabId);
+        const url = await pageUrl(sender, tabId);
         // подписи соседних полей формы: демон вернёт свои поля записи с такими именами
         const extra = Array.isArray(msg.extra) ? msg.extra.filter((x) => typeof x === 'string').slice(0, 40).map((x) => x.slice(0, 80)) : [];
         const r = await call({ action: 'fill', id: msg.id, url, quiet: !!msg.quiet && !fromExtension(sender), extra });
-        lastFill.set(await tabOf(sender, msg.tabId), { site: hostOf(url), id: msg.id, at: Date.now() });
+        lastFill.set(tabId, { site: hostOf(url), id: msg.id, at: Date.now() });
         rememberUsed(url, msg.id);
         if (fromExtension(sender)) {
           // из popup: передаём учётку content script вкладки
-          await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillWith', username: r.username, password: r.password }, { frameId: frameOf(sender) });
+          await stillAt(tabId, url);
+          await browser.tabs.sendMessage(tabId, { type: 'fillWith', username: r.username, password: r.password }, { frameId: frameOf(sender) });
           return null;
         }
         return { username: r.username, password: r.password, extra: r.extra ?? [] };
@@ -257,9 +298,12 @@ export default defineBackground(() => {
         return true;
       }
       case 'totp': {
-        const r = await call({ action: 'totp', id: msg.id, url: await pageUrl(sender, msg.tabId) });
+        const tabId = await tabOf(sender, msg.tabId);
+        const url = await pageUrl(sender, tabId);
+        const r = await call({ action: 'totp', id: msg.id, url });
         if (fromExtension(sender)) {
-          await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillOtp', code: r.code }, { frameId: frameOf(sender) });
+          await stillAt(tabId, url);
+          await browser.tabs.sendMessage(tabId, { type: 'fillOtp', code: r.code }, { frameId: frameOf(sender) });
           return null;
         }
         return r.code as string;
@@ -412,7 +456,11 @@ export default defineBackground(() => {
   if (import.meta.env.BROWSER !== 'firefox') {
     browser.action.setPopup({ popup: '' }).catch(() => {});
     browser.action.onClicked.addListener(async (tab) => {
-      const toggle = () => browser.tabs.sendMessage(tab.id!, { type: 'togglePanel' }, { frameId: 0 });
+      const toggle = () => {
+        const token = crypto.randomUUID();
+        armed.set(tab.id!, token);
+        return browser.tabs.sendMessage(tab.id!, { type: 'togglePanel', token }, { frameId: 0 });
+      };
       try {
         if (tab.id === undefined || !tab.url?.startsWith('http')) throw new Error('служебная страница');
         try {

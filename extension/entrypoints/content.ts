@@ -38,6 +38,19 @@ export default defineContentScript({
   main(ctx) {
     // во фрейме работаем, только если он и все рамки над ним с того же адреса, что вкладка:
     // чужой iframe мог бы выманить пароль, а к чужому окну доступа нет (обращение бросает ошибку)
+    // документ в песочнице (CSP sandbox): адрес сайта, но это не сам сайт
+    if (self.origin === 'null') return;
+    // щелчок по нашим кнопкам считается, только если их видно: страница может сделать их прозрачными
+    // и подставить под щелчок по своей картинке
+    const real = (e: Event) => {
+      if (!e.isTrusted) return false;
+      const root = (e.currentTarget as Node).getRootNode();
+      for (let n: Element | null = root instanceof ShadowRoot ? root.host : null; n; n = n.parentElement) {
+        const s = getComputedStyle(n);
+        if (+s.opacity < 0.9 || s.visibility === 'hidden') return false;
+      }
+      return true;
+    };
     const framed = window !== window.top;
     try {
       for (let w: Window = window; w !== window.top; w = w.parent) if (w.parent.location.origin !== location.origin) return;
@@ -246,7 +259,7 @@ export default defineContentScript({
       ctx.setInterval(place, 500);
       // mousedown, а не click: фокус остаётся в поле, меню не мигает
       root.querySelector('button')!.addEventListener('mousedown', (e) => {
-        if (!e.isTrusted) return;
+        if (!real(e)) return;
         e.preventDefault();
         if (menu?.anchor === el) return closeMenu();
         el.focus();
@@ -495,7 +508,7 @@ export default defineContentScript({
         }
         b.append(av, tx);
         b.addEventListener('click', (e) => {
-          if (!e.isTrusted) return;
+          if (!real(e)) return;
           closeMenu();
           it.pick();
         });
@@ -823,7 +836,7 @@ export default defineContentScript({
           host.remove();
         };
         btn.addEventListener('click', (e) => {
-          if (!e.isTrusted) return;
+          if (!real(e)) return;
           ask({ type: 'openUnlock' }).catch((err) => toast((err as Error).message));
           clearInterval(timer);
           let left = 120;
@@ -836,7 +849,7 @@ export default defineContentScript({
           }, 1000);
         });
         root.querySelector('.n')!.addEventListener('click', (e) => {
-          if (!e.isTrusted) return;
+          if (!real(e)) return;
           close();
           ask({ type: 'save', accept: false }).catch(() => {});
         });
@@ -874,20 +887,20 @@ export default defineContentScript({
       };
       renderPw();
       eye.addEventListener('click', (e) => {
-        if (!e.isTrusted) return;
+        if (!real(e)) return;
         shown = !shown;
         renderPw();
       });
       root.querySelector('.p')!.textContent = t(changed ? 'update' : 'save');
       const done = (accept: boolean) => (e: Event) => {
-        if (!e.isTrusted) return;
+        if (!real(e)) return;
         host.remove();
         ask({ type: 'save', accept, username: userIn?.value }).then(() => accept && toast(t('toast_saved_keywarden'))).catch((err) => toast((err as Error).message));
       };
       root.querySelector('.p')!.addEventListener('click', done(true));
       root.querySelector('.n')!.addEventListener('click', done(false));
       root.querySelector('.never')!.addEventListener('click', (e) => {
-        if (!e.isTrusted) return;
+        if (!real(e)) return;
         host.remove();
         ask({ type: 'neverSave' }).then(() => toast(t('toast_never_site', p.site))).catch(() => {});
       });
@@ -910,7 +923,7 @@ export default defineContentScript({
 
     // --- окно Keywarden на странице: скруглённая панель с popup.html внутри iframe ---
     let panel: { host: HTMLElement; frame: HTMLIFrameElement; close: () => void } | null = null;
-    function togglePanel() {
+    function togglePanel(token: string) {
       if (panel) return panel.close();
       closeMenu();
       const host = document.createElement('keywarden-panel');
@@ -932,7 +945,10 @@ export default defineContentScript({
       const onDown = (e: MouseEvent) => !e.composedPath().includes(host) && close();
       const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
       const onMsg = (e: MessageEvent) => {
-        if (e.source === frame.contentWindow && e.data?.kw === 'close-panel') close();
+        if (e.source !== frame.contentWindow) return;
+        if (e.data?.kw === 'close-panel') close();
+        // знак уходит только окну расширения: страница его не видит и свой фрейм им не подтвердит
+        if (e.data?.kw === 'panel-ready') frame.contentWindow!.postMessage({ kwToken: token }, new URL(frame.src).origin);
       };
       function close() {
         if (!panel) return;
@@ -964,7 +980,7 @@ export default defineContentScript({
         if (el) quickFill(el, f);
       }
       if (msg.type === 'fillWith' && f) fill(f, msg.username, msg.password);
-      if (msg.type === 'togglePanel') togglePanel();
+      if (msg.type === 'togglePanel') togglePanel(msg.token);
       if (msg.type === 'showSave') showSave();
       if (msg.type === 'fillNew') {
         // поля нового пароля формы, иначе поле пароля в фокусе

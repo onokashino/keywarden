@@ -297,9 +297,26 @@ assert((await sameFrame.inputValue('#user')) === 'tester' && (await sameFrame.in
 // окно Keywarden панелью на странице (значок K): iframe с popup внутри скруглённой рамки
 await site.goto('http://127.0.0.1:8765/login');
 await site.waitForTimeout(1200);
-await popup.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'togglePanel' }), tabId);
+// страница сама встраивает окно расширения: такому фрейму фон не доверяет
+await site.evaluate((src) => {
+  const f = document.createElement('iframe');
+  f.id = 'squat';
+  f.src = src;
+  document.body.appendChild(f);
+}, `chrome-extension://${extId}/popup.html#panel`);
+await site.waitForTimeout(800);
+const squat = site.frames().find((f) => f.url().includes('/popup.html'));
+const denied = await squat.evaluate(() => chrome.runtime.sendMessage({ type: 'search', query: 'git' }));
+assert(denied.ok === false, 'окно расширения, встроенное сайтом, не получает записи');
+await site.evaluate(() => document.getElementById('squat').remove());
+// щелчок по значку K: фон выдаёт одноразовый знак, панель предъявляет его
+[sw] = ctx.serviceWorkers();
+await sw.evaluate(async (id) => chrome.action.onClicked.dispatch(await chrome.tabs.get(id)), tabId);
 await site.waitForTimeout(1800);
 assert((await site.locator('keywarden-panel').count()) === 1, 'панель Keywarden открылась на странице');
+const real = site.frames().find((f) => f.url().includes('/popup.html'));
+const allowed = await real.evaluate(() => chrome.runtime.sendMessage({ type: 'search', query: 'git' }));
+assert(allowed.ok === true, 'панель, открытая по значку, работает');
 if (process.env.SHOTS) {
   await site.setViewportSize({ width: 900, height: 640 });
   await site.waitForTimeout(600);

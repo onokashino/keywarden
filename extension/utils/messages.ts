@@ -51,6 +51,8 @@ export type PendingSave = { site: string; username: string; password: string; st
 
 export type Msg =
   | { type: 'status' }
+  /// панель на странице предъявляет одноразовый знак, выданный по щелчку на значке
+  | { type: 'panelAuth'; token: string }
   | { type: 'associate' }
   | { type: 'classify'; fields: FieldInfo[] }
   | { type: 'logins'; tabId?: number }
@@ -86,7 +88,7 @@ export type ContentMsg =
   | { type: 'fillWith'; username: string; password: string }
   | { type: 'fillOtp'; code: string }
   | { type: 'fillNew'; password: string }
-  | { type: 'togglePanel' }
+  | { type: 'togglePanel'; token: string }
   /// пункт меню по правой кнопке мыши: поле берётся то, по которому щёлкнули
   | { type: 'ctx'; action: 'fill' | 'card' | 'identity' }
   | { type: 'ctx'; action: 'generate'; password: string }

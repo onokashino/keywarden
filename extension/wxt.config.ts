@@ -20,7 +20,8 @@ export default defineConfig({
       extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
     },
     // окно Keywarden открывается скруглённой панелью прямо на странице (iframe с popup.html)
-    web_accessible_resources: [{ resources: ['popup.html'], matches: ['http://*/*', 'https://*/*'] }],
+    // в Firefox панели нет (там обычное окно), так что и открывать файл страницам незачем
+    ...(browser === 'firefox' ? {} : { web_accessible_resources: [{ resources: ['popup.html'], matches: ['http://*/*', 'https://*/*'] }] }),
     commands: {
       'fill-login': {
         suggested_key: { default: 'Ctrl+Shift+L' },
