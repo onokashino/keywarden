@@ -619,6 +619,28 @@ assert(twoOffer.ok && twoOffer.value?.username === 'two-step' && twoOffer.value.
 await send({ type: 'save', accept: false, tabId: twoTab });
 await two.close();
 
+// 10b. сайт с портом добавлен в «никогда не предлагать» руками: на нём окна сохранения больше нет
+await popup.getByRole('button', { name: 'Настройки' }).click();
+await popup.getByPlaceholder('example.com, localhost:3000').fill('http://127.0.0.3:8765/any/path');
+await popup.keyboard.press('Enter');
+await popup.waitForTimeout(400);
+const never = await popup.evaluate(async () => (await chrome.storage.local.get('prefs')).prefs.neverSites);
+assert(never.includes('127.0.0.3:8765'), `сайт с портом в списке: ${JSON.stringify(never)}`);
+if (SHOTS) {
+  await popup.getByPlaceholder('example.com, localhost:3000').scrollIntoViewIfNeeded();
+  await popup.screenshot({ path: `${SHOTS}/ext-never.png` });
+}
+const quiet = await ctx.newPage();
+await quiet.goto('http://127.0.0.3:8765/login');
+await quiet.waitForTimeout(1500);
+await quiet.fill('#user', 'nobody');
+await quiet.fill('#pass', 'No-offer-here-1');
+await Promise.all([quiet.waitForURL('**/welcome**'), quiet.press('#pass', 'Enter')]);
+await quiet.waitForTimeout(1500);
+assert((await quiet.locator('keywarden-save').count()) === 0, 'на сайте из списка сохранить не предлагают');
+await quiet.close();
+await popup.evaluate(() => chrome.storage.local.remove('prefs'));
+
 // 11. блокировка из popup: дальше ни учёток, ни заполнения
 assert((await send({ type: 'lock' })).ok, 'заблокировано из popup');
 const st2 = await send({ type: 'status' });

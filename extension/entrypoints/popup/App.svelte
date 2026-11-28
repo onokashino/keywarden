@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Filter, Folder, GenOptions, Item, Login, Msg, Reply, Status } from '../../utils/messages';
-  import { AUTH_PERMS, DEFAULT_PREFS, loadPrefs, savePrefs, type Prefs } from '../../utils/prefs';
+  import { AUTH_PERMS, DEFAULT_PREFS, loadPrefs, savePrefs, siteKey, type Prefs } from '../../utils/prefs';
   import Select from './Select.svelte';
   import { t } from '../../utils/i18n';
   import { fade, fly, scale } from 'svelte/transition';
@@ -292,6 +292,7 @@
     say(t('password_copied'));
   }
 
+  let neverDraft = $state('');
   // вход в окне браузера: включён, пока выдано разрешение (отдельной настройки нет)
   let basicAuth = $state(false);
   browser.permissions.contains(AUTH_PERMS).then((v) => (basicAuth = v));
@@ -740,6 +741,24 @@
           <label class="field toggle"><span><b>{t('pref_fill_load')}</b><small>{t('pref_fill_load_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.fillOnLoad} onchange={(e) => setPref('fillOnLoad', e.currentTarget.checked)} /></label>
         </section>
         <h2>{t('never_sites')}</h2>
+        <form
+          class="card form"
+          onsubmit={(e) => {
+            e.preventDefault();
+            const key = siteKey(neverDraft);
+            if (!key) return;
+            if (!prefs.neverSites.includes(key)) setPref('neverSites', [...prefs.neverSites, key]);
+            neverDraft = '';
+          }}
+        >
+          <div class="input">
+            <small>{t('never_sites_add')}</small>
+            <span class="with">
+              <input bind:value={neverDraft} placeholder="example.com, localhost:3000" autocomplete="off" spellcheck="false" />
+              <button class="ghost small" type="submit" disabled={!siteKey(neverDraft)}>{t('add')}</button>
+            </span>
+          </div>
+        </form>
         {#if prefs.neverSites.length === 0}
           <p class="hint pad">{t('never_sites_empty')}</p>
         {:else}

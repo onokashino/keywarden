@@ -538,8 +538,11 @@
   "never_sites": {
     "message": "Never offer to save"
   },
+  "never_sites_add": {
+    "message": "Add a site: with a port the entry applies to that port only"
+  },
   "never_sites_empty": {
-    "message": "Empty. A site is added here with the \"Never here\" button."
+    "message": "Empty. Add a site above or press \"Never here\" in the save prompt."
   },
   "remove": {
     "message": "Remove"

@@ -3,7 +3,7 @@
 // WASM загружается только здесь, не в content script, и не выставляется сайтам.
 import initWasm, { classifyData, classifyFields, generateKeypair, open, seal } from '../wasm/keywarden_ext';
 import type { ContentMsg, FieldInfo, Login, Msg, PendingSave, Reply, Status } from '../utils/messages';
-import { loadPrefs, savePrefs } from '../utils/prefs';
+import { loadPrefs, neverSave, savePrefs } from '../utils/prefs';
 import { t } from '../utils/i18n';
 import { cachedTheme, type Theme } from '../utils/theme';
 
@@ -343,7 +343,7 @@ export default defineBackground(() => {
         // пароль пришёл со второй страницы входа: логин берём с первой (та же вкладка и сайт, не старше 5 минут)
         if (!msg.username && step && step.site === hostOf(url) && Date.now() - step.at < 5 * 60_000) msg.username = step.username;
         const prefs = await loadPrefs();
-        if (!prefs.offerSave || prefs.neverSites.includes(hostOf(url))) return null;
+        if (!prefs.offerSave || neverSave(prefs, url)) return null;
         // база заблокирована: предложение не теряем, страница покажет «Разблокировать»
         const r = await call({ action: 'check_save', url, username: msg.username, password: msg.password }).catch((e) => {
           if ((e as DaemonError).code !== 'locked') throw e;

@@ -15,7 +15,7 @@ export type Prefs = {
   otpClipboard: boolean;
   /// заполнять логин и пароль сразу при открытии страницы (только уже разрешённые сайты с одной записью)
   fillOnLoad: boolean;
-  /// сайты, где сохранять пароль не предлагаем никогда
+  /// сайты, где сохранять пароль не предлагаем никогда: `example.com` или с портом `localhost:3000`
   neverSites: string[];
 };
 
@@ -35,3 +35,20 @@ export const AUTH_PERMS = {
   permissions: import.meta.env.BROWSER === 'firefox' ? ['webRequest', 'webRequestBlocking'] : ['webRequest', 'webRequestAuthProvider'],
   origins: ['<all_urls>'],
 } as any;
+
+/// Запись списка «никогда не предлагать» из того, что ввели руками: адрес, хост или хост с портом.
+export function siteKey(text: string): string | null {
+  const x = text.trim();
+  try {
+    const u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(x) ? x : `http://${x}`);
+    return u.hostname ? u.host.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/// Сайт в списке целиком (любой порт) или именно с этим портом.
+export function neverSave(p: Prefs, url: string): boolean {
+  const u = new URL(url);
+  return p.neverSites.includes(u.hostname) || p.neverSites.includes(u.host);
+}
