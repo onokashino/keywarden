@@ -279,7 +279,7 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
 kw otp qr github      # show the QR in the terminal</code></pre>
 
 <h2 id="autotype">Autotype</h2>
-<p>Autotype types into the active window: by default username, <kbd>Tab</kbd>, password, <kbd>Enter</kbd>. An entry can have its own sequence in KeePass syntax, like <code>{USERNAME}{TAB}{TAB}{PASSWORD}{ENTER}</code>, and window associations that pick the right entry by window title. Keywarden checks that the focused window has not changed before typing.</p>
+<p>Autotype types into the active window: by default username, <kbd>Tab</kbd>, password, <kbd>Enter</kbd>. An entry can have its own sequence in KeePass syntax, like <code>{USERNAME}{TAB}{TAB}{PASSWORD}{ENTER}</code>, and window associations that pick the right entry by window title. Into a window listed in the entry Keywarden types straight away. When the entry is found only by its name or site in the window title, it asks you to confirm first: any web page can put a familiar word into its title. Keywarden checks that the focused window has not changed before typing.</p>
 <pre><code>kw autotype           # entry for the active window
 kw autotype github    # a specific entry</code></pre>
 <div class="table-wrap"><table>
