@@ -228,6 +228,14 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
   <li>Register the host so the browser can reach Keywarden. The Linux installer does it; otherwise run <code>kw browser-setup</code>. For Chromium-based browsers pass the extension id shown on <code>chrome://extensions</code>: <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</li>
   <li>Click the Keywarden icon in the toolbar and press <b>Connect</b>. Confirm in the Keywarden window.</li>
 </ol>
+<h3>If the browser does not connect</h3>
+<p>Run <code>kw browser-setup --check</code>. It checks each step (the host program, the background service, the link file of every browser it finds) and names the one that is broken. <code>kw browser-setup</code> repairs the link files; restart the browser afterwards.</p>
+<ul>
+  <li><b>Firefox forks</b> (LibreWolf, Waterfox, Zen, Floorp) and Vivaldi, Opera, Yandex are set up by the same command when they are installed.</li>
+  <li><b>Flatpak browsers</b>: the command puts a copy of the host inside the browser's sandbox and gives the sandbox read access to the Keywarden socket (<code>flatpak override --user --filesystem=xdg-run/keywarden:ro</code>). Run it again after updating Keywarden.</li>
+  <li><b>Firefox from Snap</b> uses the regular link file; the system asks for permission on the first connection.</li>
+  <li><b>A portable build or a browser that is not listed</b>: point at its manifest folder with <code>kw browser-setup --dir &lt;folder&gt;</code>.</li>
+</ul>
 <h3>Confirmations</h3>
 <figure><div class="shot" style="max-width:560px"><img src="../assets/shots/confirm.webp" alt="Confirmation window asking to fill a login on github.com" loading="lazy" width="658" height="228"></div></figure>
 <p>The first time a site asks for a login, Keywarden shows a confirmation over all windows: <kbd>Enter</kbd> allows once, <kbd>Ctrl+Enter</kbd> always for this site, <kbd>Esc</kbd> denies. Sites are matched by registrable domain using the Public Suffix List, so <code>login.example.com</code> and <code>example.com</code> share logins but <code>example.co.uk</code> and <code>other.co.uk</code> do not.</p>
@@ -380,7 +388,7 @@ kw ssh-import-config                   kw knock NAME
 kw otp set|scan|qr                     kw autotype [QUERY]
 kw passwd [-k KEYFILE]   kw keyfile PATH   kw db-settings [--tune]
 kw profiles   kw profile-add NAME FILE.kdbx   kw --profile NAME ...
-kw browser-setup [--chrome-id ID]      kw new PATH</code></pre>
+kw browser-setup [--chrome-id ID] [--check]   kw new PATH</code></pre>
 
 <h2 id="platforms">Platform support</h2>
 <div class="table-wrap"><table>

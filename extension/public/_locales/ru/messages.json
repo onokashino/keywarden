@@ -351,8 +351,14 @@
   "no_connection": {
     "message": "Нет связи с Keywarden"
   },
-  "no_connection_hint": {
-    "message": "Запущен ли keywardend и установлен ли keywarden-host?"
+  "no_daemon_hint": {
+    "message": "Keywarden не запущен. Откройте приложение Keywarden и вернитесь сюда."
+  },
+  "no_host_hint": {
+    "message": "Браузер не нашёл Keywarden на этом компьютере. Выполните в терминале и перезапустите браузер:"
+  },
+  "no_host_check": {
+    "message": "Не помогло? Эта команда покажет, что именно сломано:"
   },
   "connect_title": {
     "message": "Подключите расширение"

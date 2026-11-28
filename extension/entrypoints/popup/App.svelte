@@ -585,7 +585,14 @@
           <div class="empty">
             <span class="big">!</span>
             <b>{t('no_connection')}</b>
-            <p class="muted">{t('no_connection_hint')}</p>
+            {#if status.reason === 'daemon'}
+              <p class="muted">{t('no_daemon_hint')}</p>
+            {:else}
+              <p class="muted">{t('no_host_hint')}</p>
+              <code class="cmd">kw browser-setup</code>
+              <p class="muted">{t('no_host_check')}</p>
+              <code class="cmd">kw browser-setup --check</code>
+            {/if}
             {#if status.error}<p class="err">{status.error}</p>{/if}
           </div>
         {:else if !status.associated}
@@ -1196,6 +1203,15 @@
   }
   .empty p {
     margin: 0;
+  }
+  .cmd {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--kw-sunken, #1b1b1f);
+    border: 1px solid var(--kw-input-border, #2c2d33);
+    user-select: all;
   }
   .big {
     width: 48px;

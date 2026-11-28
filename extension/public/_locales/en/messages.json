@@ -351,8 +351,14 @@
   "no_connection": {
     "message": "No connection to Keywarden"
   },
-  "no_connection_hint": {
-    "message": "Is keywardend running and keywarden-host installed?"
+  "no_daemon_hint": {
+    "message": "Keywarden is not running. Open the Keywarden app and come back here."
+  },
+  "no_host_hint": {
+    "message": "The browser did not find Keywarden on this computer. Run this in a terminal and restart the browser:"
+  },
+  "no_host_check": {
+    "message": "Did not help? This command shows what exactly is broken:"
   },
   "connect_title": {
     "message": "Connect the extension"

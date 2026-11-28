@@ -40,20 +40,12 @@ systemctl --user restart keywardend.service
 ok "background service ${B}keywardend${N} is running and starts with your session"
 ok "menu entry added"
 
-# native messaging: Firefox and Chromium-based browsers
-dir=$HOME/.mozilla/native-messaging-hosts
-mkdir -p "$dir"
-sed "s|/usr/bin/keywarden-host|$BIN/keywarden-host|" dist/native-messaging/firefox.json > "$dir/dev.keywarden.host.json"
-browsers=Firefox
-for d in "$CONF/chromium:Chromium" "$CONF/google-chrome:Chrome" "$CONF/BraveSoftware/Brave-Browser:Brave"; do
-  path=${d%%:*}
-  [ -d "$path" ] || continue
-  mkdir -p "$path/NativeMessagingHosts"
-  sed -e "s|/usr/bin/keywarden-host|$BIN/keywarden-host|" -e "s|REPLACE_WITH_EXTENSION_ID|${CHROMIUM_EXTENSION_ID:-REPLACE_WITH_EXTENSION_ID}|" \
-    dist/native-messaging/chromium.json > "$path/NativeMessagingHosts/dev.keywarden.host.json"
-  browsers="$browsers, ${d##*:}"
-done
-ok "browsers can reach Keywarden: $browsers"
+# native messaging: Firefox, Chromium-based browsers, their forks and Flatpak builds
+if "$BIN/kw" browser-setup ${CHROMIUM_EXTENSION_ID:+--chrome-id "$CHROMIUM_EXTENSION_ID"} >/dev/null; then
+  ok "browsers can reach Keywarden (check: kw browser-setup --check)"
+else
+  warn "browser host not registered, run: kw browser-setup"
+fi
 
 stamp=$(date +%Y%m%d-%H%M%S)
 

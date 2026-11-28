@@ -98,7 +98,8 @@ export default defineBackground(() => {
       const code = (e as DaemonError).code;
       if (code === 'locked') return { connected: true, associated: true, locked: true };
       if (code === 'not_associated') return { connected: true, associated: false, locked: false };
-      return { connected: false, associated: !!k.serverPublic, locked: false, error: (e as Error).message };
+      // мост ответил, но служба молчит: чинится запуском приложения; иначе браузер не нашёл сам мост
+      return { connected: false, associated: !!k.serverPublic, locked: false, error: (e as Error).message, reason: code === 'daemon' ? 'daemon' : 'host' };
     }
   }
 

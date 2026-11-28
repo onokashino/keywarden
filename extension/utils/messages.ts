@@ -45,7 +45,7 @@ export type Item = {
   notes?: string;
 };
 
-export type Status = { connected: boolean; associated: boolean; locked: boolean; error?: string };
+export type Status = { connected: boolean; associated: boolean; locked: boolean; error?: string; reason?: 'host' | 'daemon' };
 
 export type PendingSave = { site: string; username: string; password: string; state: 'new' | 'changed' | 'locked'; id?: string };
 

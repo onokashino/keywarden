@@ -450,11 +450,15 @@ enum Cmd {
         #[arg(long, conflicts_with = "hosts", help = tr!("выключить ключ под каждый хост"))]
         no_hosts: bool,
     },
-    #[command(about = tr!("Связать расширение браузера с Keywarden (native messaging) для Firefox, Chrome, Edge, Brave"))]
+    #[command(about = tr!("Связать расширение браузера с Keywarden (native messaging) для Firefox, Chrome и их форков"))]
     BrowserSetup {
         #[arg(help = tr!("id расширения в Chromium-браузерах (chrome://extensions)"))]
         #[arg(long)]
         chrome_id: Option<String>,
+        #[arg(long, help = tr!("каталог манифестов браузера, которого нет в списке (портативная сборка, форк)"))]
+        dir: Option<PathBuf>,
+        #[arg(long, conflicts_with_all = ["chrome_id", "dir"], help = tr!("проверить связь с браузерами и показать, что сломано"))]
+        check: bool,
     },
     #[command(about = tr!("Печатать события демона (отладка)"))]
     Watch,
@@ -646,7 +650,10 @@ fn run(cli: Cli) -> Result<()> {
             }
             return Ok(());
         }
-        Cmd::BrowserSetup { chrome_id } => return browser::setup(chrome_id.as_deref()),
+        Cmd::BrowserSetup { check: true, .. } => return browser::check(),
+        Cmd::BrowserSetup { chrome_id, dir, .. } => {
+            return browser::setup(chrome_id.as_deref(), dir.as_deref());
+        }
         Cmd::ProfileAdd { name, db } => {
             ipc::add_profile(name, db).map_err(|e| anyhow!(e))?;
             if cfg!(target_os = "linux") {

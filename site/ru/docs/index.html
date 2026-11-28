@@ -228,6 +228,14 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // блокировка</co
   <li>Зарегистрируйте хост, чтобы браузер мог достучаться до Keywarden. Установщик на Linux делает это сам; в остальных случаях выполните <code>kw browser-setup</code>. Для браузеров на основе Chromium передайте id расширения со страницы <code>chrome://extensions</code>: <code>kw browser-setup --chrome-id &lt;id&gt;</code>.</li>
   <li>Нажмите значок Keywarden на панели браузера и кнопку <b>«Подключить»</b>. Подтвердите в окне Keywarden.</li>
 </ol>
+<h3>Если браузер не подключается</h3>
+<p>Выполните <code>kw browser-setup --check</code>. Команда проверяет каждый шаг (программу-мост, фоновую службу, файл связи каждого найденного браузера) и называет сломанный. <code>kw browser-setup</code> чинит файлы связи; после неё перезапустите браузер.</p>
+<ul>
+  <li><b>Форки Firefox</b> (LibreWolf, Waterfox, Zen, Floorp), а также Vivaldi, Opera и Яндекс Браузер настраиваются той же командой, если установлены.</li>
+  <li><b>Браузеры из Flatpak</b>: команда кладёт копию моста внутрь песочницы браузера и даёт песочнице доступ на чтение к сокету Keywarden (<code>flatpak override --user --filesystem=xdg-run/keywarden:ro</code>). После обновления Keywarden выполните её ещё раз.</li>
+  <li><b>Firefox из Snap</b> берёт обычный файл связи; при первом подключении система спросит разрешение.</li>
+  <li><b>Портативная сборка или браузер не из списка</b>: укажите его каталог манифестов через <code>kw browser-setup --dir &lt;каталог&gt;</code>.</li>
+</ul>
 <h3>Подтверждения</h3>
 <figure><div class="shot" style="max-width:560px"><img src="../../assets/shots/ru/confirm.webp" alt="Окно подтверждения заполнения логина на github.com" loading="lazy" width="658" height="228"></div></figure>
 <p>Когда сайт впервые запрашивает логин, Keywarden показывает подтверждение поверх всех окон: <kbd>Enter</kbd> разрешает один раз, <kbd>Ctrl+Enter</kbd> всегда для этого сайта, <kbd>Esc</kbd> отказывает. Сайты сопоставляются по регистрируемому домену с помощью Public Suffix List, поэтому у <code>login.example.com</code> и <code>example.com</code> общие логины, а у <code>example.co.uk</code> и <code>other.co.uk</code> нет.</p>
@@ -380,7 +388,7 @@ kw ssh-import-config                   kw knock NAME
 kw otp set|scan|qr                     kw autotype [QUERY]
 kw passwd [-k KEYFILE]   kw keyfile PATH   kw db-settings [--tune]
 kw profiles   kw profile-add NAME FILE.kdbx   kw --profile NAME ...
-kw browser-setup [--chrome-id ID]      kw new PATH</code></pre>
+kw browser-setup [--chrome-id ID] [--check]   kw new PATH</code></pre>
 
 <h2 id="platforms">Поддержка платформ</h2>
 <div class="table-wrap"><table>
