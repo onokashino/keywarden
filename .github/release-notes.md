@@ -12,15 +12,26 @@ The script downloads the archive for your system, checks it against `SHA256SUMS`
 
 **Windows (x86_64)**
 
-Unpack `keywarden-{TAG}-windows-x86_64.zip` to a folder you keep, for example `%LOCALAPPDATA%\Programs\Keywarden`, run `keywarden-ui.exe`, then register the browser host:
-
 ```powershell
-.\kw.exe browser-setup
+irm https://onokashino.github.io/keywarden/install.ps1 | iex
 ```
+
+Installs into `%LOCALAPPDATA%\Programs\Keywarden` without administrator rights, adds `kw` to PATH, a Start menu shortcut and the browser link.
+
+**Later, on any system**
+
+Run the same command again. It checks the installation, offers to fix what is broken, updates to the latest release, and lets you choose the optional parts (browser link, SSH agent for all programs). The installer speaks English and Russian.
 
 **Browser extension**
 
 Firefox: https://addons.mozilla.org/firefox/addon/keywarden/. The extension talks only to the Keywarden app on the same computer.
+
+## Upgrading to 0.2.10
+
+- Autotype types straight away only into a window listed in the entry. When the entry is found by a word in the window title, it asks you to confirm first.
+- Extra sign-in fields (a last name, a client number) are filled only from entry fields named with the `KPH:` prefix, for example `KPH: Last Name`.
+- A site on a non-default port asks for your permission once more: the permission is now remembered per host and port.
+- The AUR, Homebrew and winget packages were never published and are no longer planned: the install command above is the single source.
 
 ## Verify
 

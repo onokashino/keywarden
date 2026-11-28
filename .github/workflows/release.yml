@@ -39,7 +39,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-24.04, name: linux-x86_64 }
+          # the oldest runner on purpose: the binaries then need glibc 2.35, not 2.39,
+          # and start on Debian 12 and Ubuntu 22.04 as well
+          - { os: ubuntu-22.04, name: linux-x86_64 }
           - { os: windows-2022, name: windows-x86_64 }
           - { os: macos-15, name: macos-arm64 }
     runs-on: ${{ matrix.os }}
