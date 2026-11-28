@@ -172,6 +172,8 @@ export default defineBackground(() => {
 
   // предложение сохранить пароль переживает переход на следующую страницу
   const pending = new Map<number, PendingSave & { url: string; at: number }>();
+  // логин с первой страницы входа в два шага, ждёт пароль со второй
+  const stepUser = new Map<number, { site: string; username: string; at: number }>();
 
   async function handle(msg: Msg, sender: Browser.runtime.MessageSender): Promise<unknown> {
     switch (msg.type) {
@@ -292,8 +294,16 @@ export default defineBackground(() => {
         return true;
       }
       case 'submitted': {
-        if (!msg.password) return null;
         const url = await pageUrl(sender);
+        const from = await tabOf(sender);
+        // не стираем после первого раза: одну отправку формы страница сообщает дважды (Enter и submit)
+        const step = stepUser.get(from);
+        if (!msg.password) {
+          if (msg.username) stepUser.set(from, { site: hostOf(url), username: msg.username, at: Date.now() });
+          return null;
+        }
+        // пароль пришёл со второй страницы входа: логин берём с первой (та же вкладка и сайт, не старше 5 минут)
+        if (!msg.username && step && step.site === hostOf(url) && Date.now() - step.at < 5 * 60_000) msg.username = step.username;
         const prefs = await loadPrefs();
         if (!prefs.offerSave || prefs.neverSites.includes(hostOf(url))) return null;
         // база заблокирована: предложение не теряем, страница покажет «Разблокировать»

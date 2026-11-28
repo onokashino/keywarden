@@ -725,10 +725,13 @@ export default defineContentScript({
       const f = form ?? formFor();
       if (!f) return;
       const pwIdx = f.password ?? f.new_passwords[0] ?? null;
-      if (pwIdx === null) return;
-      const password = inputs[pwIdx]?.value;
+      const password = pwIdx !== null ? inputs[pwIdx]?.value : '';
       const username = f.username !== null ? inputs[f.username].value : '';
-      if (!password) return;
+      if (!password) {
+        // вход в два шага: логин уходит первой страницей, запоминаем его к паролю со следующей
+        if (username) ask({ type: 'submitted', username, password: '' }).catch(() => {});
+        return;
+      }
       ask({ type: 'submitted', username, password })
         .then((r) => {
           if (!r) return;
@@ -865,11 +868,11 @@ export default defineContentScript({
     // SPA без <form>: Enter в поле пароля или клик по кнопке рядом
     document.addEventListener('keydown', (e) => {
       const el = origin(e);
-      if (e.key === 'Enter' && el instanceof HTMLInputElement && el.type === 'password') captureSubmit(formFor(el));
+      if (e.key === 'Enter' && el instanceof HTMLInputElement && formFor(el)) captureSubmit(formFor(el));
     }, true);
     document.addEventListener('click', (e) => {
       const b = (origin(e) as Element)?.closest?.('button,[type=submit],[role=button]');
-      if (b && forms.some((f) => f.password !== null || f.new_passwords.length)) captureSubmit();
+      if (b && forms.length) captureSubmit();
     }, true);
 
     // --- окно Keywarden на странице: скруглённая панель с popup.html внутри iframe ---

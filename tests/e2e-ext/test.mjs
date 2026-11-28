@@ -35,6 +35,10 @@ const pages = {
       }
     });
   </script>`,
+  '/step1': `<!doctype html><meta charset=utf-8><title>Шаг 1</title>
+    <form action="/step2" method="get" style="margin:40px"><input id="user" name="username" autocomplete="username" placeholder="Email"><button type="submit">Далее</button></form>`,
+  '/step2': `<!doctype html><meta charset=utf-8><title>Шаг 2</title>
+    <form action="/welcome" method="get" style="margin:40px"><input id="pass" name="password" type="password" autocomplete="current-password" placeholder="Пароль"><button type="submit">Войти</button></form>`,
   '/login-otp': `<!doctype html><meta charset=utf-8><title>Вход с 2FA</title>
     <form action="/otp" method="get" style="margin:40px;display:grid;gap:8px;width:300px">
       <input id="user" name="username" autocomplete="username" placeholder="Логин">
@@ -539,6 +543,22 @@ await reg.mouse.click(1220, 182); // «Сохранить»
 await reg.waitForTimeout(1200);
 const regLogins = await send({ type: 'logins', tabId: regTab });
 assert(regLogins.ok && regLogins.value.some((l) => l.username === 'newbie@mail'), `сохранено с исправленным логином: ${JSON.stringify(regLogins)}`);
+
+// 10a. вход в два шага: логин на первой странице, пароль на второй, сохранить предлагают оба
+const two = await ctx.newPage();
+await two.goto('http://127.0.0.3:8765/step1');
+await two.waitForTimeout(1500);
+await two.fill('#user', 'two-step');
+await Promise.all([two.waitForURL('**/step2**'), two.click('button[type=submit]')]);
+await two.waitForTimeout(1500);
+await two.fill('#pass', 'Second-page-1');
+await Promise.all([two.waitForURL('**/welcome**'), two.press('#pass', 'Enter')]);
+await two.waitForTimeout(1500);
+const twoTab = await popup.evaluate(async () => (await chrome.tabs.query({ url: 'http://127.0.0.3:8765/*' }))[0].id);
+const twoOffer = await send({ type: 'pendingSave', tabId: twoTab });
+assert(twoOffer.ok && twoOffer.value?.username === 'two-step' && twoOffer.value.password === 'Second-page-1', `вход в два шага: логин с первой страницы в предложении сохранить: ${JSON.stringify(twoOffer)}`);
+await send({ type: 'save', accept: false, tabId: twoTab });
+await two.close();
 
 // 11. блокировка из popup: дальше ни учёток, ни заполнения
 assert((await send({ type: 'lock' })).ok, 'заблокировано из popup');
