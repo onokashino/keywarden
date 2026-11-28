@@ -1,6 +1,8 @@
 // Keywarden site: launcher demo, tabs, reveal on scroll, copy buttons, docs scrollspy.
 (() => {
   const ru = document.documentElement.lang === 'ru';
+  // the language menu closes on a click elsewhere
+  addEventListener('click', (e) => document.querySelectorAll('.lang[open]').forEach((d) => d.contains(e.target) || (d.open = false)));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const T = ru
     ? {

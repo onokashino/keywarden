@@ -33,6 +33,12 @@ html { scroll-behavior: smooth; scroll-padding-top: 76px; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); font-feature-settings: "cv11", "ss03"; -webkit-font-smoothing: antialiased; }
 a { color: var(--violet-hi); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+* { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 8px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+::-webkit-scrollbar-corner { background: transparent; }
 img { max-width: 100%; display: block; height: auto; }
 code { font: 500 0.86em var(--mono); background: var(--bg-3); border: 1px solid var(--line); padding: 0.08em 0.38em; border-radius: 6px; }
 :focus-visible { outline: 2px solid var(--violet-hi); outline-offset: 2px; border-radius: 8px; }
@@ -62,7 +68,7 @@ main > section.hero, main > section.show { border-top: 0; }
 .nav-links { display: flex; gap: 4px; font-size: 14px; }
 .nav-links a, .nav-right .docs { color: var(--muted); padding: 6px 10px; border-radius: 8px; transition: color 140ms, background 140ms; }
 .nav-links a:hover, .nav-right .docs:hover { color: var(--ink); background: var(--bg-3); text-decoration: none; }
-.nav-links a[aria-current="true"] { color: var(--ink); }
+.nav-links a[aria-current="true"], .nav-right .docs[aria-current] { color: var(--ink); }
 .nav-right { display: flex; gap: 10px; align-items: center; font-size: 14px; }
 .gh, .menu-btn { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line); color: var(--muted); transition: color 140ms, border-color 140ms; }
 .gh:hover, .menu-btn:hover { color: var(--ink); border-color: var(--line-2); }
@@ -70,10 +76,15 @@ main > section.hero, main > section.show { border-top: 0; }
 .nav-links .only-narrow { display: none; }
 .menu-btn { display: none; cursor: pointer; padding: 0; }
 .menu-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; }
-.lang { display: flex; gap: 2px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
-.lang a { padding: 3px 8px; border-radius: 6px; font: 600 11.5px var(--mono); color: var(--muted); }
-.lang a:hover { text-decoration: none; color: var(--ink); }
-.lang a[aria-current="page"] { background: var(--bg-3); color: var(--ink); }
+.lang { position: relative; }
+.lang summary { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; list-style: none; cursor: pointer; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; font: 500 13px var(--body); color: var(--muted); user-select: none; }
+.lang summary::-webkit-details-marker { display: none; }
+.lang summary::after { content: ""; width: 6px; height: 6px; margin-top: -3px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+.lang summary:hover, .lang[open] summary { color: var(--ink); }
+.lang-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 100%; padding: 4px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
+.lang-menu a { display: block; padding: 6px 10px; border-radius: 6px; font: 500 13px var(--body); color: var(--muted); white-space: nowrap; }
+.lang-menu a:hover { text-decoration: none; background: var(--bg-3); color: var(--ink); }
+.lang-menu a[aria-current="page"] { color: var(--ink); }
 
 /* --- кнопки, плашки --- */
 .btn { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; border-radius: 9px; font: 500 14.5px var(--body); border: 1px solid transparent; cursor: pointer; transition: background 140ms, border-color 140ms, transform 120ms var(--out); }

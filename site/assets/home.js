@@ -228,6 +228,8 @@
 
   // --- кнопка копирования у команд с data-copy ---
   const ru = document.documentElement.lang === 'ru';
+  // the language menu closes on a click elsewhere
+  addEventListener('click', (e) => document.querySelectorAll('.lang[open]').forEach((d) => d.contains(e.target) || (d.open = false)));
   $$('[data-copy]').forEach(el => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'copy-btn'; b.textContent = ru ? 'Копировать' : 'Copy';
