@@ -151,11 +151,38 @@ export default defineContentScript({
         }
         return true;
       };
+      // своя кнопка сайта у правого края (глаз «показать пароль», крестик): встаём левее неё
+      const free = (r: DOMRect) => {
+        let left = r.right - 28;
+        const y = r.top + r.height / 2;
+        for (let i = 0; i < 3; i++) {
+          let hit: Element | undefined;
+          for (const dx of [18, 10, 2]) {
+            const n = document.elementsFromPoint(left + dx, y).find((n) => !n.localName.startsWith('keywarden-'));
+            if (n && n !== el && !n.contains(el)) {
+              hit = n;
+              break;
+            }
+          }
+          if (!hit) break;
+          // от попавшейся иконки поднимаемся до всей кнопки
+          while (hit.parentElement && !hit.parentElement.contains(el)) hit = hit.parentElement;
+          const b = hit.getBoundingClientRect();
+          const next = b.left - 24;
+          // широкий слой (плавающая подпись, окно поверх) не кнопка; дальше середины поля не уходим
+          if (!b.width || b.width > r.width / 2 || next < r.left + r.width / 2) break;
+          left = next;
+        }
+        // глаз нарисован фоном поля или псевдоэлементом: его не нащупать, но место под него сайт оставил отступом
+        const pad = parseFloat(getComputedStyle(el).paddingRight) || 0;
+        if (left === r.right - 28 && pad >= 36 && pad < r.width / 2) left = r.right - pad - 24;
+        return left;
+      };
       const place = () => {
         const r = el.getBoundingClientRect();
         host.style.display = visible(el) && !covered() ? 'block' : 'none';
         host.style.top = `${r.top + window.scrollY + (r.height - 20) / 2}px`;
-        host.style.left = `${r.right + window.scrollX - 28}px`;
+        host.style.left = `${free(r) + window.scrollX}px`;
       };
       place();
       ctx.setInterval(place, 500);

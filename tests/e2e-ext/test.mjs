@@ -402,6 +402,30 @@ await cov.goto('http://127.0.0.2:8765/login-otp');
 await cov.waitForTimeout(1500);
 const shownIcons = () => cov.evaluate(() => [...document.querySelectorAll('keywarden-icon')].filter((h) => h.style.display !== 'none').length);
 assert((await shownIcons()) === 2, 'значки в полях логина и пароля');
+// у поля своя кнопка «показать пароль»: значок встаёт левее, а не поверх неё
+const eyeGap = await cov.evaluate(async () => {
+  const r = document.querySelector('#pass').getBoundingClientRect();
+  const eye = document.createElement('button');
+  eye.style.cssText = `position:fixed;left:${r.right - 30}px;top:${r.top}px;width:26px;height:${r.height}px;padding:0`;
+  eye.type = 'button';
+  document.querySelector('form').appendChild(eye);
+  await new Promise((ok) => setTimeout(ok, 900));
+  const lefts = [...document.querySelectorAll('keywarden-icon')].map((h) => h.getBoundingClientRect());
+  const mine = lefts.find((i) => Math.abs(i.top + i.height / 2 - (r.top + r.height / 2)) < 4);
+  eye.remove();
+  return mine ? r.right - 30 - mine.right : null;
+});
+assert(eyeGap !== null && eyeGap >= 0, `значок левее кнопки сайта в поле пароля: зазор ${eyeGap}`);
+// глаз фоном поля: кнопки нет, но под него оставлен отступ справа
+const padGap = await cov.evaluate(async () => {
+  const u = document.querySelector('#user');
+  u.style.paddingRight = '44px';
+  await new Promise((ok) => setTimeout(ok, 900));
+  const r = u.getBoundingClientRect();
+  const mine = [...document.querySelectorAll('keywarden-icon')].map((h) => h.getBoundingClientRect()).find((i) => Math.abs(i.top + i.height / 2 - (r.top + r.height / 2)) < 4);
+  return mine ? r.right - 44 - mine.right : null;
+});
+assert(padGap !== null && padGap >= 0, `значок левее места, оставленного под иконку сайта: зазор ${padGap}`);
 await cov.evaluate(() => {
   const d = document.createElement('div');
   d.style.cssText = 'position:fixed;inset:0;background:#000c;z-index:1000';
