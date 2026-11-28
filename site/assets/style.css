@@ -1,26 +1,26 @@
 /* Keywarden: документация (главная в home.css). Шрифты и палитра общие с главной. Ничего не грузится со сторонних ресурсов. */
 :root {
-  --bg: oklch(0.17 0.012 290);
-  --bg-2: oklch(0.205 0.014 290);
-  --card: oklch(0.215 0.014 290);
-  --card-2: oklch(0.245 0.016 290);
-  --line: oklch(0.31 0.02 290);
-  --line-2: oklch(0.37 0.02 290);
-  --text: oklch(0.96 0.006 290);
-  --muted: oklch(0.77 0.02 290);
-  --faint: oklch(0.62 0.02 290);
-  --accent: oklch(0.62 0.2 292);
-  --accent-2: oklch(0.76 0.14 292);
-  --accent-bg: rgba(139, 108, 255, 0.12);
+  --bg: #0d0d10;
+  --bg-2: #131317;
+  --card: #131317;
+  --card-2: #1a1a1f;
+  --line: #24242a;
+  --line-2: #33333c;
+  --text: #ececef;
+  --muted: #9a9aa6;
+  --faint: #7d7d89;
+  --accent: #7c5cff;
+  --accent-2: #a18bff;
+  --accent-bg: rgba(124, 92, 255, 0.12);
   --ok: #4ade80;
   --ok-bg: rgba(74, 222, 128, 0.12);
   --warn: #fbbf24;
   --warn-bg: rgba(251, 191, 36, 0.12);
   --no: #f87171;
   --no-bg: rgba(248, 113, 113, 0.12);
-  --radius: 14px;
-  --font: "Golos Text", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --display: "Unbounded", var(--font);
+  --radius: 12px;
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: var(--font);
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   color-scheme: dark;
 }
@@ -68,7 +68,7 @@ pre:hover .copy, .copy:focus-visible { opacity: 1; }
   border-bottom: 1px solid var(--line);
 }
 .nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
-.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font: 700 17px var(--display); letter-spacing: -0.01em; margin-right: auto; white-space: nowrap; flex: none; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font: 600 16px var(--display); letter-spacing: -0.015em; margin-right: auto; white-space: nowrap; flex: none; }
 .brand:hover { text-decoration: none; }
 .brand img { width: 26px; height: 26px; }
 .nav-links { display: flex; gap: 24px; }
@@ -121,7 +121,7 @@ pre:hover .copy, .copy:focus-visible { opacity: 1; }
   display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--accent-2);
   background: var(--accent-bg); border-radius: 999px; padding: 4px 12px; margin-bottom: 20px;
 }
-h1 { font-family: var(--display); font-size: clamp(32px, 4.4vw, 50px); line-height: 1.08; letter-spacing: -0.035em; margin: 0 0 20px; font-weight: 800; }
+h1 { font-family: var(--display); font-size: clamp(32px, 4.4vw, 50px); line-height: 1.08; letter-spacing: -0.035em; margin: 0 0 20px; font-weight: 600; }
 h1 .grad { background: linear-gradient(92deg, #fff 10%, var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lead { font-size: 19px; color: var(--muted); max-width: 34em; margin: 0 0 30px; }
 .cta { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -175,7 +175,7 @@ section { padding: 80px 0; }
 section + section { border-top: 1px solid var(--line); }
 .sec-head { max-width: 680px; margin-bottom: 44px; }
 .sec-head .kicker { color: var(--accent-2); font-size: 13.5px; font-weight: 500; letter-spacing: 0.02em; margin-bottom: 10px; }
-h2 { font-family: var(--display); font-size: clamp(24px, 2.8vw, 32px); line-height: 1.15; letter-spacing: -0.025em; margin: 0 0 14px; font-weight: 700; }
+h2 { font-family: var(--display); font-size: clamp(24px, 2.8vw, 32px); line-height: 1.15; letter-spacing: -0.025em; margin: 0 0 14px; font-weight: 600; }
 .sec-head p { color: var(--muted); font-size: 17px; margin: 0; }
 h3 { font-size: 17px; margin: 0 0 6px; font-weight: 600; letter-spacing: -0.01em; }
 
