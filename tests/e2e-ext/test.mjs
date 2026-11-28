@@ -25,6 +25,16 @@ const pages = {
       <input id="pass" name="password" type="password" autocomplete="current-password" placeholder="Пароль">
       <button type="submit">Войти</button>
     </form>`,
+  '/shadow': `<!doctype html><meta charset=utf-8><title>Веб-компонент</title><x-login></x-login><script>
+    customElements.define('x-login', class extends HTMLElement {
+      connectedCallback() {
+        this.attachShadow({ mode: 'open' }).innerHTML = '<form action="/welcome" method="get" style="margin:40px;display:grid;gap:8px;width:300px">' +
+          '<input id="user" name="username" autocomplete="username" placeholder="Логин">' +
+          '<input id="pass" name="password" type="password" autocomplete="current-password" placeholder="Пароль">' +
+          '<button type="submit">Войти</button></form>';
+      }
+    });
+  </script>`,
   '/login-otp': `<!doctype html><meta charset=utf-8><title>Вход с 2FA</title>
     <form action="/otp" method="get" style="margin:40px;display:grid;gap:8px;width:300px">
       <input id="user" name="username" autocomplete="username" placeholder="Логин">
@@ -147,6 +157,16 @@ assert(fill.ok, `заполнение разрешено: ${JSON.stringify(fill)
 await site.waitForTimeout(300);
 assert((await site.inputValue('#user')) === 'tester', 'логин подставлен в форму');
 assert((await site.inputValue('#pass')) === 'S3cret-from-db', 'пароль подставлен в форму');
+
+// 2a. форма внутри веб-компонента (open shadow root): значки на месте, заполнение работает
+await site.goto('http://127.0.0.1:8765/shadow');
+await site.waitForTimeout(1500);
+assert((await site.evaluate(() => [...document.querySelectorAll('keywarden-icon')].filter((h) => h.style.display !== 'none').length)) === 2, 'значки в полях внутри веб-компонента');
+const sfill = await send({ type: 'fill', id: logins.value[0].id, tabId });
+assert(sfill.ok, `заполнение в веб-компоненте разрешено: ${JSON.stringify(sfill)}`);
+await site.waitForTimeout(300);
+const inShadow = await site.evaluate(() => [...document.querySelector('x-login').shadowRoot.querySelectorAll('input')].map((i) => i.value).join('|'));
+assert(inShadow === 'tester|S3cret-from-db', `логин и пароль подставлены внутрь веб-компонента: ${inShadow}`);
 
 // 3. чужой хост (localhost вместо 127.0.0.1) учётку не получает
 const other = await ctx.newPage();

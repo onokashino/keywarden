@@ -49,6 +49,55 @@ export default defineContentScript({
     cachedTheme().then((v) => (theme = v));
     let otpDone = false;
 
+    let timer: number | undefined;
+    function watch(node: Node) {
+      new MutationObserver(() => {
+        clearTimeout(timer);
+        timer = ctx.setTimeout(scan, 400) as unknown as number;
+      }).observe(node, { childList: true, subtree: true });
+    }
+
+    // --- страница с веб-компонентами: поля лежат в открытых shadow root, обычный поиск их не видит ---
+    const roots = new WeakSet<ShadowRoot>();
+    function deep<T extends Element>(sel: string, root: ParentNode = document): T[] {
+      const out = [...root.querySelectorAll<T>(sel)];
+      for (const h of root.querySelectorAll('*')) {
+        const sr = h.shadowRoot;
+        if (!sr) continue;
+        // изменения внутри shadow root до наблюдателя документа не доходят
+        if (!roots.has(sr)) {
+          roots.add(sr);
+          watch(sr);
+        }
+        out.push(...deep<T>(sel, sr));
+      }
+      return out;
+    }
+    /// поле с фокусом, даже если оно внутри веб-компонента
+    function active(): Element | null {
+      let a = document.activeElement;
+      while (a?.shadowRoot?.activeElement) a = a.shadowRoot.activeElement;
+      return a;
+    }
+    /// настоящая цель события: снаружи веб-компонента виден только он сам
+    const origin = (e: Event) => (e.composedPath()[0] ?? e.target) as EventTarget | null;
+    /// contains, который проходит сквозь границы shadow root
+    function within(anc: Node, node: Node | null): boolean {
+      for (let n = node; n; n = n.parentNode ?? (n as ShadowRoot).host ?? null) if (n === anc) return true;
+      return false;
+    }
+    /// верхний чужой элемент в точке, с заходом внутрь веб-компонентов
+    function topAt(x: number, y: number): Element | undefined {
+      let n = document.elementsFromPoint(x, y).find((n) => !n.localName.startsWith('keywarden-'));
+      while (n?.shadowRoot) {
+        const inner = n.shadowRoot.elementsFromPoint(x, y)[0];
+        if (!inner || inner === n || !within(n, inner)) break;
+        n = inner;
+      }
+      return n;
+    }
+    let formList: HTMLFormElement[] = [];
+
     // --- сбор полей ---
     function visible(el: HTMLElement): boolean {
       const r = el.getBoundingClientRect();
@@ -59,16 +108,16 @@ export default defineContentScript({
     }
 
     function labelOf(el: HTMLElement): string {
-      const byFor = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent : '';
+      const byFor = el.id ? (el.getRootNode() as ParentNode).querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent : '';
       return [byFor, el.closest('label')?.textContent, el.getAttribute('aria-label')].filter(Boolean).join(' ').slice(0, 80);
     }
 
     async function scan() {
-      inputs = [...document.querySelectorAll<HTMLInputElement>('input')].filter((i) =>
+      inputs = deep<HTMLInputElement>('input').filter((i) =>
         ['text', 'email', 'tel', 'number', 'password', ''].includes(i.type),
       );
-      els = [...inputs, ...document.querySelectorAll<HTMLSelectElement>('select')];
-      const formList = [...document.forms];
+      els = [...inputs, ...deep<HTMLSelectElement>('select')];
+      formList = deep<HTMLFormElement>('form');
       const fields: FieldInfo[] = els.map((el, index) => ({
         index,
         form: el.form ? formList.indexOf(el.form) : -1,
@@ -139,15 +188,15 @@ export default defineContentScript({
         const x = r.right - 18;
         const y = r.top + r.height / 2;
         if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return false;
-        const top = document.elementsFromPoint(x, y).find((n) => !n.localName.startsWith('keywarden-'));
-        if (!top || top === el || el.contains(top) || top.contains(el)) return false;
+        const top = topAt(x, y);
+        if (!top || top === el || within(top, el)) return false;
         // подпись или кнопка рядом с полем лежат в той же обёртке: это не «закрыто»
         let near: Element | null = el;
         for (let i = 0; i < 3 && near; i++) {
           near = near.parentElement;
           // до самой страницы не поднимаемся: в body лежит всё, включая окна поверх
           if (!near || near === document.body || near === document.documentElement) break;
-          if (near.contains(top)) return false;
+          if (within(near, top)) return false;
         }
         return true;
       };
@@ -158,15 +207,15 @@ export default defineContentScript({
         for (let i = 0; i < 3; i++) {
           let hit: Element | undefined;
           for (const dx of [18, 10, 2]) {
-            const n = document.elementsFromPoint(left + dx, y).find((n) => !n.localName.startsWith('keywarden-'));
-            if (n && n !== el && !n.contains(el)) {
+            const n = topAt(left + dx, y);
+            if (n && n !== el && !within(n, el)) {
               hit = n;
               break;
             }
           }
           if (!hit) break;
           // от попавшейся иконки поднимаемся до всей кнопки
-          while (hit.parentElement && !hit.parentElement.contains(el)) hit = hit.parentElement;
+          while (hit.parentElement && !within(hit.parentElement, el)) hit = hit.parentElement;
           const b = hit.getBoundingClientRect();
           const next = b.left - 24;
           // широкий слой (плавающая подпись, окно поверх) не кнопка; дальше середины поля не уходим
@@ -300,7 +349,7 @@ export default defineContentScript({
 
     // поле, по которому щёлкнули правой кнопкой: меню браузера сообщает только вкладку
     let ctxTarget: EventTarget | null = null;
-    document.addEventListener('contextmenu', (e) => (ctxTarget = e.target), true);
+    document.addEventListener('contextmenu', (e) => (ctxTarget = origin(e)), true);
 
     /// Поле не распознано как вход: берём его само и ближайшее парное (логин перед паролем или пароль после логина).
     function adhocForm(el: HTMLInputElement): LoginForm | undefined {
@@ -459,9 +508,9 @@ export default defineContentScript({
         buttons[sel]?.scrollIntoView({ block: 'nearest' });
       };
       const onDown = (e: MouseEvent) => {
-        if (!e.composedPath().includes(host) && e.target !== anchor) closeMenu();
+        if (!e.composedPath().includes(host) && origin(e) !== anchor) closeMenu();
       };
-      const onBlur = () => setTimeout(() => menu?.anchor === anchor && document.activeElement !== anchor && closeMenu(), 120);
+      const onBlur = () => setTimeout(() => menu?.anchor === anchor && active() !== anchor && closeMenu(), 120);
       // пользователь печатает сам: меню не мешает и не закрывает кнопку «Войти»
       const onInput = (e: Event) => e.isTrusted && !filling && closeMenu();
       document.addEventListener('mousedown', onDown, true);
@@ -500,7 +549,7 @@ export default defineContentScript({
     document.addEventListener(
       'keydown',
       (e) => {
-        if (e.isTrusted && menu && document.activeElement === menu.anchor && menu.key(e)) {
+        if (e.isTrusted && menu && active() === menu.anchor && menu.key(e)) {
           e.preventDefault();
           e.stopPropagation();
         }
@@ -522,7 +571,7 @@ export default defineContentScript({
       try {
         if (form.new_passwords.includes(idx)) {
           const pw = await ask<string>({ type: 'generate' });
-          if (document.activeElement !== el && auto) return;
+          if (active() !== el && auto) return;
           return showMenu(el, t('menu_new_password', host), [
             {
               label: pw,
@@ -538,7 +587,7 @@ export default defineContentScript({
           ]);
         }
         const logins = await siteLogins();
-        if (document.activeElement !== el && auto) return;
+        if (active() !== el && auto) return;
         if (form.otp === idx) {
           const withOtp = logins.filter((l) => l.has_otp);
           if (!withOtp.length && auto) return;
@@ -586,7 +635,7 @@ export default defineContentScript({
       const use = (l: Login) => ask<Record<string, string>>({ type: 'dataFill', id: l.id }).then((v) => fillData(d, v), failed);
       try {
         const list = await ask<Login[]>({ type: 'dataList', kind: d.group });
-        if (auto && (document.activeElement !== el || !list.length)) return;
+        if (auto && (active() !== el || !list.length)) return;
         if (!auto && list.length === 1) return void use(list[0]);
         showMenu(
           el,
@@ -810,16 +859,16 @@ export default defineContentScript({
     }
 
     document.addEventListener('submit', (e) => {
-      const formEl = e.target as HTMLFormElement;
-      const idx = [...document.forms].indexOf(formEl);
+      const idx = formList.indexOf(origin(e) as HTMLFormElement);
       captureSubmit(forms.find((f) => f.form === idx));
     }, true);
     // SPA без <form>: Enter в поле пароля или клик по кнопке рядом
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type === 'password') captureSubmit(formFor(e.target));
+      const el = origin(e);
+      if (e.key === 'Enter' && el instanceof HTMLInputElement && el.type === 'password') captureSubmit(formFor(el));
     }, true);
     document.addEventListener('click', (e) => {
-      const b = (e.target as Element)?.closest?.('button,[type=submit],[role=button]');
+      const b = (origin(e) as Element)?.closest?.('button,[type=submit],[role=button]');
       if (b && forms.some((f) => f.password !== null || f.new_passwords.length)) captureSubmit();
     }, true);
 
@@ -871,7 +920,9 @@ export default defineContentScript({
       if (msg.type === 'notify') return void toast(msg.text);
       // ответ уходит в background: какой аккаунт скопировать
       if (msg.type === 'choose') return choose(document.body, msg.logins, msg.title).then((l) => l?.id ?? null);
-      const f = formFor(document.activeElement instanceof HTMLInputElement ? document.activeElement : undefined);
+      const act = active();
+      const focused = act instanceof HTMLInputElement ? act : undefined;
+      const f = formFor(focused);
       if (msg.type === 'triggerFill' && f) {
         const el = inputs[f.otp ?? f.password ?? f.username ?? f.new_passwords[0]];
         if (el) quickFill(el, f);
@@ -883,8 +934,8 @@ export default defineContentScript({
         const nf = forms.find((x) => x.new_passwords.length);
         const targets = nf
           ? nf.new_passwords.map((i) => inputs[i])
-          : document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'password'
-            ? [document.activeElement]
+          : focused?.type === 'password'
+            ? [focused]
             : [];
         targets.forEach((el) => setValue(el, msg.password));
         if (!targets.length) toast(t('toast_no_new_password_field'));
@@ -944,10 +995,6 @@ export default defineContentScript({
       if (c.prefs) loadPrefs().then((p) => (prefs = p));
       if (c.theme) theme = (c.theme.newValue as Theme | undefined) ?? null;
     });
-    let timer: number | undefined;
-    new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = ctx.setTimeout(scan, 400) as unknown as number;
-    }).observe(document.documentElement, { childList: true, subtree: true });
+    watch(document.documentElement);
   },
 });
