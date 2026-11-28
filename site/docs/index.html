@@ -243,6 +243,8 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
 <p>Shortcut in the browser: <kbd>Ctrl+Shift+L</kbd> fills the login on the current page.</p>
 <h3>Sign-in in the browser dialog</h3>
 <p>Some sites ask for a login and password in the browser's own dialog (HTTP Basic). Turn on <b>Sign-in in the browser dialog</b> in the extension settings and Keywarden answers it with the entry for that site. The browser asks for an extra permission at that moment; nobody who leaves the switch off is asked. Only the page itself is answered, never an image or a frame from another site.</p>
+<h3>A third field in the sign-in form</h3>
+<p>Some sites ask for more than a login and password: a last name, a client number, a contract number. Add a field with the same name to the entry (for example <b>Last Name</b> for a box labelled or named <code>last_name</code>) and it is filled together with the login. Names are compared without case, spaces and punctuation. Hidden (protected) fields are never sent this way, and it works when you pick the account in the menu under the field.</p>
 <h3>Cards and personal details</h3>
 <p>On payment and address forms a menu under the field lists your Card or Identity entries. The chosen entry fills the whole group of fields: number, cardholder, expiry in the format the form expects, CVC, name, address. It works on https pages only and only after you confirm it for the site in the Keywarden window. Payment forms embedded as a third-party frame are left alone.</p>
 <h3>Right-click menu</h3>

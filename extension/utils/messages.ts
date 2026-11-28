@@ -54,7 +54,7 @@ export type Msg =
   | { type: 'associate' }
   | { type: 'classify'; fields: FieldInfo[] }
   | { type: 'logins'; tabId?: number }
-  | { type: 'fill'; id: string; tabId?: number; quiet?: boolean }
+  | { type: 'fill'; id: string; tabId?: number; quiet?: boolean; extra?: string[] }
   | { type: 'dataList'; kind: 'card' | 'identity' }
   | { type: 'dataFill'; id: string }
   | { type: 'copyOtp'; id: string }

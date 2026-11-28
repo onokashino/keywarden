@@ -229,7 +229,9 @@ export default defineBackground(() => {
       }
       case 'fill': {
         const url = await pageUrl(sender, msg.tabId);
-        const r = await call({ action: 'fill', id: msg.id, url, quiet: !!msg.quiet && !fromExtension(sender) });
+        // подписи соседних полей формы: демон вернёт свои поля записи с такими именами
+        const extra = Array.isArray(msg.extra) ? msg.extra.filter((x) => typeof x === 'string').slice(0, 40).map((x) => x.slice(0, 80)) : [];
+        const r = await call({ action: 'fill', id: msg.id, url, quiet: !!msg.quiet && !fromExtension(sender), extra });
         lastFill.set(await tabOf(sender, msg.tabId), { site: hostOf(url), id: msg.id, at: Date.now() });
         rememberUsed(url, msg.id);
         if (fromExtension(sender)) {
@@ -237,7 +239,7 @@ export default defineBackground(() => {
           await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillWith', username: r.username, password: r.password }, { frameId: frameOf(sender) });
           return null;
         }
-        return { username: r.username, password: r.password };
+        return { username: r.username, password: r.password, extra: r.extra ?? [] };
       }
       // карты и личные данные: список без значений, сами значения только вкладке после согласия в Keywarden
       case 'dataList':

@@ -311,6 +311,23 @@ export default defineContentScript({
       if (form.password !== null) setValue(inputs[form.password], password);
     }
 
+    /// Остальные пустые видимые поля той же формы: подпись (имя, id, текст рядом) → поле.
+    function extraInputs(form: LoginForm): Map<string, HTMLInputElement> {
+      const out = new Map<string, HTMLInputElement>();
+      const taken = [form.username, form.password, form.otp, ...form.new_passwords];
+      const anchor = inputs[taken.find((i) => i !== null) ?? -1]?.form;
+      // без <form> непонятно, какие поля относятся ко входу
+      if (!anchor) return out;
+      inputs.forEach((el, i) => {
+        if (taken.includes(i) || el.form !== anchor || el.type === 'password' || el.value || !visible(el)) return;
+        for (const name of [el.name, el.id, labelOf(el), el.placeholder]) {
+          const key = name?.trim().slice(0, 80);
+          if (key && !out.has(key)) out.set(key, el);
+        }
+      });
+      return out;
+    }
+
     function formFor(el?: HTMLInputElement): LoginForm | undefined {
       if (el) return forms.find((f) => [f.username, f.password, f.otp, ...f.new_passwords].some((i) => i !== null && inputs[i] === el));
       return forms.find((f) => f.password !== null) ?? forms.find((f) => f.username !== null) ?? forms[0];
@@ -326,8 +343,14 @@ export default defineContentScript({
 
     async function fillWith(form: LoginForm, l: Login) {
       try {
-        const c = await ask<{ username: string; password: string }>({ type: 'fill', id: l.id });
+        const others = extraInputs(form);
+        const c = await ask<{ username: string; password: string; extra?: [string, string][] }>({ type: 'fill', id: l.id, extra: [...others.keys()] });
         fill(form, c.username, c.password);
+        // свои поля записи (фамилия, номер договора) в поля формы с тем же названием
+        for (const [name, value] of c.extra ?? []) {
+            const el = others.get(name);
+            if (el && !el.value) setValue(el, value);
+        }
         // код 2FA этой записи сразу в буфер: на следующем шаге его остаётся вставить
         if (l.has_otp && prefs.otpClipboard) {
           ask<boolean>({ type: 'copyOtp', id: l.id })

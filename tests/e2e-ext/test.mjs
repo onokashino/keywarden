@@ -52,6 +52,13 @@ const pages = {
   '/framed': `<!doctype html><meta charset=utf-8><title>Фреймы</title>
     <iframe id="same" src="/login" width="420" height="220"></iframe>
     <iframe id="alien" src="http://127.0.0.2:8765/login-otp" width="420" height="220"></iframe>`,
+  '/login-extra': `<!doctype html><meta charset=utf-8><title>Вход с фамилией</title>
+    <form action="/welcome" method="get" style="margin:40px;display:grid;gap:8px;width:300px">
+      <input id="user" name="username" autocomplete="username" placeholder="Логин">
+      <input id="last" name="last_name" placeholder="Фамилия">
+      <input id="pass" name="password" type="password" autocomplete="current-password" placeholder="Пароль">
+      <button type="submit">Войти</button>
+    </form>`,
   '/login-otp': `<!doctype html><meta charset=utf-8><title>Вход с 2FA</title>
     <form action="/otp" method="get" style="margin:40px;display:grid;gap:8px;width:300px">
       <input id="user" name="username" autocomplete="username" placeholder="Логин">
@@ -261,6 +268,16 @@ await site.keyboard.press('Enter');
 await site.waitForTimeout(800);
 assert((await site.inputValue('#user')) === 'tester' && (await site.inputValue('#pass')) === 'S3cret-from-db', 'первым в меню последний использованный аккаунт (tester), форма заполнена');
 assert((await site.locator('keywarden-menu').count()) === 0, 'меню закрылось после выбора');
+
+// третье поле формы входа берётся из своего поля записи с тем же названием («Last Name» → last_name)
+await site.goto('http://127.0.0.1:8765/login-extra');
+await site.waitForTimeout(1500);
+await site.click('#user');
+await site.waitForTimeout(800);
+await site.keyboard.press('ArrowDown');
+await site.keyboard.press('Enter');
+await site.waitForTimeout(800);
+assert((await site.inputValue('#last')) === 'Ivanov' && (await site.inputValue('#pass')) === 'S3cret-from-db', `своё поле записи подставлено в форму: ${await site.inputValue('#last')}`);
 
 // форма во фрейме: свой адрес обслуживаем, чужой нет
 await site.goto('http://127.0.0.1:8765/framed');

@@ -344,11 +344,31 @@ impl Daemon {
                 BrowserRequest::DataFill { id, url } => BrowserReply::Data {
                     fields: self.allowed_data(&id, &url).await?,
                 },
-                BrowserRequest::Fill { id, url, quiet } => {
+                BrowserRequest::Fill {
+                    id,
+                    url,
+                    quiet,
+                    extra,
+                } => {
                     let e = self.allowed_entry(&id, &url, quiet).await?;
+                    let extra = if extra.is_empty() {
+                        Vec::new()
+                    } else {
+                        self.read(|db| {
+                            let e = entry(db, &id)?;
+                            let own: Vec<(String, String)> = e
+                                .fields
+                                .iter()
+                                .filter(|(k, v)| own_field(k) && !v.is_protected())
+                                .map(|(k, v)| (k.clone(), model::resolve(db, &e, v.get())))
+                                .collect();
+                            Ok(pick_extra(&own, &extra))
+                        })?
+                    };
                     BrowserReply::Credentials {
                         username: e.0,
                         password: e.1,
+                        extra,
                     }
                 }
                 BrowserRequest::Totp { id, url } => {
@@ -823,6 +843,48 @@ fn entry<'a>(db: &'a Database, id: &str) -> Reply<EntryRef<'a>> {
         .ok_or_else(|| model_err(ModelError::EntryNotFound))
 }
 
+/// Поле, которое пользователь завёл сам (фамилия, номер договора), а не служебное.
+fn own_field(name: &str) -> bool {
+    ![
+        fields::TITLE,
+        fields::USERNAME,
+        fields::PASSWORD,
+        fields::URL,
+        fields::NOTES,
+        fields::OTP,
+        MATCH_FIELD,
+        model::LEGACY_TOTP_SEED,
+        model::LEGACY_TOTP_SETTINGS,
+    ]
+    .contains(&name)
+        && !name.starts_with("KP2A_URL")
+        && !name.starts_with(model::PASSKEY_PREFIX)
+}
+
+/// Свои поля записи для полей формы: имя сравнивается без регистра, пробелов и знаков.
+/// Приставка `KPH:` (так такие поля называет KeePassXC) не мешает. Скрытые поля сюда не попадают.
+fn pick_extra(own: &[(String, String)], wanted: &[String]) -> Vec<(String, String)> {
+    let norm = |s: &str| -> String {
+        s.chars()
+            .filter(|c| c.is_alphanumeric())
+            .flat_map(char::to_lowercase)
+            .collect()
+    };
+    wanted
+        .iter()
+        .take(40)
+        .filter_map(|w| {
+            let key = norm(w);
+            if key.is_empty() {
+                return None;
+            }
+            own.iter()
+                .find(|(k, v)| !v.is_empty() && norm(k.trim_start_matches("KPH:")) == key)
+                .map(|(_, v)| (w.clone(), v.clone()))
+        })
+        .collect()
+}
+
 /// Адрес записи и дополнительные адреса (KP2A_URL*, как у KeePassDX и KeePassXC).
 fn entry_matches(e: &EntryRef<'_>, page: &str) -> bool {
     let rule = Match::parse(e.get(MATCH_FIELD).unwrap_or_default());
@@ -996,6 +1058,43 @@ fn browser_group(db: &mut Database) -> model::Result<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn own_fields_match_form_labels_by_name() {
+        let own = vec![
+            ("Last Name".to_string(), "Ivanov".to_string()),
+            ("KPH: account".to_string(), "42".to_string()),
+            ("Empty".to_string(), String::new()),
+        ];
+        let got = super::pick_extra(
+            &own,
+            &[
+                "last_name".into(),
+                "Account".into(),
+                "empty".into(),
+                "city".into(),
+                "  ".into(),
+            ],
+        );
+        assert_eq!(
+            got,
+            vec![
+                ("last_name".to_string(), "Ivanov".to_string()),
+                ("Account".to_string(), "42".to_string())
+            ]
+        );
+        // служебные поля наружу не идут даже по точному имени
+        for n in [
+            "Password",
+            "otp",
+            "KP2A_URL_1",
+            "KPEX_PASSKEY_PRIVATE_KEY_PEM",
+            "TOTP Seed",
+        ] {
+            assert!(!super::own_field(n), "{n}");
+        }
+        assert!(super::own_field("Last Name"));
+    }
+
     use super::*;
     use crate::config::Config;
     use keywarden_core::ipc::Request;
@@ -1145,6 +1244,7 @@ mod tests {
                     id: id.clone(),
                     url: "https://github.com/login".into(),
                     quiet: false,
+                    extra: vec![],
                 },
             )
             .await;
@@ -1160,6 +1260,7 @@ mod tests {
                     id: id.clone(),
                     url: "https://evil.com".into(),
                     quiet: false,
+                    extra: vec![],
                 },
             )
             .await;
@@ -1391,6 +1492,7 @@ mod tests {
                     id: gh.clone(),
                     url: "https://github.com/login".into(),
                     quiet,
+                    extra: vec![],
                 },
             )
         };

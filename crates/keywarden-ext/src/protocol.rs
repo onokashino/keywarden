@@ -71,6 +71,9 @@ pub enum BrowserRequest {
         /// заполнение при загрузке страницы: если сайт ещё не разрешён, отказ без вопроса
         #[serde(default)]
         quiet: bool,
+        /// подписи остальных полей формы: вернуть значения своих полей записи с такими именами
+        #[serde(default)]
+        extra: Vec<String>,
     },
     /// карты (`card`) или личные данные (`identity`) для меню под полем: название и подпись, без значений
     DataList {
@@ -202,6 +205,9 @@ pub enum BrowserReply {
     Credentials {
         username: String,
         password: String,
+        /// свои поля записи, подошедшие по имени к полям формы: (подпись из запроса, значение)
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        extra: Vec<(String, String)>,
     },
     Totp {
         code: String,
