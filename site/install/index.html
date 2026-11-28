@@ -52,7 +52,7 @@
     <div class="quick">
       <p class="quick-label">Linux and macOS, one command</p>
       <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
-      <p class="quick-note">Checks the download against <code>SHA256SUMS</code> and installs into <code>~/.local/bin</code> without root. <a href="../install.sh" target="_blank" rel="noopener">Read the script</a></p>
+      <p class="quick-note">Checks the download against <code>SHA256SUMS</code> and installs into <code>~/.local/bin</code> without root. <a href="../install.sh" target="_blank" rel="noopener">Read the script</a>. Run the same command again later: it checks the installation, offers to fix what is broken, updates, and lets you choose the optional parts (browser link, SSH agent for all programs).</p>
     </div>
   </section>
 
@@ -81,7 +81,7 @@
 <span class="p">&gt; </span><span data-type>irm https://onokashino.github.io/keywarden/install.ps1 | iex</span></pre>
       <div>
         <h3>Windows<span class="badge">beta</span></h3>
-        <p>Checks the download and installs into <code>%LOCALAPPDATA%\Programs\Keywarden</code> without administrator rights: programs, Start menu shortcut, <code>kw</code> in PATH and the browser link. <a href="../install.ps1" target="_blank" rel="noopener">Read the script</a>. The programs are not code-signed yet, so SmartScreen may ask once on first start: "More info", then "Run anyway".</p>
+        <p>Checks the download and installs into <code>%LOCALAPPDATA%\Programs\Keywarden</code> without administrator rights: programs, Start menu shortcut, <code>kw</code> in PATH and the browser link. <a href="../install.ps1" target="_blank" rel="noopener">Read the script</a>. Running it again checks, fixes and updates the installation. The programs are not code-signed yet, so SmartScreen may ask once on first start: "More info", then "Run anyway".</p>
         <details class="hand"><summary>By hand from the archive</summary><pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip from Releases</span>
 <span class="c"># unpack it to a folder you keep, then there:</span>
 <span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span>

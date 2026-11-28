@@ -52,7 +52,7 @@
     <div class="quick">
       <p class="quick-label">Linux и macOS, одна команда</p>
       <pre class="term" data-copy="curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh"><span class="p">$ </span><span data-type>curl -fsSL https://onokashino.github.io/keywarden/install.sh | sh</span></pre>
-      <p class="quick-note">Сверяет загрузку с <code>SHA256SUMS</code> и ставит в <code>~/.local/bin</code> без root. <a href="../../install.sh" target="_blank" rel="noopener">Прочитать скрипт</a></p>
+      <p class="quick-note">Сверяет загрузку с <code>SHA256SUMS</code> и ставит в <code>~/.local/bin</code> без root. <a href="../../install.sh" target="_blank" rel="noopener">Прочитать скрипт</a>. Запустите ту же команду позже: она проверит установку, предложит починить сломанное, обновит и даст выбрать дополнительные части (связь с браузером, SSH-агент для всех программ).</p>
     </div>
   </section>
 
@@ -81,7 +81,7 @@
 <span class="p">&gt; </span><span data-type>irm https://onokashino.github.io/keywarden/install.ps1 | iex</span></pre>
       <div>
         <h3>Windows<span class="badge">бета</span></h3>
-        <p>Проверяет загрузку и ставит в <code>%LOCALAPPDATA%\Programs\Keywarden</code> без прав администратора: программы, ярлык в меню «Пуск», <code>kw</code> в PATH и связь с браузером. <a href="../../install.ps1" target="_blank" rel="noopener">Прочитать скрипт</a>. Программы пока не подписаны, поэтому SmartScreen при первом запуске может переспросить: «Подробнее», затем «Выполнить в любом случае».</p>
+        <p>Проверяет загрузку и ставит в <code>%LOCALAPPDATA%\Programs\Keywarden</code> без прав администратора: программы, ярлык в меню «Пуск», <code>kw</code> в PATH и связь с браузером. <a href="../../install.ps1" target="_blank" rel="noopener">Прочитать скрипт</a>. Повторный запуск проверяет, чинит и обновляет установку. Программы пока не подписаны, поэтому SmartScreen при первом запуске может переспросить: «Подробнее», затем «Выполнить в любом случае».</p>
         <details class="hand"><summary>Вручную из архива</summary><pre class="term"><span class="c"># keywarden-*-windows-x86_64.zip из Releases</span>
 <span class="c"># распакуйте в постоянную папку и там:</span>
 <span class="p">&gt; </span><span data-type>.\keywarden-ui.exe</span>

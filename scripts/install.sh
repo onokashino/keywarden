@@ -3,8 +3,12 @@
 # (build: make build) or sit next to this script in a release archive.
 # niri and Noctalia are connected only if they are installed: the config gets a backup first,
 # niri's keys are checked for clashes, the config is validated and restored if niri rejects it.
+# KEYWARDEN_PARTS picks the optional parts, space separated: browser ssh niri noctalia
+# (default: browser niri noctalia; ssh makes the Keywarden agent the SSH agent of every program).
 # KEYWARDEN_NO_LAUNCH=1: do not open the app at the end. NO_COLOR: plain output.
 set -eu
+PARTS=${KEYWARDEN_PARTS-browser niri noctalia}
+part() { case " $PARTS " in *" $1 "*) return 0 ;; esac; return 1; }
 BIN=${BIN:-$HOME/.local/bin}
 R=${R:-target/release}
 CONF=${XDG_CONFIG_HOME:-$HOME/.config}
@@ -41,10 +45,21 @@ ok "background service ${B}keywardend${N} is running and starts with your sessio
 ok "menu entry added"
 
 # native messaging: Firefox, Chromium-based browsers, their forks and Flatpak builds
-if "$BIN/kw" browser-setup ${CHROMIUM_EXTENSION_ID:+--chrome-id "$CHROMIUM_EXTENSION_ID"} >/dev/null; then
+if ! part browser; then
+  skip "browser link skipped, later: kw browser-setup"
+elif "$BIN/kw" browser-setup ${CHROMIUM_EXTENSION_ID:+--chrome-id "$CHROMIUM_EXTENSION_ID"} >/dev/null; then
   ok "browsers can reach Keywarden (check: kw browser-setup --check)"
 else
   warn "browser host not registered, run: kw browser-setup"
+fi
+
+# the agent socket goes into the session environment: ssh, git and IDEs see the vault's keys
+if part ssh; then
+  if "$BIN/kw" ssh-setup >/dev/null 2>&1; then
+    ok "SSH agent for all programs ${D}(after the next login; undo: kw ssh-setup --off)${N}"
+  else
+    warn "SSH agent not connected, run: kw ssh-setup"
+  fi
 fi
 
 stamp=$(date +%Y%m%d-%H%M%S)
@@ -58,7 +73,9 @@ niri_taken() {
     --include='*.kdl' --exclude=keywarden.kdl "$CONF/niri" 2>/dev/null |
     tr -d ' \t{' | sort -u | sed 's/Mod/Super/' | paste -sd, - | sed 's/,/, /g'
 }
-if [ -f "$NIRI" ] && command -v niri >/dev/null 2>&1; then
+if ! part niri; then
+  skip "niri shortcuts skipped"
+elif [ -f "$NIRI" ] && command -v niri >/dev/null 2>&1; then
   cp dist/niri/keywarden.kdl "$CONF/niri/keywarden.kdl"
   taken=$(niri_taken)
   if grep -q 'include "keywarden.kdl"' "$NIRI"; then
@@ -86,7 +103,7 @@ fi
 
 # Noctalia: the app follows the shell's colors
 NOC=$CONF/noctalia/config.toml
-if [ -f "$NOC" ]; then
+if [ -f "$NOC" ] && part noctalia; then
   mkdir -p "$CONF/noctalia/templates"
   install -m 0644 dist/noctalia/keywarden.json "$CONF/noctalia/templates/keywarden.json"
   if ! grep -q 'theme.templates.user.keywarden' "$NOC"; then

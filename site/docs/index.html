@@ -129,7 +129,8 @@ cargo build --release -p keywarden-daemon -p keywarden-cli -p keywarden-host -p 
 
 <h3>Updates</h3>
 <ul>
-  <li>Run the install command again, on any system. It downloads the latest release, checks it and replaces the programs; your vault and settings stay as they are.</li>
+  <li>Run the install command again, on any system. With Keywarden already installed it first checks the installation and shows a short menu: fix what is broken (stopped service, lost browser link, missing program), update to the latest release, or choose the optional parts. Your vault and settings stay as they are.</li>
+  <li>Without questions, for scripts: set <code>KEYWARDEN_YES=1</code>. Optional parts by name: <code>KEYWARDEN_PARTS="browser ssh"</code> (also <code>niri</code> and <code>noctalia</code> on Linux).</li>
   <li>To hear about new versions: turn on <b>Settings, This computer, Updates</b>. Once a day Keywarden asks GitHub for the latest release (nothing else is sent) and tells you when a new version is out. It is off by default.</li>
 </ul>
 <p>The browser extension from a store updates itself.</p>

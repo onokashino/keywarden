@@ -28,13 +28,17 @@ keeps your devices in step.
 
 ## Install
 
-Download an archive for your system from [Releases](https://github.com/onokashino/keywarden/releases):
+One command, no root or administrator rights:
 
-| System | Archive | Next step |
-| --- | --- | --- |
-| Linux x86_64 | `keywarden-*-linux-x86_64.tar.gz` | `./install.sh` (installs to `~/.local/bin`, no root) |
-| Windows x86_64 | `keywarden-*-windows-x86_64.zip` | unpack, run `keywarden-ui.exe` |
-| macOS (Apple Silicon) | `keywarden-*-macos-arm64.tar.gz` | `xattr -dr com.apple.quarantine keywarden-*` then run `keywarden-ui` |
+| System | Command |
+| --- | --- |
+| Linux x86_64, macOS (Apple Silicon) | `curl -fsSL https://onokashino.github.io/keywarden/install.sh \| sh` |
+| Windows x86_64 (PowerShell) | `irm https://onokashino.github.io/keywarden/install.ps1 \| iex` |
+
+The script downloads the latest release, checks it against `SHA256SUMS` and installs it. Run it
+again later to update, to fix a broken installation, or to choose the optional parts (browser
+link, SSH agent for all programs). The archives themselves are on the
+[Releases](https://github.com/onokashino/keywarden/releases) page.
 
 Then install the [Firefox extension](https://addons.mozilla.org/firefox/addon/keywarden/) and connect it with `kw browser-setup`. Full guide:
 [onokashino.github.io/keywarden/docs](https://onokashino.github.io/keywarden/docs/).
