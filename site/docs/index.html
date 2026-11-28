@@ -241,6 +241,8 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
 <p>The first time a site asks for a login, Keywarden shows a confirmation over all windows: <kbd>Enter</kbd> allows once, <kbd>Ctrl+Enter</kbd> always for this site, <kbd>Esc</kbd> denies. Sites are matched by registrable domain using the Public Suffix List, so <code>login.example.com</code> and <code>example.com</code> share logins but <code>example.co.uk</code> and <code>other.co.uk</code> do not.</p>
 <p>The browser and Keywarden use an encrypted channel (the same crypto_box scheme as KeePassXC-Browser); the host in between only forwards opaque messages. Every automatic behavior can be turned off in the extension settings.</p>
 <p>Shortcut in the browser: <kbd>Ctrl+Shift+L</kbd> fills the login on the current page.</p>
+<h3>Sign-in in the browser dialog</h3>
+<p>Some sites ask for a login and password in the browser's own dialog (HTTP Basic). Turn on <b>Sign-in in the browser dialog</b> in the extension settings and Keywarden answers it with the entry for that site. The browser asks for an extra permission at that moment; nobody who leaves the switch off is asked. Only the page itself is answered, never an image or a frame from another site.</p>
 <h3>Cards and personal details</h3>
 <p>On payment and address forms a menu under the field lists your Card or Identity entries. The chosen entry fills the whole group of fields: number, cardholder, expiry in the format the form expects, CVC, name, address. It works on https pages only and only after you confirm it for the site in the Keywarden window. Payment forms embedded as a third-party frame are left alone.</p>
 <h3>Right-click menu</h3>

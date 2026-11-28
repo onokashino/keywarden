@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Filter, Folder, GenOptions, Item, Login, Msg, Reply, Status } from '../../utils/messages';
-  import { DEFAULT_PREFS, loadPrefs, savePrefs, type Prefs } from '../../utils/prefs';
+  import { AUTH_PERMS, DEFAULT_PREFS, loadPrefs, savePrefs, type Prefs } from '../../utils/prefs';
   import Select from './Select.svelte';
   import { t } from '../../utils/i18n';
   import { fade, fly, scale } from 'svelte/transition';
@@ -290,6 +290,16 @@
   async function copyGenerated() {
     await navigator.clipboard.writeText(generated);
     say(t('password_copied'));
+  }
+
+  // вход в окне браузера: включён, пока выдано разрешение (отдельной настройки нет)
+  let basicAuth = $state(false);
+  browser.permissions.contains(AUTH_PERMS).then((v) => (basicAuth = v));
+  function setBasicAuth(on: boolean) {
+    // запрос разрешения обязан идти прямо из нажатия, без ожиданий перед ним
+    (on ? browser.permissions.request(AUTH_PERMS) : browser.permissions.remove(AUTH_PERMS).then(() => false))
+      .then((v) => (basicAuth = v))
+      .catch(() => (basicAuth = false));
   }
 
   async function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]) {
@@ -726,6 +736,7 @@
           <label class="field toggle"><span><b>{t('pref_otp')}</b><small>{t('pref_otp_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.autoOtp} onchange={(e) => setPref('autoOtp', e.currentTarget.checked)} /></label>
           <label class="field toggle"><span><b>{t('pref_otp_submit')}</b><small>{t('pref_otp_submit_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.otpSubmit} onchange={(e) => setPref('otpSubmit', e.currentTarget.checked)} /></label>
           <label class="field toggle"><span><b>{t('pref_otp_clip')}</b><small>{t('pref_otp_clip_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.otpClipboard} onchange={(e) => setPref('otpClipboard', e.currentTarget.checked)} /></label>
+          <label class="field toggle"><span><b>{t('pref_basic')}</b><small>{t('pref_basic_hint')}</small></span><input type="checkbox" class="switch" checked={basicAuth} onchange={(e) => setBasicAuth(e.currentTarget.checked)} /></label>
           <label class="field toggle"><span><b>{t('pref_fill_load')}</b><small>{t('pref_fill_load_hint')}</small></span><input type="checkbox" class="switch" checked={prefs.fillOnLoad} onchange={(e) => setPref('fillOnLoad', e.currentTarget.checked)} /></label>
         </section>
         <h2>{t('never_sites')}</h2>

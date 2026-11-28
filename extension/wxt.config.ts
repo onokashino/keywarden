@@ -12,6 +12,9 @@ export default defineConfig({
     // favicon: иконки сайтов в списке popup (только Chromium, в Firefox буква)
     // scripting: открыть панель на вкладке, открытой до установки или обновления расширения
     permissions: ['nativeMessaging', 'activeTab', 'storage', 'tabs', 'contextMenus', ...(browser === 'firefox' ? [] : ['favicon', 'scripting'])],
+    // вход в окне браузера (HTTP Basic): спрашиваем только у тех, кто включил это в настройках
+    optional_permissions: browser === 'firefox' ? ['webRequest', 'webRequestBlocking'] : ['webRequest', 'webRequestAuthProvider'],
+    optional_host_permissions: ['<all_urls>'],
     // без wasm-unsafe-eval MV3 не даёт инстанцировать WASM
     content_security_policy: {
       extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",

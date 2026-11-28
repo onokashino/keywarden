@@ -106,6 +106,38 @@ export default defineBackground(() => {
   // popup и другие страницы самого расширения (их адрес chrome-extension:// или moz-extension://)
   const fromExtension = (sender: Browser.runtime.MessageSender) => !!sender.url?.startsWith(browser.runtime.getURL('/'));
 
+  // --- вход в окне браузера (HTTP Basic), только с выданным в настройках разрешением ---
+  const authTried = new Set<string>();
+  async function basicAuth(d: { url: string; requestId: string; isProxy?: boolean; type?: string }) {
+    // только сама страница: картинка или фрейм с чужого сайта могли бы выпросить пароль.
+    // второй вопрос по тому же запросу значит, что учётка не подошла: дальше спрашивает браузер
+    if (d.isProxy || d.type !== 'main_frame' || authTried.has(d.requestId)) return {};
+    authTried.add(d.requestId);
+    setTimeout(() => authTried.delete(d.requestId), 60_000);
+    try {
+      const logins = await withLastFirst(d.url, (await call({ action: 'get_logins', url: d.url })).logins as Login[]);
+      if (!logins.length) return {};
+      const r = await call({ action: 'fill', id: logins[0].id, url: d.url, quiet: false });
+      rememberUsed(d.url, logins[0].id);
+      return { authCredentials: { username: r.username as string, password: r.password as string } };
+    } catch {
+      return {};
+    }
+  }
+  // Chromium отдаёт ответ через callback, Firefox ждёт Promise
+  const onAuth = (d: any, cb?: (r: unknown) => void) => {
+    const p = basicAuth(d);
+    if (!cb) return p;
+    p.then(cb);
+  };
+  function watchAuth() {
+    const ev = (browser as any).webRequest?.onAuthRequired;
+    if (!ev || ev.hasListener(onAuth)) return;
+    ev.addListener(onAuth, { urls: ['<all_urls>'] }, [import.meta.env.BROWSER === 'firefox' ? 'blocking' : 'asyncBlocking']);
+  }
+  watchAuth();
+  browser.permissions.onAdded.addListener(watchAuth);
+
   /// куда отвечать: в тот фрейм страницы, откуда пришёл запрос; из окна расширения в саму вкладку
   const frameOf = (sender: Browser.runtime.MessageSender) => (fromExtension(sender) ? 0 : (sender.frameId ?? 0));
 

@@ -8,7 +8,17 @@ import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 
-const EXT = path.resolve(process.argv[2]);
+// необязательные разрешения (вход в окне браузера) в тесте выданы сразу: окно запроса в headless не нажать
+const EXT = fs.mkdtempSync(path.join(os.tmpdir(), 'kw-ext-'));
+fs.cpSync(path.resolve(process.argv[2]), EXT, { recursive: true });
+{
+  const mf = JSON.parse(fs.readFileSync(path.join(EXT, 'manifest.json'), 'utf8'));
+  mf.permissions.push(...mf.optional_permissions);
+  mf.host_permissions = mf.optional_host_permissions;
+  delete mf.optional_permissions;
+  delete mf.optional_host_permissions;
+  fs.writeFileSync(path.join(EXT, 'manifest.json'), JSON.stringify(mf));
+}
 const HOST_BIN = path.resolve(process.argv[3]);
 const assert = (cond, msg) => {
   if (!cond) {
@@ -108,6 +118,11 @@ const pages = {
   </script><p>passkey</p>`,
 };
 const server = http.createServer((req, res) => {
+  // страница за HTTP Basic: пускает только с учёткой из базы
+  if (req.url.startsWith('/basic')) {
+    const ok = req.headers.authorization === 'Basic ' + Buffer.from('tester:S3cret-from-db').toString('base64');
+    return res.writeHead(ok ? 200 : 401, ok ? { 'content-type': 'text/html' } : { 'www-authenticate': 'Basic realm="kw"' }).end(ok ? '<title>inside</title>' : 'denied');
+  }
   const body = pages[new URL(req.url, 'http://x').pathname] ?? 'not found';
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(body);
 });
@@ -174,6 +189,12 @@ assert(sfill.ok, `заполнение в веб-компоненте разре
 await site.waitForTimeout(300);
 const inShadow = await site.evaluate(() => [...document.querySelector('x-login').shadowRoot.querySelectorAll('input')].map((i) => i.value).join('|'));
 assert(inShadow === 'tester|S3cret-from-db', `логин и пароль подставлены внутрь веб-компонента: ${inShadow}`);
+
+// 2b. вход в окне браузера (HTTP Basic): Keywarden отвечает сам
+const basic = await ctx.newPage();
+await basic.goto('http://127.0.0.1:8765/basic');
+assert((await basic.title()) === 'inside', `HTTP Basic пройден учёткой из базы: ${await basic.title()}`);
+await basic.close();
 
 // 3. чужой хост (localhost вместо 127.0.0.1) учётку не получает
 const other = await ctx.newPage();

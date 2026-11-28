@@ -529,6 +529,12 @@
   "pref_otp_submit_hint": {
     "message": "When Keywarden has filled the code itself, the sign-in form is submitted without a click"
   },
+  "pref_basic": {
+    "message": "Sign-in in the browser dialog"
+  },
+  "pref_basic_hint": {
+    "message": "A site asks for a login and password in the browser's own dialog: Keywarden answers it. The browser will ask for an extra permission"
+  },
   "never_sites": {
     "message": "Never offer to save"
   },

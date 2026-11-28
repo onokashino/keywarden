@@ -29,3 +29,9 @@ export async function loadPrefs(): Promise<Prefs> {
 export async function savePrefs(p: Prefs): Promise<void> {
   await browser.storage.local.set({ prefs: p });
 }
+
+/// Разрешения для входа в окне браузера (HTTP Basic): выдаются переключателем в настройках.
+export const AUTH_PERMS = {
+  permissions: import.meta.env.BROWSER === 'firefox' ? ['webRequest', 'webRequestBlocking'] : ['webRequest', 'webRequestAuthProvider'],
+  origins: ['<all_urls>'],
+} as any;
