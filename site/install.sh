@@ -15,23 +15,27 @@ set -eu
 
 main() {
   repo=onokashino/keywarden
+  # language: KEYWARDEN_LANG=ru|en, otherwise the session locale; "l" in the menu switches it
+  lang=${KEYWARDEN_LANG:-}
+  if [ -z "$lang" ]; then case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in ru*) lang=ru ;; *) lang=en ;; esac; fi
+  switch_lang; switch_lang
   base=${KEYWARDEN_MIRROR:-https://github.com/$repo/releases/download}
   bin=${BIN:-$HOME/.local/bin}
   amo=https://addons.mozilla.org/firefox/addon/keywarden/
   # public half of the release signing key (packaging/release-key.pub); empty: checksum only
   signer=''
 
-  printf '\n  %s◆ Keywarden%s %sinstaller%s\n\n' "$V$B" "$N" "$D" "$N"
+  printf '\n  %s◆ Keywarden%s %s%s%s\n\n' "$V$B" "$N" "$D" "$(m 'installer')" "$N"
   case "$(uname -s)-$(uname -m)" in
     Linux-x86_64) target=linux-x86_64 ;;
     Darwin-arm64) target=macos-arm64 ;;
-    *) die "no ready build for $(uname -s) $(uname -m). Build from source: https://onokashino.github.io/keywarden/docs/#install" ;;
+    *) die "$(m 'no ready build for %s. Build from source: %s' "$(uname -s) $(uname -m)" https://onokashino.github.io/keywarden/docs/#install)" ;;
   esac
   need curl
   need tar
   if command -v sha256sum >/dev/null 2>&1; then sum="sha256sum"
   elif command -v shasum >/dev/null 2>&1; then sum="shasum -a 256"
-  else die "needs sha256sum or shasum"; fi
+  else die "$(m 'needs %s' 'sha256sum / shasum')"; fi
 
   tag=${KEYWARDEN_VERSION:-}
   if [ -z "$tag" ]; then
@@ -39,7 +43,7 @@ main() {
     tag=$(curl --proto '=https' --tlsv1.2 -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$repo/releases/latest")
     tag=${tag##*/}
   fi
-  case "$tag" in v[0-9]*) ;; *) die "no published release yet: https://github.com/$repo/releases" ;; esac
+  case "$tag" in v[0-9]*) ;; *) die "$(m 'no published release yet: %s' "https://github.com/$repo/releases")" ;; esac
 
   # questions only when a person is at the terminal; the script itself may be coming from a pipe
   talk=
@@ -50,35 +54,38 @@ main() {
     diagnose
     if [ -n "$talk" ]; then menu; fi
   elif [ -n "$talk" ]; then
-    printf '  %sEnter%s installs everything, %sc%s lets you choose the parts: ' "$B" "$N" "$B" "$N"
-    read -r a < /dev/tty || a=
-    case "$a" in c|C) choose_parts ;; esac
+    while :; do
+      printf '  %s ' "$(m '%sEnter%s installs everything, %sc%s lets you choose the parts, %sl%s: %s' "$B" "$N" "$B" "$N" "$B" "$N" "$other")"
+      read -r a < /dev/tty || a=
+      case "$a" in l|L) switch_lang ;; c|C) choose_parts; break ;; *) break ;; esac
+    done
   fi
+  export KEYWARDEN_LANG="$lang"
   [ -z "${KEYWARDEN_PARTS+x}" ] || export KEYWARDEN_PARTS
-  ok "release ${B}$tag${N} for $target"
+  ok "$(m 'release %s for %s' "$B$tag$N" "$target")"
 
   file=keywarden-$tag-$target.tar.gz
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' EXIT INT TERM
   fetch "$base/$tag/$file" "$tmp/$file" &
-  spin $! "downloading $file" || die "download failed: $base/$tag/$file"
-  fetch "$base/$tag/SHA256SUMS" "$tmp/SHA256SUMS" || die "download failed: SHA256SUMS"
-  ok "downloaded $(du -h "$tmp/$file" | cut -f1 | tr -d ' ')"
+  spin $! "$(m 'downloading %s' "$file")" || die "$(m 'download failed: %s' "$base/$tag/$file")"
+  fetch "$base/$tag/SHA256SUMS" "$tmp/SHA256SUMS" || die "$(m 'download failed: %s' SHA256SUMS)"
+  ok "$(m 'downloaded %s' "$(du -h "$tmp/$file" | cut -f1 | tr -d ' ')")"
   want=$(awk -v f="$file" '$2 == f || $2 == "*" f { print $1 }' "$tmp/SHA256SUMS")
   got=$(cd "$tmp" && $sum "$file" | awk '{ print $1 }')
-  [ -n "$want" ] || die "$file is not listed in SHA256SUMS"
-  [ "$want" = "$got" ] || die "checksum mismatch for $file, nothing installed"
-  ok "checksum matches SHA256SUMS"
+  [ -n "$want" ] || die "$(m '%s is not listed in SHA256SUMS' "$file")"
+  [ "$want" = "$got" ] || die "$(m 'checksum mismatch for %s, nothing installed' "$file")"
+  ok "$(m 'checksum matches SHA256SUMS')"
   # the checksum file sits next to the archive, so on its own it only catches a broken download;
   # the signature proves the list was made by the holder of the release key
   if [ -n "$signer" ] && [ -z "${KEYWARDEN_UNSIGNED:-}" ]; then
-    command -v ssh-keygen >/dev/null 2>&1 || die "ssh-keygen is needed to check the release signature (package: openssh)"
-    fetch "$base/$tag/SHA256SUMS.sig" "$tmp/SHA256SUMS.sig" || die "this release has no signature (SHA256SUMS.sig), nothing installed"
+    command -v ssh-keygen >/dev/null 2>&1 || die "$(m 'ssh-keygen is needed to check the release signature (package: openssh)')"
+    fetch "$base/$tag/SHA256SUMS.sig" "$tmp/SHA256SUMS.sig" || die "$(m 'this release has no signature (SHA256SUMS.sig), nothing installed')"
     printf 'release@keywarden %s\n' "$signer" > "$tmp/signers"
     ssh-keygen -Y verify -f "$tmp/signers" -I release@keywarden -n keywarden-release \
       -s "$tmp/SHA256SUMS.sig" < "$tmp/SHA256SUMS" >/dev/null 2>&1 \
-      || die "release signature does not match, nothing installed"
-    ok "release signature is valid"
+      || die "$(m 'release signature does not match, nothing installed')"
+    ok "$(m 'release signature is valid')"
   fi
   tar xzf "$tmp/$file" -C "$tmp"
   dir=$tmp/keywarden-$tag-$target
@@ -91,52 +98,122 @@ main() {
     for b in keywardend kw keywarden-ui keywarden-host; do
       install -m 0755 "$dir/$b" "$bin/$b"
     done
-    ok "programs in $bin"
+    ok "$(m 'programs in %s' "$bin")"
     parts=${KEYWARDEN_PARTS-browser}
     case " $parts " in *" browser "*)
-      if "$bin/kw" browser-setup >/dev/null 2>&1; then ok "browsers can reach Keywarden"; else warn "browser host not registered, run: kw browser-setup"; fi ;;
+      if "$bin/kw" browser-setup >/dev/null 2>&1; then ok "$(m 'browsers can reach Keywarden')"; else warn "$(m 'browser host not registered, run: %s' 'kw browser-setup')"; fi ;;
     esac
     case " $parts " in *" ssh "*)
-      if "$bin/kw" ssh-setup >/dev/null 2>&1; then ok "SSH agent for all programs (after the next login; undo: kw ssh-setup --off)"; else warn "SSH agent not connected, run: kw ssh-setup"; fi ;;
+      if "$bin/kw" ssh-setup >/dev/null 2>&1; then ok "$(m 'SSH agent for all programs (after the next login; undo: %s)' 'kw ssh-setup --off')"; else warn "$(m 'SSH agent not connected, run: %s' 'kw ssh-setup')"; fi ;;
     esac
     if [ -z "${KEYWARDEN_NO_LAUNCH:-}" ]; then
-      (nohup "$bin/keywarden-ui" >/dev/null 2>&1 </dev/null &) && ok "opening Keywarden"
+      (nohup "$bin/keywarden-ui" >/dev/null 2>&1 </dev/null &) && ok "$(m 'opening Keywarden')"
     fi
   fi
 
   case ":$PATH:" in
     *":$bin:"*) ;;
-    *) warn "add $bin to PATH: echo 'export PATH=\"$bin:\$PATH\"' >> ~/.profile" ;;
+    *) warn "$(m 'add %s to PATH: %s' "$bin" "echo 'export PATH=\"$bin:\$PATH\"' >> ~/.profile")" ;;
   esac
-  printf '\n  %sKeywarden %s is installed.%s\n' "$G$B" "$tag" "$N"
-  printf '  Browser extension: %s\n\n' "$(link "$amo" "Add to Firefox")"
+  printf '\n  %s%s%s\n' "$G$B" "$(m 'Keywarden %s is installed.' "$tag")" "$N"
+  printf '  %s %s\n\n' "$(m 'Browser extension:')" "$(link "$amo" "$(m 'Add to Firefox')")"
+}
+
+switch_lang() {
+  if [ "$lang" = ru ]; then lang=en; other='Русский'; else lang=ru; other='English'; fi
+}
+
+# A message in the chosen language: m 'English text with %s' args...
+# The English text is the key; a line missing from ru() is shown in English.
+m() {
+  f=$1; shift
+  [ "$lang" != ru ] || f=$(ru "$f")
+  # shellcheck disable=SC2059
+  printf "$f" "$@"
+}
+
+ru() {
+  case "$1" in
+    'installer') printf '%s' '· установка' ;;
+    'no ready build for %s. Build from source: %s') printf '%s' 'готовой сборки для %s нет. Сборка из исходников: %s' ;;
+    'needs %s') printf '%s' 'нужна программа %s' ;;
+    'no published release yet: %s') printf '%s' 'релизов пока нет: %s' ;;
+    'release %s for %s') printf '%s' 'релиз %s для %s' ;;
+    'downloading %s') printf '%s' 'загрузка %s' ;;
+    'download failed: %s') printf '%s' 'не удалось скачать: %s' ;;
+    'downloaded %s') printf '%s' 'скачано %s' ;;
+    '%s is not listed in SHA256SUMS') printf '%s' '%s нет в списке SHA256SUMS' ;;
+    'checksum mismatch for %s, nothing installed') printf '%s' 'контрольная сумма %s не совпала, ничего не установлено' ;;
+    'checksum matches SHA256SUMS') printf '%s' 'контрольная сумма совпала с SHA256SUMS' ;;
+    'ssh-keygen is needed to check the release signature (package: openssh)') printf '%s' 'для проверки подписи релиза нужен ssh-keygen (пакет openssh)' ;;
+    'this release has no signature (SHA256SUMS.sig), nothing installed') printf '%s' 'у этого релиза нет подписи (SHA256SUMS.sig), ничего не установлено' ;;
+    'release signature does not match, nothing installed') printf '%s' 'подпись релиза не сошлась, ничего не установлено' ;;
+    'release signature is valid') printf '%s' 'подпись релиза верна' ;;
+    'programs in %s') printf '%s' 'программы в %s' ;;
+    'browsers can reach Keywarden') printf '%s' 'браузеры видят Keywarden' ;;
+    'browser host not registered, run: %s') printf '%s' 'связь с браузером не настроена, выполните: %s' ;;
+    'SSH agent for all programs (after the next login; undo: %s)') printf '%s' 'SSH-агент для всех программ (после следующего входа в систему; отменить: %s)' ;;
+    'SSH agent not connected, run: %s') printf '%s' 'SSH-агент не подключён, выполните: %s' ;;
+    'opening Keywarden') printf '%s' 'открываю Keywarden' ;;
+    'add %s to PATH: %s') printf '%s' 'добавьте %s в PATH: %s' ;;
+    'Keywarden %s is installed.') printf '%s' 'Keywarden %s установлен.' ;;
+    'Browser extension:') printf '%s' 'Расширение для браузера:' ;;
+    'Add to Firefox') printf '%s' 'Добавить в Firefox' ;;
+    'Keywarden %s is installed, this is the latest version') printf '%s' 'Keywarden %s установлен, это последняя версия' ;;
+    'Keywarden %s is installed, the latest is %s') printf '%s' 'Keywarden %s установлен, последняя версия %s' ;;
+    'missing programs:%s') printf '%s' 'не хватает программ:%s' ;;
+    'background service is running') printf '%s' 'фоновая служба работает' ;;
+    'background service is stopped or does not start with your session') printf '%s' 'фоновая служба остановлена или не запускается вместе с сеансом' ;;
+    'browser link: %s') printf '%s' 'связь с браузером: %s' ;;
+    'browser link') printf '%s' 'связь с браузером' ;;
+    '%s is not in PATH') printf '%s' '%s нет в PATH' ;;
+    'background service started') printf '%s' 'фоновая служба запущена' ;;
+    'the service did not start, see: %s') printf '%s' 'служба не запустилась, смотрите: %s' ;;
+    'browser link registered again') printf '%s' 'связь с браузером настроена заново' ;;
+    'browser link still broken, see: %s') printf '%s' 'связь с браузером всё ещё не работает, смотрите: %s' ;;
+    'What to do?') printf '%s' 'Что сделать?' ;;
+    'put the missing programs back (downloads %s)') printf '%s' 'вернуть пропавшие программы (скачает %s)' ;;
+    'start the background service and enable it') printf '%s' 'запустить фоновую службу и включить её автозапуск' ;;
+    'register the browser link again') printf '%s' 'настроить связь с браузером заново' ;;
+    'fix all of the above') printf '%s' 'исправить всё перечисленное' ;;
+    'reinstall %s') printf '%s' 'переустановить %s' ;;
+    'update to %s') printf '%s' 'обновить до %s' ;;
+    'choose the optional parts (browser link, SSH agent, desktop integration)') printf '%s' 'выбрать дополнительные части (связь с браузером, SSH-агент, интеграция с рабочим столом)' ;;
+    'nothing') printf '%s' 'ничего' ;;
+    'Browser link, so the extension can reach Keywarden?') printf '%s' 'Связь с браузером, чтобы расширение видело Keywarden?' ;;
+    'SSH agent for all programs (ssh, git and IDEs see the keys in your vault)?') printf '%s' 'SSH-агент для всех программ (ssh, git и IDE видят ключи из базы)?' ;;
+    'niri: shortcuts for the launcher (your config is backed up first)?') printf '%s' 'niri: клавиши для лаунчера (сначала делается копия конфига)?' ;;
+    'Noctalia: follow the shell colors?') printf '%s' 'Noctalia: брать цвета оболочки?' ;;
+    '%sEnter%s installs everything, %sc%s lets you choose the parts, %sl%s: %s') printf '%s' '%sEnter%s ставит всё, %sc%s даёт выбрать части, %sl%s: %s' ;;
+    *) printf '%s' "$1" ;;
+  esac
 }
 
 # What is wrong with the installation in $bin; fills $problems with: files service browser
 diagnose() {
   problems=
-  if [ "v$have" = "$tag" ]; then ok "Keywarden ${B}$have${N} is installed, this is the latest version"
-  else warn "Keywarden ${B}$have${N} is installed, the latest is ${B}$tag${N}"; fi
+  if [ "v$have" = "$tag" ]; then ok "$(m 'Keywarden %s is installed, this is the latest version' "$B$have$N")"
+  else warn "$(m 'Keywarden %s is installed, the latest is %s' "$B$have$N" "$B$tag$N")"; fi
   miss=
   for b in keywardend kw keywarden-ui keywarden-host; do [ -x "$bin/$b" ] || miss="$miss $b"; done
-  if [ -n "$miss" ]; then problems="$problems files"; bad "missing programs:$miss"; else ok "programs in $bin"; fi
+  if [ -n "$miss" ]; then problems="$problems files"; bad "$(m 'missing programs:%s' "$miss")"; else ok "$(m 'programs in %s' "$bin")"; fi
   if [ "$target" = linux-x86_64 ] && command -v systemctl >/dev/null 2>&1; then
     if systemctl --user is-active --quiet keywardend.service 2>/dev/null \
       && systemctl --user is-enabled --quiet keywardend.service 2>/dev/null; then
-      ok "background service is running"
+      ok "$(m 'background service is running')"
     else
-      problems="$problems service"; bad "background service is stopped or does not start with your session"
+      problems="$problems service"; bad "$(m 'background service is stopped or does not start with your session')"
     fi
   fi
   # the daemon line is left out: it is covered by the service check above
-  fails=$(KEYWARDEN_LANG=en "$bin/kw" browser-setup --check 2>/dev/null | grep '^FAIL' | grep -v keywardend || true)
+  fails=$(KEYWARDEN_LANG=$lang "$bin/kw" browser-setup --check 2>/dev/null | grep '^FAIL' | grep -v keywardend || true)
   if [ -n "$fails" ]; then
     problems="$problems browser"
-    printf '%s\n' "$fails" | while read -r _ what; do bad "browser link: $what"; done
+    printf '%s\n' "$fails" | while read -r _ what; do bad "$(m 'browser link: %s' "$what")"; done
   else
-    ok "browser link"
+    ok "$(m 'browser link')"
   fi
-  case ":$PATH:" in *":$bin:"*) ;; *) warn "$bin is not in PATH" ;; esac
+  case ":$PATH:" in *":$bin:"*) ;; *) warn "$(m '%s is not in PATH' "$bin")" ;; esac
 }
 
 fix() {
@@ -144,35 +221,37 @@ fix() {
     service)
       systemctl --user daemon-reload
       if systemctl --user --quiet enable keywardend.service && systemctl --user restart keywardend.service; then
-        ok "background service started"
-      else warn "the service did not start, see: journalctl --user -u keywardend -e"; fi ;;
+        ok "$(m 'background service started')"
+      else warn "$(m 'the service did not start, see: %s' 'journalctl --user -u keywardend -e')"; fi ;;
     browser)
-      if "$bin/kw" browser-setup >/dev/null 2>&1; then ok "browser link registered again"; else warn "browser link still broken, see: kw browser-setup --check"; fi ;;
+      if "$bin/kw" browser-setup >/dev/null 2>&1; then ok "$(m 'browser link registered again')"; else warn "$(m 'browser link still broken, see: %s' 'kw browser-setup --check')"; fi ;;
   esac
 }
 
 # Returns to install or update; exits when the choice needs no download.
 menu() {
-  printf '\n  What to do?\n'
+  printf '\n  %s\n' "$(m 'What to do?')"
   n=0
   for p in $problems; do
     n=$((n + 1))
     eval "opt_$n=\$p"
     case "$p" in
-      files) t="put the missing programs back (downloads $tag)" ;;
-      service) t="start the background service and enable it" ;;
-      browser) t="register the browser link again" ;;
+      files) t=$(m 'put the missing programs back (downloads %s)' "$tag") ;;
+      service) t=$(m 'start the background service and enable it') ;;
+      browser) t=$(m 'register the browser link again') ;;
     esac
     printf '    %s%s)%s %s\n' "$B" "$n" "$N" "$t"
   done
-  [ "$n" -lt 2 ] || printf '    %sa)%s fix all of the above\n' "$B" "$N"
-  if [ "v$have" = "$tag" ]; then printf '    %sr)%s reinstall %s\n' "$B" "$N" "$tag"
-  else printf '    %su)%s update to %s\n' "$B" "$N" "$tag"; fi
-  printf '    %sc)%s choose the optional parts (browser link, SSH agent, desktop integration)\n' "$B" "$N"
-  printf '    %sq)%s nothing\n  > ' "$B" "$N"
+  [ "$n" -lt 2 ] || printf '    %sa)%s %s\n' "$B" "$N" "$(m 'fix all of the above')"
+  if [ "v$have" = "$tag" ]; then printf '    %sr)%s %s\n' "$B" "$N" "$(m 'reinstall %s' "$tag")"
+  else printf '    %su)%s %s\n' "$B" "$N" "$(m 'update to %s' "$tag")"; fi
+  printf '    %sc)%s %s\n' "$B" "$N" "$(m 'choose the optional parts (browser link, SSH agent, desktop integration)')"
+  printf '    %sl)%s %s\n' "$B" "$N" "$other"
+  printf '    %sq)%s %s\n  > ' "$B" "$N" "$(m 'nothing')"
   read -r a < /dev/tty || a=q
   echo
   case "$a" in
+    l|L) switch_lang; echo; diagnose; menu; return 0 ;;
     u|U|r|R) return 0 ;;
     c|C) choose_parts; return 0 ;;
     a|A) todo=$problems ;;
@@ -195,14 +274,14 @@ agree() {
 
 choose_parts() {
   KEYWARDEN_PARTS=
-  ! agree "Browser link, so the extension can reach Keywarden?" "Y/n" || KEYWARDEN_PARTS="$KEYWARDEN_PARTS browser"
-  ! agree "SSH agent for all programs (ssh, git and IDEs see the keys in your vault)?" "y/N" || KEYWARDEN_PARTS="$KEYWARDEN_PARTS ssh"
+  ! agree "$(m 'Browser link, so the extension can reach Keywarden?')" "Y/n" || KEYWARDEN_PARTS="$KEYWARDEN_PARTS browser"
+  ! agree "$(m 'SSH agent for all programs (ssh, git and IDEs see the keys in your vault)?')" "y/N" || KEYWARDEN_PARTS="$KEYWARDEN_PARTS ssh"
   if [ "$target" = linux-x86_64 ]; then
     if command -v niri >/dev/null 2>&1; then
-      ! agree "niri: shortcuts for the launcher (your config is backed up first)?" "Y/n" || KEYWARDEN_PARTS="$KEYWARDEN_PARTS niri"
+      ! agree "$(m 'niri: shortcuts for the launcher (your config is backed up first)?')" "Y/n" || KEYWARDEN_PARTS="$KEYWARDEN_PARTS niri"
     fi
     if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/noctalia/config.toml" ]; then
-      ! agree "Noctalia: follow the shell colors?" "Y/n" || KEYWARDEN_PARTS="$KEYWARDEN_PARTS noctalia"
+      ! agree "$(m 'Noctalia: follow the shell colors?')" "Y/n" || KEYWARDEN_PARTS="$KEYWARDEN_PARTS noctalia"
     fi
   fi
   echo
@@ -218,7 +297,7 @@ ok() { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
 warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*"; }
 bad() { printf '  %s✗%s %s\n' "$Y" "$N" "$*"; }
 die() { printf '  %s✗ %s%s\n' "$Y" "$*" "$N" >&2; exit 1; }
-need() { command -v "$1" >/dev/null 2>&1 || die "needs $1"; }
+need() { command -v "$1" >/dev/null 2>&1 || die "$(m 'needs %s' "$1")"; }
 # clickable in terminals that support OSC 8, plain text with the address otherwise
 link() { if [ -n "$E" ]; then printf '%s]8;;%s%s\\%s%s%s%s]8;;%s\\ %s%s%s' "$E" "$1" "$E" "$V" "$2" "$N" "$E" "$E" "$D" "$1" "$N"; else printf '%s %s' "$2" "$1"; fi; }
 # a spinner next to the message while process $1 runs; returns its exit status
