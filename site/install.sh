@@ -18,14 +18,26 @@ main() {
   # language: KEYWARDEN_LANG=ru|en, otherwise the session locale; "l" in the menu switches it
   lang=${KEYWARDEN_LANG:-}
   if [ -z "$lang" ]; then case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in ru*) lang=ru ;; *) lang=en ;; esac; fi
+  # a terminal that is not UTF-8 would show boxes instead of marks and Cyrillic
+  case "$(locale charmap 2>/dev/null || printf '%s' "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}")" in
+    *[Uu][Tt][Ff]-8*|*[Uu][Tt][Ff]8*) ;;
+    *) OKM='+' BADM='x' DIA='*'; SPIN=; [ -n "${KEYWARDEN_LANG:-}" ] || lang=en ;;
+  esac
   switch_lang; switch_lang
+  said=; tmp=
+  trap 'on_exit $?' EXIT
+  trap 'said=1; exit 130' INT TERM
   base=${KEYWARDEN_MIRROR:-https://github.com/$repo/releases/download}
   bin=${BIN:-$HOME/.local/bin}
   amo=https://addons.mozilla.org/firefox/addon/keywarden/
   # public half of the release signing key (packaging/release-key.pub); empty: checksum only
   signer=''
 
-  printf '\n  %s◆ Keywarden%s %s%s%s\n\n' "$V$B" "$N" "$D" "$(m 'installer')" "$N"
+  printf '\n  %s%s Keywarden%s %s%s%s\n\n' "$V$B" "$DIA" "$N" "$D" "$(m 'installer')" "$N"
+  # everything goes into the home directory of the person who runs this; root has another one
+  if [ "$(id -u)" = 0 ] && [ -z "${KEYWARDEN_ROOT:-}" ]; then
+    die "$(m 'run this as your own user, without sudo: Keywarden installs into your home directory')"
+  fi
   case "$(uname -s)-$(uname -m)" in
     Linux-x86_64) target=linux-x86_64 ;;
     Darwin-arm64) target=macos-arm64 ;;
@@ -40,10 +52,13 @@ main() {
   tag=${KEYWARDEN_VERSION:-}
   if [ -z "$tag" ]; then
     # /releases/latest redirects to /releases/tag/vX.Y.Z; no API call, no rate limit
-    tag=$(curl --proto '=https' --tlsv1.2 -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$repo/releases/latest")
+    tag=$(curl --proto '=https' --tlsv1.2 -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$repo/releases/latest") \
+      || die "$(m 'cannot reach github.com to find the latest release. Check the connection or a proxy (https_proxy), or name the version: %s' 'KEYWARDEN_VERSION=v0.2.10')"
     tag=${tag##*/}
   fi
   case "$tag" in v[0-9]*) ;; *) die "$(m 'no published release yet: %s' "https://github.com/$repo/releases")" ;; esac
+
+  mkdir -p "$bin" 2>/dev/null && [ -w "$bin" ] || die "$(m 'cannot write to %s. Pick another folder: %s' "$bin" 'BIN=~/bin')"
 
   # questions only when a person is at the terminal; the script itself may be coming from a pipe
   talk=
@@ -65,8 +80,7 @@ main() {
   ok "$(m 'release %s for %s' "$B$tag$N" "$target")"
 
   file=keywarden-$tag-$target.tar.gz
-  tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT INT TERM
+  tmp=$(mktemp -d) || die "$(m 'cannot create a temporary folder (is the disk full?)')"
   fetch "$base/$tag/$file" "$tmp/$file" &
   spin $! "$(m 'downloading %s' "$file")" || die "$(m 'download failed: %s' "$base/$tag/$file")"
   fetch "$base/$tag/SHA256SUMS" "$tmp/SHA256SUMS" || die "$(m 'download failed: %s' SHA256SUMS)"
@@ -87,8 +101,13 @@ main() {
       || die "$(m 'release signature does not match, nothing installed')"
     ok "$(m 'release signature is valid')"
   fi
-  tar xzf "$tmp/$file" -C "$tmp"
+  tar xzf "$tmp/$file" -C "$tmp" || die "$(m 'cannot unpack the archive (is the disk full?)')"
   dir=$tmp/keywarden-$tag-$target
+  # the programs must start here before anything is replaced: an older system library (glibc),
+  # another C library (musl) or a system without the usual loader (NixOS) shows up right now
+  why=$("$dir/kw" --version 2>&1) || die "$(m 'the downloaded programs do not start on this system, nothing was changed. The system says: %s. Usually the system is older than this build needs. Build from source: %s' "$(printf '%s' "$why" | head -n 1)" https://onokashino.github.io/keywarden/docs/#install)"
+  running=
+  [ -z "$have" ] || ! command -v pgrep >/dev/null 2>&1 || ! pgrep -x keywarden-ui >/dev/null 2>&1 || running=1
 
   if [ "$target" = linux-x86_64 ]; then
     # the archive's own script: binaries, service, menu entry, browsers, niri, Noctalia
@@ -111,9 +130,20 @@ main() {
     fi
   fi
 
+  [ -z "$running" ] || warn "$(m 'the Keywarden window that is open is still the old version: close it and open it again')"
   case ":$PATH:" in
-    *":$bin:"*) ;;
-    *) warn "$(m 'add %s to PATH: %s' "$bin" "echo 'export PATH=\"$bin:\$PATH\"' >> ~/.profile")" ;;
+    *":$bin:"*)
+      # an older copy somewhere else would keep answering to "kw"
+      first=$(command -v kw 2>/dev/null || true)
+      [ -z "$first" ] || [ "$first" = "$bin/kw" ] || warn "$(m 'another kw comes first in PATH: %s. Remove it or put %s earlier' "$first" "$bin")" ;;
+    *)
+      case "${SHELL##*/}" in
+        fish) hint="fish_add_path $bin" ;;
+        zsh) hint="echo 'export PATH=\"$bin:\$PATH\"' >> ~/.zshrc" ;;
+        bash) hint="echo 'export PATH=\"$bin:\$PATH\"' >> ~/.bashrc" ;;
+        *) hint="echo 'export PATH=\"$bin:\$PATH\"' >> ~/.profile" ;;
+      esac
+      warn "$(m 'the terminal does not see kw yet. Add %s to PATH and open a new terminal: %s' "$bin" "$hint")" ;;
   esac
   printf '\n  %s%s%s\n' "$G$B" "$(m 'Keywarden %s is installed.' "$tag")" "$N"
   printf '  %s %s\n\n' "$(m 'Browser extension:')" "$(link "$amo" "$(m 'Add to Firefox')")"
@@ -155,7 +185,6 @@ ru() {
     'SSH agent for all programs (after the next login; undo: %s)') printf '%s' 'SSH-агент для всех программ (после следующего входа в систему; отменить: %s)' ;;
     'SSH agent not connected, run: %s') printf '%s' 'SSH-агент не подключён, выполните: %s' ;;
     'opening Keywarden') printf '%s' 'открываю Keywarden' ;;
-    'add %s to PATH: %s') printf '%s' 'добавьте %s в PATH: %s' ;;
     'Keywarden %s is installed.') printf '%s' 'Keywarden %s установлен.' ;;
     'Browser extension:') printf '%s' 'Расширение для браузера:' ;;
     'Add to Firefox') printf '%s' 'Добавить в Firefox' ;;
@@ -185,6 +214,16 @@ ru() {
     'niri: shortcuts for the launcher (your config is backed up first)?') printf '%s' 'niri: клавиши для лаунчера (сначала делается копия конфига)?' ;;
     'Noctalia: follow the shell colors?') printf '%s' 'Noctalia: брать цвета оболочки?' ;;
     '%sEnter%s installs everything, %sc%s lets you choose the parts, %sl%s: %s') printf '%s' '%sEnter%s ставит всё, %sc%s даёт выбрать части, %sl%s: %s' ;;
+    'run this as your own user, without sudo: Keywarden installs into your home directory') printf '%s' 'запустите от своего пользователя, без sudo: Keywarden ставится в вашу домашнюю папку' ;;
+    'cannot reach github.com to find the latest release. Check the connection or a proxy (https_proxy), or name the version: %s') printf '%s' 'не удаётся связаться с github.com, чтобы узнать последний релиз. Проверьте соединение или прокси (https_proxy) либо укажите версию: %s' ;;
+    'cannot write to %s. Pick another folder: %s') printf '%s' 'нет прав на запись в %s. Выберите другую папку: %s' ;;
+    'cannot create a temporary folder (is the disk full?)') printf '%s' 'не удаётся создать временную папку (диск заполнен?)' ;;
+    'cannot unpack the archive (is the disk full?)') printf '%s' 'не удаётся распаковать архив (диск заполнен?)' ;;
+    'the downloaded programs do not start on this system, nothing was changed. The system says: %s. Usually the system is older than this build needs. Build from source: %s') printf '%s' 'скачанные программы не запускаются на этой системе, ничего не изменено. Ответ системы: %s. Обычно система старше, чем нужно этой сборке. Сборка из исходников: %s' ;;
+    'the Keywarden window that is open is still the old version: close it and open it again') printf '%s' 'открытое окно Keywarden ещё старой версии: закройте его и откройте заново' ;;
+    'another kw comes first in PATH: %s. Remove it or put %s earlier') printf '%s' 'в PATH раньше стоит другой kw: %s. Удалите его или поставьте %s раньше' ;;
+    'the terminal does not see kw yet. Add %s to PATH and open a new terminal: %s') printf '%s' 'терминал пока не видит kw. Добавьте %s в PATH и откройте новый терминал: %s' ;;
+    'the installer stopped on an unexpected error. Please report it with the lines above: %s') printf '%s' 'установщик остановился на неожиданной ошибке. Сообщите о ней, приложив строки выше: %s' ;;
     *) printf '%s' "$1" ;;
   esac
 }
@@ -197,7 +236,7 @@ diagnose() {
   miss=
   for b in keywardend kw keywarden-ui keywarden-host; do [ -x "$bin/$b" ] || miss="$miss $b"; done
   if [ -n "$miss" ]; then problems="$problems files"; bad "$(m 'missing programs:%s' "$miss")"; else ok "$(m 'programs in %s' "$bin")"; fi
-  if [ "$target" = linux-x86_64 ] && command -v systemctl >/dev/null 2>&1; then
+  if [ "$target" = linux-x86_64 ] && command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
     if systemctl --user is-active --quiet keywardend.service 2>/dev/null \
       && systemctl --user is-enabled --quiet keywardend.service 2>/dev/null; then
       ok "$(m 'background service is running')"
@@ -214,6 +253,12 @@ diagnose() {
     ok "$(m 'browser link')"
   fi
   case ":$PATH:" in *":$bin:"*) ;; *) warn "$(m '%s is not in PATH' "$bin")" ;; esac
+}
+
+# Leaves no temporary files; a stop nobody explained gets one plain line instead of silence.
+on_exit() {
+  [ -z "$tmp" ] || rm -rf "$tmp"
+  [ "$1" = 0 ] || [ -n "$said" ] || printf '  %s%s %s%s\n' "$Y" "$BADM" "$(m 'the installer stopped on an unexpected error. Please report it with the lines above: %s' "https://github.com/$repo/issues")" "$N" >&2
 }
 
 fix() {
@@ -293,16 +338,17 @@ if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
 else
   E="" G="" Y="" V="" D="" B="" N=""
 fi
-ok() { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
+OKM='✓' BADM='✗' DIA='◆' SPIN=1
+ok() { printf '  %s%s%s %s\n' "$G" "$OKM" "$N" "$*"; }
 warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*"; }
-bad() { printf '  %s✗%s %s\n' "$Y" "$N" "$*"; }
-die() { printf '  %s✗ %s%s\n' "$Y" "$*" "$N" >&2; exit 1; }
+bad() { printf '  %s%s%s %s\n' "$Y" "$BADM" "$N" "$*"; }
+die() { said=1; printf '  %s%s %s%s\n' "$Y" "$BADM" "$*" "$N" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "$(m 'needs %s' "$1")"; }
 # clickable in terminals that support OSC 8, plain text with the address otherwise
 link() { if [ -n "$E" ]; then printf '%s]8;;%s%s\\%s%s%s%s]8;;%s\\ %s%s%s' "$E" "$1" "$E" "$V" "$2" "$N" "$E" "$E" "$D" "$1" "$N"; else printf '%s %s' "$2" "$1"; fi; }
 # a spinner next to the message while process $1 runs; returns its exit status
 spin() {
-  if [ -z "$E" ]; then wait "$1"; return; fi
+  if [ -z "$E" ] || [ -z "$SPIN" ]; then wait "$1"; return; fi
   i=0
   while kill -0 "$1" 2>/dev/null; do
     case $((i % 10)) in 0) f=⠋;; 1) f=⠙;; 2) f=⠹;; 3) f=⠸;; 4) f=⠼;; 5) f=⠴;; 6) f=⠦;; 7) f=⠧;; 8) f=⠇;; *) f=⠏;; esac

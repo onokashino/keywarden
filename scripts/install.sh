@@ -39,6 +39,8 @@ ru() {
     'Noctalia: Keywarden follows your shell colors') printf '%s' 'Noctalia: Keywarden берёт цвета оболочки' ;;
     'opening Keywarden') printf '%s' 'открываю Keywarden' ;;
     'start the app: %s') printf '%s' 'запуск приложения: %s' ;;
+    'the background service did not start, see: %s') printf '%s' 'фоновая служба не запустилась, смотрите: %s' ;;
+    'no systemd user session here: Keywarden starts its background service itself when you open the app') printf '%s' 'пользовательского сеанса systemd здесь нет: Keywarden сам запускает фоновую службу, когда вы открываете приложение' ;;
     *) printf '%s' "$1" ;;
   esac
 }
@@ -70,11 +72,19 @@ install -Dm644 dist/icons/keywarden.svg "$HOME/.local/share/icons/hicolor/scalab
 touch "$HOME/.local/share/icons/hicolor"
 ok "$(m 'programs in %s' "$(home "$BIN")")"
 
-systemctl --user daemon-reload
-systemctl --user --quiet enable keywardend.service
-# restart, not --now: on a re-run the old daemon would keep running the old binary
-systemctl --user restart keywardend.service
-ok "$(m 'background service %s is running and starts with your session' "${B}keywardend${N}")"
+# no systemd user session (Alpine, Void, Artix, a container, WSL without systemd): the app
+# starts the background service itself when it is opened
+if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+  systemctl --user daemon-reload
+  # restart, not --now: on a re-run the old daemon would keep running the old binary
+  if systemctl --user --quiet enable keywardend.service && systemctl --user restart keywardend.service; then
+    ok "$(m 'background service %s is running and starts with your session' "${B}keywardend${N}")"
+  else
+    warn "$(m 'the background service did not start, see: %s' 'journalctl --user -u keywardend -e')"
+  fi
+else
+  skip "$(m 'no systemd user session here: Keywarden starts its background service itself when you open the app')"
+fi
 ok "$(m 'menu entry added')"
 
 # native messaging: Firefox, Chromium-based browsers, their forks and Flatpak builds

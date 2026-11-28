@@ -26,6 +26,11 @@ function Install-Keywarden {
   # switches it. English text is the key. Russian is written as \u escapes on purpose: Windows
   # PowerShell 5.1 reads a script fetched from the web as Latin-1 and would garble real letters.
   $ru = @{
+    'cannot reach github.com to find the latest release. Check the connection or the proxy, or name the version: {0}' = '\u043d\u0435 \u0443\u0434\u0430\u0451\u0442\u0441\u044f \u0441\u0432\u044f\u0437\u0430\u0442\u044c\u0441\u044f \u0441 github.com, \u0447\u0442\u043e\u0431\u044b \u0443\u0437\u043d\u0430\u0442\u044c \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u0439 \u0440\u0435\u043b\u0438\u0437. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0438\u043b\u0438 \u043f\u0440\u043e\u043a\u0441\u0438 \u043b\u0438\u0431\u043e \u0443\u043a\u0430\u0436\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e: {0}'
+    'the programs need the Microsoft Visual C++ runtime, nothing was changed. Install it and run this again: {0}' = '\u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u0430\u043c \u043d\u0443\u0436\u0435\u043d \u043d\u0430\u0431\u043e\u0440 Microsoft Visual C++, \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u043e. \u0423\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u0435 \u0435\u0433\u043e \u0438 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0435 \u043a\u043e\u043c\u0430\u043d\u0434\u0443 \u0435\u0449\u0451 \u0440\u0430\u0437: {0}'
+    'the downloaded programs do not start on this system (code {0}), nothing was changed. An antivirus may be blocking them. Report: {1}' = '\u0441\u043a\u0430\u0447\u0430\u043d\u043d\u044b\u0435 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u044e\u0442\u0441\u044f \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0438\u0441\u0442\u0435\u043c\u0435 (\u043a\u043e\u0434 {0}), \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u043e. \u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e, \u0438\u0445 \u0431\u043b\u043e\u043a\u0438\u0440\u0443\u0435\u0442 \u0430\u043d\u0442\u0438\u0432\u0438\u0440\u0443\u0441. \u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c: {1}'
+    'cannot write to {0}. Pick another folder: {1}' = '\u043d\u0435\u0442 \u043f\u0440\u0430\u0432 \u043d\u0430 \u0437\u0430\u043f\u0438\u0441\u044c \u0432 {0}. \u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u0443\u044e \u043f\u0430\u043f\u043a\u0443: {1}'
+    'cannot replace {0}: close Keywarden (also in the tray) and run this again. If it repeats, an antivirus is holding the file' = '\u043d\u0435 \u0443\u0434\u0430\u0451\u0442\u0441\u044f \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u044c {0}: \u0437\u0430\u043a\u0440\u043e\u0439\u0442\u0435 Keywarden (\u0432 \u0442\u043e\u043c \u0447\u0438\u0441\u043b\u0435 \u0432 \u0442\u0440\u0435\u0435) \u0438 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0435 \u043a\u043e\u043c\u0430\u043d\u0434\u0443 \u0435\u0449\u0451 \u0440\u0430\u0437. \u0415\u0441\u043b\u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0441\u044f, \u0444\u0430\u0439\u043b \u0434\u0435\u0440\u0436\u0438\u0442 \u0430\u043d\u0442\u0438\u0432\u0438\u0440\u0443\u0441'
     'browsers can reach Keywarden' = '\u0431\u0440\u0430\u0443\u0437\u0435\u0440\u044b \u0432\u0438\u0434\u044f\u0442 Keywarden'
     'browser host not registered, run: {0}' = '\u0441\u0432\u044f\u0437\u044c \u0441 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u043e\u043c \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d\u0430, \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u0435: {0}'
     'SSH agent for all programs (after the next sign-in; undo: {0})' = 'SSH-\u0430\u0433\u0435\u043d\u0442 \u0434\u043b\u044f \u0432\u0441\u0435\u0445 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c (\u043f\u043e\u0441\u043b\u0435 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0433\u043e \u0432\u0445\u043e\u0434\u0430 \u0432 \u0441\u0438\u0441\u0442\u0435\u043c\u0443; \u043e\u0442\u043c\u0435\u043d\u0438\u0442\u044c: {0})'
@@ -131,8 +136,10 @@ function Install-Keywarden {
   }
 
   Write-Host ("`n  " + (M 'Keywarden installer') + "`n")
-  if ($onWindows -and $env:PROCESSOR_ARCHITECTURE -notin 'AMD64', 'ARM64') {
-    throw ((M 'no ready build for {0}. Build from source: {1}') -f $env:PROCESSOR_ARCHITECTURE, 'https://onokashino.github.io/keywarden/docs/#install')
+  # a 32-bit PowerShell on 64-bit Windows reports x86 and keeps the real one in PROCESSOR_ARCHITEW6432
+  $arch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
+  if ($onWindows -and $arch -notin 'AMD64', 'ARM64') {
+    throw ((M 'no ready build for {0}. Build from source: {1}') -f $arch, 'https://onokashino.github.io/keywarden/docs/#install')
   }
   # Windows PowerShell 5.1 may still default to TLS 1.0
   [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -143,9 +150,12 @@ function Install-Keywarden {
     $req = [Net.WebRequest]::Create("https://github.com/$repo/releases/latest")
     $req.Method = 'HEAD'
     $req.AllowAutoRedirect = $false
-    $res = $req.GetResponse()
-    $tag = ($res.Headers['Location'] -split '/')[-1]
-    $res.Close()
+    try {
+      $res = $req.GetResponse()
+      $tag = ($res.Headers['Location'] -split '/')[-1]
+      $res.Close()
+    }
+    catch { throw ((M 'cannot reach github.com to find the latest release. Check the connection or the proxy, or name the version: {0}') -f "`$env:KEYWARDEN_VERSION='v0.2.10'") }
   }
   if ($tag -notmatch '^v[0-9][0-9A-Za-z.\-]*$') { throw ((M 'no published release yet: {0}') -f "https://github.com/$repo/releases") }
 
@@ -259,7 +269,16 @@ function Install-Keywarden {
     foreach ($n in $names) {
       if (-not (Test-Path (Join-Path $src "$n.exe"))) { throw ((M 'the archive has no {0}, nothing installed') -f "$n.exe") }
     }
-    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    # the programs must start here before anything is replaced
+    $global:LASTEXITCODE = 1
+    try { $null = & (Join-Path $src 'kw.exe') --version 2>&1 } catch { }
+    if ($LASTEXITCODE -eq -1073741515) {
+      throw ((M 'the programs need the Microsoft Visual C++ runtime, nothing was changed. Install it and run this again: {0}') -f 'https://aka.ms/vs/17/release/vc_redist.x64.exe')
+    }
+    if ($LASTEXITCODE -ne 0) {
+      throw ((M 'the downloaded programs do not start on this system (code {0}), nothing was changed. An antivirus may be blocking them. Report: {1}') -f $LASTEXITCODE, "https://github.com/$repo/issues")
+    }
+    try { New-Item -ItemType Directory -Path $dir -Force | Out-Null } catch { throw ((M 'cannot write to {0}. Pick another folder: {1}') -f $dir, "`$env:KEYWARDEN_DIR='D:\Keywarden'") }
     if ($onWindows) {
       # an update: running programs keep their files locked
       $mine = (Resolve-Path $dir).Path
@@ -268,7 +287,10 @@ function Install-Keywarden {
         Stop-Process -Force -ErrorAction SilentlyContinue
       Start-Sleep -Milliseconds 300
     }
-    foreach ($n in $names) { Copy-Item (Join-Path $src "$n.exe") (Join-Path $dir "$n.exe") -Force }
+    foreach ($n in $names) {
+      try { Copy-Item (Join-Path $src "$n.exe") (Join-Path $dir "$n.exe") -Force }
+      catch { throw ((M 'cannot replace {0}: close Keywarden (also in the tray) and run this again. If it repeats, an antivirus is holding the file') -f "$n.exe") }
+    }
     Ok ((M 'programs in {0}') -f $dir)
   }
   finally {
