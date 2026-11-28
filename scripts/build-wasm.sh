@@ -1,7 +1,7 @@
 #!/bin/sh
 # Rust -> WASM -> extension/wasm (импортируется из background.ts). Общий для Makefile и CI.
 set -eu
-cargo build -p keywarden-ext --target wasm32-unknown-unknown --release
+cargo build --locked -p keywarden-ext --target wasm32-unknown-unknown --release
 wasm-bindgen --target web --out-dir extension/wasm \
   "${CARGO_TARGET_DIR:-target}/wasm32-unknown-unknown/release/keywarden_ext.wasm"
 mkdir -p extension/public && cp extension/wasm/keywarden_ext_bg.wasm extension/public/

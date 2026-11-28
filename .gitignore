@@ -4,6 +4,10 @@ extension/.output
 extension/.wxt
 extension/wasm
 *.kdbx.bak*
+# real vaults and key files never belong in the repo (test fixtures are generated)
+*.kdbx
+*.keyx
+tests/e2e-ext/target
 extension/public/keywarden_ext_bg.wasm
 tests/e2e-ext/node_modules
 .serena/

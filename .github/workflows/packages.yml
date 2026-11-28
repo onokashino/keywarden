@@ -41,7 +41,7 @@ jobs:
                  -e "s/^sha256sums=.*/sha256sums=('$sum')/" packaging/aur/PKGBUILD
           echo "ok=1" >> "$GITHUB_OUTPUT"
       - if: steps.pkg.outputs.ok
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        uses: KSXGitHub/github-actions-deploy-aur@2ac5a4c1d7035885d46b10e3193393be8460b6f1 # v4.1.1
         with:
           pkgname: keywarden-bin
           pkgbuild: packaging/aur/PKGBUILD
@@ -91,7 +91,7 @@ jobs:
         run: '[ -n "$T" ] && echo "ok=1" >> "$GITHUB_OUTPUT" || echo "::warning::no WINGET_TOKEN, winget skipped"'
       # updates an existing package; submit the first version by hand (docs/publishing.md)
       - if: steps.tok.outputs.ok
-        uses: vedantmgoyal9/winget-releaser@v2
+        uses: vedantmgoyal9/winget-releaser@b7370d4d152efdce803a26cc6ca9eee58cb2ad54 # v2
         with:
           identifier: onokashino.Keywarden
           release-tag: ${{ env.TAG }}
