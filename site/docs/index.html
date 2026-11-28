@@ -415,6 +415,7 @@ kw browser-setup [--chrome-id ID] [--check]   kw new PATH</code></pre>
   <li>Local sockets are <code>0600</code> and check the peer user id; Windows named pipes compare the client's user SID and refuse remote clients.</li>
   <li>The browser channel is encrypted end to end; each new site is confirmed by you.</li>
   <li>Network access happens only on request: a Have I Been Pwned check with k-anonymity (only 5 characters of the SHA-1 hash leave your computer) and fetching a site icon.</li>
+  <li>The browser extension and its host program make no network requests at all: the host only passes encrypted messages between the browser and the local service. A system monitor can still list the browser's own connections under <code>keywarden-host</code>, because the browser starts it and the process inherits them.</li>
 </ul>
 <p><b>What it does not protect against:</b> malware already running as your user while the vault is unlocked. It can read the screen, the keyboard and process memory; no local password manager can stop that. Lock the vault when you step away.</p>
 <p>Found a problem? Please report it privately, see <a href="https://github.com/onokashino/keywarden/security">SECURITY</a>.</p>
