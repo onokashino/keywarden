@@ -106,10 +106,14 @@ export default defineBackground(() => {
   // popup и другие страницы самого расширения (их адрес chrome-extension:// или moz-extension://)
   const fromExtension = (sender: Browser.runtime.MessageSender) => !!sender.url?.startsWith(browser.runtime.getURL('/'));
 
+  /// куда отвечать: в тот фрейм страницы, откуда пришёл запрос; из окна расширения в саму вкладку
+  const frameOf = (sender: Browser.runtime.MessageSender) => (fromExtension(sender) ? 0 : (sender.frameId ?? 0));
+
   // адрес берём у браузера (sender / вкладка), а не из сообщения страницы
   async function pageUrl(sender: Browser.runtime.MessageSender, tabId?: number): Promise<string> {
     if (!fromExtension(sender) && sender.tab && sender.url) {
-      if (sender.frameId !== 0) throw new DaemonError('frame', t('err_frames'));
+      // фрейм допускаем только с того же адреса, что сама вкладка (страница проверяет ещё и рамки между ними)
+      if (sender.frameId !== 0 && (!sender.tab.url || new URL(sender.url).origin !== new URL(sender.tab.url).origin)) throw new DaemonError('frame', t('err_frames'));
       return sender.url;
     }
     const tab = tabId !== undefined ? await browser.tabs.get(tabId) : (await browser.tabs.query({ active: true, currentWindow: true }))[0];
@@ -198,7 +202,7 @@ export default defineBackground(() => {
         rememberUsed(url, msg.id);
         if (fromExtension(sender)) {
           // из popup: передаём учётку content script вкладки
-          await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillWith', username: r.username, password: r.password }, { frameId: 0 });
+          await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillWith', username: r.username, password: r.password }, { frameId: frameOf(sender) });
           return null;
         }
         return { username: r.username, password: r.password };
@@ -221,7 +225,7 @@ export default defineBackground(() => {
       case 'totp': {
         const r = await call({ action: 'totp', id: msg.id, url: await pageUrl(sender, msg.tabId) });
         if (fromExtension(sender)) {
-          await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillOtp', code: r.code }, { frameId: 0 });
+          await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillOtp', code: r.code }, { frameId: frameOf(sender) });
           return null;
         }
         return r.code as string;
@@ -239,7 +243,7 @@ export default defineBackground(() => {
       }
       case 'fillNew':
         if (!fromExtension(sender)) throw new DaemonError('denied', t('err_extension_only'));
-        await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillNew', password: msg.password }, { frameId: 0 });
+        await browser.tabs.sendMessage(await tabOf(sender, msg.tabId), { type: 'fillNew', password: msg.password }, { frameId: frameOf(sender) });
         return null;
       // поиск по базе, карточка и копирование: только из popup, не со страниц сайтов
       case 'search':
@@ -313,7 +317,9 @@ export default defineBackground(() => {
         });
         if (r.state === 'same') return null;
         const site = new URL(url).hostname;
-        pending.set(await tabOf(sender), { site, url, username: msg.username, password: msg.password, state: r.state, id: r.id, at: Date.now() });
+        pending.set(from, { site, url, username: msg.username, password: msg.password, state: r.state, id: r.id, at: Date.now() });
+        // форма была во фрейме: окно сохранения показывает сама вкладка
+        if (frameOf(sender) !== 0) browser.tabs.sendMessage(from, { type: 'showSave' }, { frameId: 0 }).catch(() => {});
         return true;
       }
       case 'pendingSave': {

@@ -33,10 +33,17 @@ async function ask<T>(msg: Msg): Promise<T> {
 
 export default defineContentScript({
   matches: ['https://*/*', 'http://*/*'],
-  // во фреймы не лезем: iframe с чужого домена мог бы выманить пароль (только по разрешению)
-  allFrames: false,
+  allFrames: true,
   runAt: 'document_idle',
   main(ctx) {
+    // во фрейме работаем, только если он и все рамки над ним с того же адреса, что вкладка:
+    // чужой iframe мог бы выманить пароль, а к чужому окну доступа нет (обращение бросает ошибку)
+    const framed = window !== window.top;
+    try {
+      for (let w: Window = window; w !== window.top; w = w.parent) if (w.parent.location.origin !== location.origin) return;
+    } catch {
+      return;
+    }
     let inputs: HTMLInputElement[] = [];
     // поля ввода и за ними списки <select>: индексы полей ввода те же, что в inputs
     let els: (HTMLInputElement | HTMLSelectElement)[] = [];
@@ -739,7 +746,8 @@ export default defineContentScript({
           if (!r) return;
           // форму отправили повторно (сайт отклонил первый пароль): окно с прежними данными заменяем
           document.querySelector('keywarden-save')?.remove();
-          showSave();
+          // окно сохранения рисует сама вкладка: во фрейме ему может не хватить места
+          if (!framed) showSave();
         })
         .catch(() => {});
     }
@@ -934,6 +942,7 @@ export default defineContentScript({
       }
       if (msg.type === 'fillWith' && f) fill(f, msg.username, msg.password);
       if (msg.type === 'togglePanel') togglePanel();
+      if (msg.type === 'showSave') showSave();
       if (msg.type === 'fillNew') {
         // поля нового пароля формы, иначе поле пароля в фокусе
         const nf = forms.find((x) => x.new_passwords.length);
@@ -995,7 +1004,11 @@ export default defineContentScript({
 
     loadPrefs()
       .then((p) => (prefs = p))
-      .finally(() => scan().then(showSave));
+      .finally(() =>
+        scan().then(() => {
+          if (!framed) showSave();
+        }),
+      );
     browser.storage.onChanged.addListener((c) => {
       if (c.prefs) loadPrefs().then((p) => (prefs = p));
       if (c.theme) theme = (c.theme.newValue as Theme | undefined) ?? null;

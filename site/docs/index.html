@@ -221,7 +221,7 @@ Mod+Shift+Alt+L { spawn "kw" "lock"; }               // lock</code></pre>
 <p>Settings, <b>This computer</b>, shows the exact instructions for the system you are on.</p>
 
 <h2 id="browser">Browser extension</h2>
-<p>The extension fills logins, picks an account when there are several, fills 2FA codes, offers to save new and changed passwords and suggests a generated password on sign-up forms. It never fills invisible fields or frames.</p>
+<p>The extension fills logins, picks an account when there are several, fills 2FA codes, offers to save new and changed passwords and suggests a generated password on sign-up forms. It never fills invisible fields. A form inside a frame is filled only when the frame comes from the same address as the page itself; frames from other addresses are ignored.</p>
 <h3>Install</h3>
 <ol>
   <li>Install the extension: Firefox from <a href="https://addons.mozilla.org/firefox/addon/keywarden/" target="_blank" rel="noopener">Firefox Add-ons</a>. For Chromium-based browsers it is not in the store yet: unpack the zip from the release, open <code>chrome://extensions</code>, turn on Developer mode and load the unpacked folder.</li>
