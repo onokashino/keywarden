@@ -76,6 +76,7 @@
   "адрес страницы": "page address",
   "приватный ключ не PKCS#8 P-256": "the private key is not PKCS#8 P-256",
   "канал демона занят": "the daemon pipe is busy",
+  "канал демона держит другой пользователь": "the daemon pipe is held by another user",
   "Система": "System",
   "Автоввод": "Autotype",
   "работает в любом окне (набор через SendInput)": "works in any window (typing via SendInput)",

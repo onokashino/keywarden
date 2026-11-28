@@ -28,7 +28,7 @@ main() {
   tag=${KEYWARDEN_VERSION:-}
   if [ -z "$tag" ]; then
     # /releases/latest redirects to /releases/tag/vX.Y.Z; no API call, no rate limit
-    tag=$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$repo/releases/latest")
+    tag=$(curl --proto '=https' --tlsv1.2 -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$repo/releases/latest")
     tag=${tag##*/}
   fi
   case "$tag" in v[0-9]*) ;; *) die "no published release yet: https://github.com/$repo/releases" ;; esac

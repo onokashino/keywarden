@@ -147,7 +147,7 @@ impl Daemon {
         }
         let csv = self.read(|db| Ok(transfer::export_csv(db)))?;
         let p = path_of(&path);
-        blocking(move || vault::write_atomic(&p, csv.as_bytes()).map_err(vault::VaultError::Io))
+        blocking(move || vault::write_private(&p, csv.as_bytes()).map_err(vault::VaultError::Io))
             .await?;
         tracing::info!("база выгружена в CSV");
         Ok(Response::Ok)

@@ -14,7 +14,6 @@ pub use unix::Listener;
 #[cfg(windows)]
 pub use windows::Listener;
 
-
 #[cfg(unix)]
 mod unix {
     use super::*;
@@ -60,10 +59,10 @@ mod unix {
 #[cfg(windows)]
 mod windows {
     use super::*;
+    use keywarden_core::platform::same_user_pid;
     use std::os::windows::io::AsRawHandle;
     use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
     use tokio::sync::Mutex;
-    use keywarden_core::platform::same_user_pid;
     use windows_sys::Win32::Foundation::HANDLE;
     use windows_sys::Win32::System::Pipes::GetNamedPipeClientProcessId;
 

@@ -40,7 +40,7 @@
   "Сначала откройте фразу": "Reveal the seed phrase first",
   "SLIP-39, доля {i} из {n}": "SLIP-39, share {i} of {n}",
   "Карточку не записать: {e}": "Can't write the card: {e}",
-  "Карточка открыта для печати. Файл в памяти, удалится сам через 10 минут": "The card is open for printing. The file is in memory and will be deleted in 10 minutes",
+  "Карточка открыта для печати. Файл удалится сам через 10 минут": "The card is open for printing. The file will be deleted in 10 minutes",
   "Для SeedSigner и аппаратных кошельков, которые его понимают": "For SeedSigner and hardware wallets that support it",
   "SeedQR только для BIP39": "SeedQR is for BIP39 only",
   "Это вся фраза целиком: не фотографируйте и закройте окно": "This is the whole seed phrase: don't photograph it, and close the window",

@@ -10,6 +10,7 @@ use std::io::{self, Read, Write};
 const MAX_MSG: usize = 1 << 20;
 
 fn main() -> Result<()> {
+    keywarden_core::platform::no_core_dumps();
     let (mut stdin, mut stdout) = (io::stdin().lock(), io::stdout().lock());
     while let Some(msg) = read_msg(&mut stdin)? {
         let reply = match serde_json::from_slice::<serde_json::Value>(&msg) {

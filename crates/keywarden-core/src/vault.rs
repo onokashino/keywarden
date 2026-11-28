@@ -200,8 +200,8 @@ impl Backups {
     pub fn default_for(db_path: &Path) -> Self {
         let state = std::env::var_os("XDG_STATE_HOME")
             .map(PathBuf::from)
-            .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/state")))
-            .unwrap_or_else(|| PathBuf::from("/tmp"));
+            // Windows: каталог пользователя, а не \tmp в корне диска, куда заглянет кто угодно
+            .unwrap_or_else(|| crate::platform::home().join(".local/state"));
         let canon = fs::canonicalize(db_path).unwrap_or_else(|_| db_path.to_path_buf());
         let tag = hex8(&Sha256::digest(canon.as_os_str().as_encoded_bytes()));
         let stem = db_path
@@ -626,6 +626,13 @@ fn open_error(e: DatabaseOpenError) -> VaultError {
         E::Io(io) => VaultError::Io(io),
         other => VaultError::Open(other.to_string()),
     }
+}
+
+/// Выгрузка с открытыми секретами (CSV, 2FAS): файл читает только владелец, даже если
+/// на его месте лежал файл с правами пошире.
+pub fn write_private(path: &Path, data: &[u8]) -> io::Result<()> {
+    write_atomic(path, data)?;
+    crate::platform::restrict_to_owner(path)
 }
 
 /// Временный файл в том же каталоге → fsync → rename → fsync каталога.

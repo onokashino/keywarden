@@ -175,8 +175,9 @@ pub fn connect(path: &Path) -> io::Result<Conn> {
                 // имя канала мог занять другой пользователь раньше демона и ждать мастер-пароль:
                 // пишем только процессу под нашей учётной записью
                 let mut pid = 0u32;
-                let ok = unsafe { GetNamedPipeServerProcessId(conn.as_raw_handle() as _, &mut pid) }
-                    != 0;
+                let ok =
+                    unsafe { GetNamedPipeServerProcessId(conn.as_raw_handle() as _, &mut pid) }
+                        != 0;
                 if ok && same_user_pid(pid) {
                     return Ok(conn);
                 }
@@ -236,6 +237,27 @@ pub fn same_user_pid(pid: u32) -> bool {
         let a = (*(mine.as_ptr() as *const TOKEN_USER)).User.Sid;
         let b = (*(theirs.as_ptr() as *const TOKEN_USER)).User.Sid;
         EqualSid(a, b) != 0
+    }
+}
+
+/// Память процесса не уходит в дамп при падении: в окне, kw и мосте браузера бывают
+/// мастер-пароль и открытые поля. Демон защищается строже сам (ещё и от отладчика и свопа).
+pub fn no_core_dumps() {
+    #[cfg(unix)]
+    unsafe {
+        let zero = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
+        libc::setrlimit(libc::RLIMIT_CORE, &zero);
+    }
+    #[cfg(windows)]
+    unsafe {
+        use windows_sys::Win32::System::Diagnostics::Debug::{
+            SEM_FAILCRITICALERRORS, SEM_NOGPFAULTERRORBOX, SetErrorMode,
+        };
+        // без отчёта об ошибке Windows: WER собирает дамп памяти процесса
+        SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     }
 }
 

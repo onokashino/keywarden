@@ -25,6 +25,21 @@ mod ui;
 use gpui_kit::*;
 
 fn main() {
+    keywarden_core::platform::no_core_dumps();
+    // карточки с сид-фразой: окно могли закрыть раньше, чем сработал таймер удаления
+    if let Ok(dir) = std::fs::read_dir(keywarden_core::ipc::runtime_dir()) {
+        for f in dir.flatten() {
+            let name = f.file_name();
+            let name = name.to_string_lossy();
+            let old = f
+                .metadata()
+                .and_then(|m| m.modified())
+                .is_ok_and(|t| t.elapsed().is_ok_and(|d| d.as_secs() >= 600));
+            if old && name.starts_with("keywarden-card-") && name.ends_with(".pdf") {
+                let _ = std::fs::remove_file(f.path());
+            }
+        }
+    }
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),

@@ -89,6 +89,20 @@ pub async fn serve(daemon: Arc<Daemon>) {
         allowed: Default::default(),
     };
     tokio::spawn(host_config_watch(agent.clone()));
+    // расшифрованные ключи не переживают блокировку базы (раньше лежали до следующего запроса)
+    let (cache, mut events) = (agent.cache.clone(), agent.daemon.events.subscribe());
+    tokio::spawn(async move {
+        use tokio::sync::broadcast::error::RecvError;
+        loop {
+            match events.recv().await {
+                Ok(keywarden_core::ipc::Event::Locked) | Err(RecvError::Lagged(_)) => {
+                    *cache.lock().unwrap_or_else(|p| p.into_inner()) = ((u64::MAX, 0), None);
+                }
+                Ok(_) => {}
+                Err(RecvError::Closed) => return,
+            }
+        }
+    });
     if let Err(e) = ssh_agent_lib::agent::listen(listener, agent).await {
         tracing::error!("SSH-агент остановился: {e}");
     }

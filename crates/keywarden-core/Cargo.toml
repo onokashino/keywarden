@@ -54,7 +54,10 @@ keepass = { version = "0.17", features = ["save_kdbx4", "_merge", "yubikey_usb"]
 [target.'cfg(windows)'.dependencies]
 hidapi = { version = "2.6", default-features = false, features = ["windows-native"] }
 # проверка, что канал демона держит процесс того же пользователя
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Pipes", "Win32_System_Threading"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Pipes", "Win32_System_Threading", "Win32_System_Diagnostics_Debug"] }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
 
 # macOS: IOKit напрямую (feature-report-ам хватает шести вызовов), без C-кода hidapi
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -488,7 +488,7 @@ struct EditArgs {
     #[arg(help = tr!("сгенерировать пароль"))]
     #[arg(long)]
     generate: bool,
-    #[arg(help = tr!("otpauth://... для 2FA"))]
+    #[arg(help = tr!("otpauth://... для 2FA; «-» спросить, чтобы секрет не попал в список процессов"))]
     #[arg(long)]
     otp: Option<String>,
     #[arg(help = tr!("своё поле: --field \"Card Number=4111...\""))]
@@ -534,7 +534,8 @@ enum OtpCmd {
     #[command(about = tr!("Задать 2FA записи: секрет base32, otpauth:// или KeeOtp"))]
     Set {
         query: String,
-        value: String,
+        #[arg(help = tr!("без значения kw спросит: так секрет не виден в списке процессов"))]
+        value: Option<String>,
         #[command(flatten)]
         pick: Pick,
     },
@@ -581,6 +582,7 @@ enum CipherArg {
 }
 
 fn main() {
+    keywarden_core::platform::no_core_dumps();
     if let Err(e) = run(Cli::parse()) {
         term::fail(&format!("{e:#}"));
         std::process::exit(1);
@@ -1218,7 +1220,10 @@ fn run(cli: Cli) -> Result<()> {
                 &mut c,
                 Request::SetOtp {
                     id: e.id,
-                    value: Secret::new(value),
+                    value: match value {
+                        Some(v) => Secret::new(v),
+                        None => prompt(tr!("Секрет 2FA: "))?,
+                    },
                 },
             )?;
             term::ok(tr!("2FA для «{title}» задана", title = e.title));
@@ -2312,8 +2317,12 @@ fn edit_patch(c: &mut Client, a: &EditArgs) -> Result<EntryPatch> {
         ("Notes", &a.notes),
         ("otp", &a.otp),
     ] {
-        if let Some(v) = v {
-            set.push(FieldSet::new(name, v.as_str()));
+        match v {
+            Some(v) if name == "otp" && v == "-" => {
+                set.push(FieldSet::new(name, prompt(tr!("Секрет 2FA: "))?))
+            }
+            Some(v) => set.push(FieldSet::new(name, v.as_str())),
+            None => {}
         }
     }
     if a.password_prompt {

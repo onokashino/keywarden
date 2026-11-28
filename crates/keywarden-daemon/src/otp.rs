@@ -138,7 +138,7 @@ impl Daemon {
     pub(crate) async fn export_twofas(&self, path: String) -> Reply<Response> {
         let json = self.read(|db| Ok(twofas::export(db)))?;
         let p = crate::config::expand(&PathBuf::from(path));
-        blocking(move || vault::write_atomic(&p, json.as_bytes()).map_err(vault::VaultError::Io))
+        blocking(move || vault::write_private(&p, json.as_bytes()).map_err(vault::VaultError::Io))
             .await?;
         Ok(Response::Ok)
     }
